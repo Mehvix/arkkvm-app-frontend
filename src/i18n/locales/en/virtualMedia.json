@@ -1,0 +1,61 @@
+{
+  "title": "Virtual Media",
+  "description": "Mount an image to boot or install an operating system.",
+  "noMedia": "No image file added",
+  "addFilePrompt": "Add an image file to get started",
+  "uploadButton": "Add Image File",
+  "unmountButton": "Unmount",
+  "streamingFromUrl": "Mount from URL",
+  "mountedFromStorage": "Mounted from Storage",
+  "urlDialogTitle": "Mount from URL",
+  "urlDialogDesc": "Enter the URL of the image file to mount",
+  "mountUrlButton": "Mount URL",
+  "backButton": "Back",
+  "storageDialog": {
+    "titleAvailable": "Mount from ArkKVM Storage",
+    "titleUploading": "Resume or upload a new image",
+    "descAvailable": "Select an image to mount from the ArkKVM storage",
+    "descUploading": "Manage ongoing uploads or start new ones",
+    "back": "Back",
+    "mountFile": "Mount File",
+    "tabAvailable": "Available",
+    "tabUploading": "Uploading",
+    "loadingFiles": "Loading storage files...",
+    "noFiles": "No images available",
+    "noFilesDesc": "Upload an image to get started",
+    "availableStorage": "Available Storage",
+    "usedPct": "{{pct}}% used",
+    "usedText": "{{used}} used",
+    "freeText": "{{free}} free",
+    "uploadNewImage": "Upload a new image",
+    "noCurrentUploads": "No current uploads",
+    "noCurrentUploadsDesc": "Completed uploads will appear under Available",
+    "formatsIntro": "",
+    "formatsTypes": "Supported formats: ISO, IMG",
+    "idleText": "Click or drag an image to upload",
+    "draggingText": "Drop file to upload",
+    "colName": "Name",
+    "colSpeed": "Transfer Speed",
+    "colStatus": "Transfer Status",
+    "deleteFile": "Delete file",
+    "deleteFileDesc": "Are you sure you want to delete \"{{displayName}}\" from storage? This action cannot be undone.",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "fileDeleted": "File deleted successfully."
+  },
+  "sourceDialog": {
+    "title": "Virtual Media Source",
+    "description": "Choose how you want to mount your virtual media",
+    "urlMount": {
+      "label": "URL Mount",
+       "badge": " ",
+      "description": "Mount an image file from a URL."
+    },
+    "storageMount": {
+      "label": "ArkKVM Storage Mount",
+      "description": "Mount previously uploaded files from the ArkKVM storage"
+    },
+    "cancelButton": "Cancel",
+    "continueButton": "Continue"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "title": "虚拟媒体",
+  "description": "挂载镜像以引导或安装操作系统。",
+  "noMedia": "未挂载媒体",
+  "addFilePrompt": "添加文件以开始",
+  "uploadButton": "上传",
+  "unmountButton": "卸载",
+  "streamingFromUrl": "从 URL 挂载中",
+  "mountedFromStorage": "已从存储挂载",
+  "urlDialogTitle": "从 URL 挂载",
+  "urlDialogDesc": "输入要挂载的镜像文件 URL",
+  "mountUrlButton": "挂载 URL",
+  "backButton": "返回",
+  "storageDialog": {
+    "titleAvailable": "从 ArkKVM 存储挂载",
+    "titleUploading": "继续或上传新文件",
+    "descAvailable": "从 ArkKVM 存储中选择要挂载的镜像",
+    "descUploading": "管理已上传的镜像并开始新的上传",
+    "back": "返回",
+    "mountFile": "挂载文件",
+    "tabAvailable": "可用",
+    "tabUploading": "上传中",
+    "loadingFiles": "正在加载存储文件...",
+    "noFiles": "存储中暂无文件。",
+    "availableStorage": "可用存储空间",
+    "usedPct": "已使用 {{pct}}%",
+    "usedText": "已用 {{used}}",
+    "freeText": "剩余 {{free}}",
+    "uploadNewImage": "上传新镜像",
+    "noCurrentUploads": "暂无正在上传的文件",
+    "noCurrentUploadsDesc": "您上传的文件会显示在这里。",
+    "formatsIntro": "选择一个文件以继续上传或上传新文件。",
+    "formatsTypes": "支持的格式：ISO、IMG"
+  },
+  "sourceDialog": {
+    "title": "虚拟媒体来源",
+    "description": "选择挂载虚拟媒体的方式",
+    "urlMount": {
+      "label": "URL 挂载",
+      "badge": "实验性",
+      "description": "从任何公共网址挂载文件"
+    },
+    "storageMount": {
+      "label": "ArkKVM 存储挂载",
+      "description": "从 ArkKVM 存储中挂载先前上传的文件"
+    },
+    "cancelButton": "取消",
+    "continueButton": "继续"
+  }
+}

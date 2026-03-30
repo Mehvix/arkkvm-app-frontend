@@ -1,0 +1,51 @@
+/**
+ * @Purpose:
+ * @Descripttion:
+ * @version:
+ * @Author: zhanglei
+ * @Date: 2025-11-03 14:42:12
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-01-29 15:17:39
+ */
+import React from 'react'
+import type { KeyLabelProps } from '../types'
+
+/**
+ * Key label renderer component
+ *
+ * Handles different types of key labels:
+ * - String labels: Simple text display
+ * - Array labels: Dual-state display (e.g., shift states)
+ * - React node labels: Custom components (e.g., icons)
+ *
+ * @param label - The label content to render
+ * @param isStringLabel - Whether the label is a string
+ * @param isArrayLabel - Whether the label is an array
+ * @param showDualState - Whether to show both states (default: true, shows primary faded + secondary bold)
+ */
+export const KeyLabel: React.FC<
+  KeyLabelProps & { showDualState?: boolean }
+> = ({ label, isStringLabel, isArrayLabel, showDualState = true }) => {
+  if (isArrayLabel) {
+    const [primary, secondary] = label as string[]
+
+    if (!showDualState) {
+      return <>{secondary}</>
+    }
+
+    return (
+      <span className="flex flex-col leading-tight items-center">
+        <span className="opacity-60 text-[10px]" aria-hidden="true">
+          {secondary}
+        </span>
+        <span className="font-semibold">{primary}</span>
+      </span>
+    )
+  }
+
+  if (isStringLabel) {
+    return <>{label as string}</>
+  }
+
+  return <>{label as React.ReactNode}</>
+}

@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+
+# Environment files
+.env*
+
+# Lock files
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Generated files
+src/assets/icons/index.ts
+src/components/index.ts
+src/router/routeConfig.ts

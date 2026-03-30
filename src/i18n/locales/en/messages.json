@@ -1,0 +1,263 @@
+{
+  "connectionTimeout": {
+    "title": "Connection Timeout",
+    "subtitle": "We couldn't get a response from the local ArkKVM service. Please make sure it's running and reachable.",
+    "items": [
+      "Confirm the ArkKVM helper/service is running on this computer",
+      "If you just started the device, wait a few seconds and try again",
+      "Restart the ArkKVM app or your computer if the problem persists"
+    ]
+  },
+  "webrtcConnection": {
+    "new": {
+      "title": "Preparing Connection",
+      "items": [
+        "Initializing remote session",
+        "Setting up communication channels",
+        "Ready to connect to your device"
+      ]
+    },
+    "connecting": {
+      "title": "Connecting...",
+      "items": [
+        "Establishing secure connection with your device",
+        "Negotiating WebRTC session parameters",
+        "This may take a few seconds depending on network conditions"
+      ]
+    },
+    "connected": {
+      "title": "Connected",
+      "items": [
+        "You are now remotely connected to your device",
+        "Video and audio streams are active",
+        "If you encounter delay, check your network performance"
+      ]
+    },
+    "disconnected": {
+      "title": "Connection Lost",
+      "items": [
+        "The connection was interrupted due to network instability",
+        "Ensure your network connection is stable and active",
+        "If using Wi-Fi, try staying closer to the router or switch to wired network"
+      ]
+    },
+    "failed": {
+      "title": "Connection Failed",
+      "items": [
+        "The device may be unreachable or not responding",
+        "Ensure the device is powered on and connected to the network",
+        "Check if any firewall or router settings are blocking the connection",
+        "If using STUN/TURN, ensure the signaling server is available"
+      ]
+    },
+    "closed": {
+      "title": "Connection Closed",
+      "items": [
+        "The remote session has ended or was manually stopped",
+        "Your device may have restarted or switched networks",
+        "Click \"Reconnect\" to establish a new session"
+      ]
+    }
+  },
+  "hdmiSignal": {
+    "noSignal": {
+      "title": "No Signal",
+      "items": [
+        "No video signal detected from the source device.",
+        "Check if the source device is powered on.",
+        "Verify that the HDMI cable is securely connected."
+      ]
+    },
+    "noLock": {
+      "title": "Signal Not Locked",
+      "items": [
+        "The HDMI signal is detected but cannot be locked.",
+        "This may indicate unstable or incomplete video output.",
+        "Try reconnecting the HDMI cable or restarting the source device."
+      ]
+    },
+     "disconnected": {
+      "title": "HDMI Cable Disconnected",
+      "items": [
+        "The HDMI cable has been disconnected from the device.",
+        "Please reconnect the HDMI cable securely at both ends.",
+        "Ensure the cable is not damaged and the connectors are clean."
+      ]
+    }
+  },
+  "cameraEmulation": {
+    "tips": {
+      "title": "Tips:",
+      "items": [
+        "To use this feature on a local network, please switch to HTTPS mode in the access settings.",
+        "Manually enable camera streaming in the interface before using the local camera."
+      ]
+    }
+  },
+  "microphoneEmulation": {
+    "tips": {
+      "title": "Tips:",
+      "items": [
+        "To use this feature on a local network, please switch to HTTPS mode in the access settings.",
+        "Manually enable microphone streaming in the interface before using the local microphone."
+      ]
+    }
+  },
+  "streamAnalytics": {
+    "header": {
+      "title": "Stream Metrics Center",
+      "desc": "Real-time statistics for inbound / outbound media streams and control channels.",
+      "list": "List",
+      "chart": "Chart",
+      "listTitle": "List view",
+      "chartTitle": "Chart view"
+    },
+    "status": {
+      "good": "Good",
+      "stable": "Stable",
+      "poor": "Poor Quality",
+      "noSignal": "No Signal",
+      "limited": "Limited",
+      "active": "Active",
+      "disconnected": "Disconnected",
+      "lowLatency": "Low latency",
+      "normal": "Normal",
+      "receiving": "Receiving",
+      "noAudio": "No Audio",
+      "sending": "Sending",
+      "inactive": "Inactive",
+      "muted": "Muted",
+      "connected": "Connected",
+      "goodQuality": "Good Quality"
+    },
+    "labels": {
+      "video": "Video",
+      "audio": "Audio",
+      "latency": "Latency",
+      "dropped": "Dropped",
+      "usb": "USB",
+      "rpcRtt": "RPC RTT",
+      "eventsPerMin": "Events / min",
+      "droppedEvents": "Dropped events",
+      "throughput": "Throughput",
+      "queueDelay": "Queue delay",
+      "errors": "Errors",
+      "rtt": "RTT",
+      "messagesPerSec": "Messages / s",
+      "status": "Status",
+      "packetLoss": "Packet Loss"
+    },
+    "charts": {
+      "videoSource": "📹 Video Source Metrics",
+      "latencyJitter": "🌐 Latency & Jitter",
+      "mediaBuffer": "🎬 Media Buffer Delay",
+      "audioBitrate": "🔊 Audio Bitrate",
+      "videoRender": "🎞️ Video Render Health",
+      "packetsLost": "📉 Packets Lost",
+      "fps": "FPS",
+      "bitrateMbps": "Bitrate (Mbps)",
+      "rttMs": "RTT (ms)",
+      "videoJitterMs": "Video Jitter (ms)",
+      "audioJitterMs": "Audio Jitter (ms)",
+      "videoRt": "Video (rt)",
+      "videoAvg": "Video (avg)",
+      "audioRt": "Audio (rt)",
+      "audioAvg": "Audio (avg)",
+      "audioBitrateKbps": "Audio Bitrate (kbps)",
+      "framesDecoded": "Frames Decoded",
+      "framesDropped": "Frames Dropped",
+      "packetsDiscarded": "Packets Discarded",
+      "packetsLostLabel": "Packets Lost"
+    },
+    "sections": {
+      "inboundMedia": "Inbound Media",
+      "outboundMedia": "Outbound Media",
+      "hidControl": "HID Control",
+      "usbRpc": "USB & RPC",
+      "controlPanels": "Control Panels",
+      "mediaDetails": "Stream Details",
+      "inboundVideo": "Video Stream (Device → You)",
+      "inboundAudio": "Audio Stream (Device → You)",
+      "outboundVideo": "Video Upload (You → Device)",
+      "outboundAudio": "Audio Upload (You → Device)",
+      "usbOverIp": "USB-over-IP",
+      "rpcChannel": "RPC Data Channel"
+    },
+    "details": {
+      "fps": "Frame Rate",
+      "bitrate": "Bitrate",
+      "jitterRealtime": "Network Jitter (realtime)",
+      "jitterAvg": "Network Jitter (average)",
+      "packetsLost": "Lost Packets",
+      "framesDroppedInterval": "Dropped Frames",
+      "packetsDiscardedInterval": "Discarded Packets",
+      "throughput": "Throughput",
+      "queueDelay": "Queue delay",
+      "errors": "Errors",
+      "rtt": "RTT",
+      "messagesPerSec": "Messages / s"
+    }
+  },
+  "welcome": {
+    "hero": {
+      "title": "Welcome to ArkKVM",
+      "subtitle": "Use any computer remotely",
+      "line1": "ArkKVM is a tiny IP KVM with PoE, two-way audio and file transfer.",
+      "line2": "It turns remote control into true remote computing.",
+      "setupButton": "Setup your ArkKVM"
+    },
+    "authMethod": {
+      "title": "Local Authentication Method",
+      "subtitle": "Select how you would like to secure your local access to **ArkKVM**.",
+      "passwordLabel": "Password Protected",
+      "passwordDesc": "Secure your access with a password for added protection.",
+      "noPasswordLabel": "No Password",
+      "noPasswordDesc": "Access without password protection. It may expose your data and privacy to significant risks.",
+      "proceedWithRisk": "Proceed with Risk",
+      "continue": "Continue",
+      "footerNote": "You can change it later in Settings."
+    },
+    "setupBtn": {
+      "later": "Set up Later",
+      "note": "You can change it later in Settings."
+    },
+    "speaker": {
+      "title": "Sound Playback",
+      "line1": "Enable **Sound Playback** to play audio from the remote computer on your host via ArkKVM.",
+      "line2": "Switch this on if you need sound from the remote device.",
+      "action": "Enable Sound Playback"
+    },
+    "microphone": {
+      "title": "Microphone Emulation",
+      "line1": "Enable **Microphone Emulation** to make your host computer's microphone available to apps on the remote computer.",
+      "line2": "Turn this on if your use case requires microphone input.",
+      "action": "Enable Microphone Emulation"
+    },
+    "camera": {
+      "title": "",
+      "line1": "",
+      "line2": "",
+      "action": ""
+    },
+    "fileTransfer": {
+      "title": "File Transfer",
+      "line1": "Enable a **Virtual USB Drive** for two-way file transfer between your computer and the remote system.",
+      "line2": "",
+      "line3": "",
+      "action": "Enable Virtual USB Drive"
+    },
+    "autoUpdate":{
+       "title": "Automatic Updates",
+      "subtitle": "Automatically install **software updates** to keep your device secure and up to date.",
+      "getStarted": "Get Started",
+      "getStartedLoading": "Get Started...",
+      "action": "Enable Automatic Updates"
+    },
+     "complete": {
+      "title": "Welcome to ArkKVM",
+      "subtitle": "Experience the next-generation way of using computer remotely.",
+      "getStarted": "Get Started",
+      "getStartedLoading": "Get Started..."
+    }
+  }
+}

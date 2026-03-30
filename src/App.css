@@ -1,0 +1,277 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-color);
+  font-family: 'Funnel Sans';
+}
+/* Global hide scrollbar */
+html,
+body {
+  overflow: hidden; /* Prevent entire page scrolling */
+  -ms-overflow-style: none; /* IE / Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / iPadOS */
+}
+@layer base {
+  * {
+    font-weight: 400;
+    font-family: 'Funnel Sans', sans-serif;
+  }
+}
+/* Hide all video controls */
+video::-webkit-media-controls {
+  display: none !important;
+}
+video::-webkit-media-controls-panel {
+  display: none !important;
+}
+video::-webkit-media-controls-play-button {
+  display: none !important;
+}
+video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+video::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+}
+video::-webkit-media-controls-overlay-enclosure {
+  display: none !important;
+}
+video::-internal-media-controls-overlay-cast-button,
+video::-internal-media-controls-picture-in-picture-button {
+  display: none !important;
+}
+
+/* Mobile specific styles */
+@media (max-width: 768px) {
+  video {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    pointer-events: auto; /* Mobile restore video element interaction, support simulated mouse events */
+    touch-action: none;
+  }
+
+  /* Force hide mobile play controls */
+  video::-webkit-media-controls-overlay-play-button {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* Hide all possible mobile video controls */
+  video::-webkit-media-controls-timeline {
+    display: none !important;
+  }
+
+  video::-webkit-media-controls-current-time-display {
+    display: none !important;
+  }
+
+  video::-webkit-media-controls-time-remaining-display {
+    display: none !important;
+  }
+
+  video::-webkit-media-controls-mute-button {
+    display: none !important;
+  }
+
+  video::-webkit-media-controls-volume-slider {
+    display: none !important;
+  }
+}
+
+/* Desktop keep normal interaction */
+@media (min-width: 769px) {
+  video {
+    pointer-events: auto; /* Desktop restore video element interaction */
+  }
+}
+.border,
+.border-top,
+.border-bottom,
+.border-left,
+.border-right {
+  border-width: 0.6px;
+
+  /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); */
+}
+.border-r {
+  /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); */
+}
+.border-l {
+  /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); */
+}
+.border-b {
+  /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); */
+}
+.border-t {
+  /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); */
+}
+.setting-right-box {
+  height: calc(100% - 40px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* Project standard spacing tool class (16px) - Simplified class names to avoid conflicts with TailwindCSS */
+.m-all {
+  margin: 16px;
+}
+.p-all {
+  padding: 16px;
+}
+/* Standard 16px spacing class - Project约定的基础间距单位 */
+.main-m {
+  margin: 16px;
+}
+.mt {
+  margin-top: 16px;
+}
+.mr {
+  margin-right: 16px;
+}
+.ml {
+  margin-left: 16px;
+}
+.mb {
+  margin-bottom: 16px;
+}
+.pl {
+  padding-left: 16px;
+}
+.pr {
+  padding-right: 16px;
+}
+.pt {
+  padding-top: 16px;
+}
+.pb {
+  padding-bottom: 16px;
+}
+/**滚动条样式*/
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  padding: 12px;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  padding: 12px;
+  border-radius: 6px;
+  background: hsla(0, 0%, 80%, 0.6);
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(30, 30, 30, 0);
+  border-radius: 0;
+}
+/* text styles */
+.text-h1 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.text-body {
+  font-size: 14px;
+  line-height: normal;
+  font-weight: 400;
+}
+
+.text-sub,
+.text-label {
+  font-size: 12px;
+  line-height: normal;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 300;
+}
+
+.text-micro {
+  font-size: 12px;
+  line-height: 12px;
+  font-weight: 400;
+}
+.text-input {
+  font-size: 12px;
+  line-height: normal;
+  font-weight: 400;
+}
+
+/* Status bar list items fixed width */
+.status-bar > li {
+  /* min-width: 100px; */
+  white-space: nowrap; /* keep on one line */
+  overflow: hidden; /* truncate overflow */
+  text-overflow: ellipsis;
+}
+
+/* ISO Enter key style - Use pseudo-class to extend upwards */
+.iso-enter {
+  position: relative;
+  z-index: 10;
+  /* Keycap立体感 */
+  background: linear-gradient(180deg, #4a4a4f 0%, #3a3a3f 100%);
+  border: 1px solid #2a2a2d;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+}
+
+.iso-enter:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.iso-enter::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: calc(100% - 1px);
+  height: 40px;
+  /* Inherit keycap gradient background */
+  background: linear-gradient(180deg, #4a4a4f 0%, #3a3a3f 100%);
+  border: 1px solid #2a2a2d;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  /* 3D shadow */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 rgba(255, 255, 255, 0.03);
+}

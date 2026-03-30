@@ -1,0 +1,55 @@
+/* Design token color variables extracted from design spec */
+
+:root {
+  /* Light mode tokens */
+  --theme-bg-color: rgba(250, 250, 250, 1);
+  --secondary-bg-color: rgba(229, 229, 229, 1);
+  --text-color: rgba(10, 10, 10, 1);
+  --status-color-1: rgba(0, 253, 84, 1);
+  --bg-button-color: rgba(212, 212, 212, 1);
+  --status-color-3: rgba(153, 153, 153, 1);
+  --border-color: rgba(212, 212, 212, 1);
+  --primary-color: rgba(239, 68, 68, 1);
+  --status-color-2: rgba(251, 146, 60, 1);
+  --active-text-color: rgba(153, 27, 27, 1);
+  --active-bg-button-color: rgba(254, 202, 202, 1);
+  --active-border-color: rgba(153, 27, 27, 1);
+  --inactive-text-color: rgba(115, 115, 115, 1);
+  --icon-color: rgba(255, 255, 255, 1);
+}
+
+.dark {
+  /* Dark mode overrides */
+  --theme-bg-color: rgba(10, 10, 10, 1);
+  --secondary-bg-color: rgba(23, 23, 23, 1);
+  --text-color: rgba(255, 255, 255, 1);
+  --status-color-1: rgba(0, 253, 84, 1);
+  --bg-button-color: rgba(38, 38, 38, 1);
+  --status-color-3: rgba(153, 153, 153, 1);
+  --border-color: rgba(64, 64, 64, 1);
+  --primary-color: rgba(239, 68, 68, 1);
+  --status-color-2: rgba(251, 146, 60, 1);
+  --active-text-color: rgba(254, 242, 242, 1);
+  --active-bg-button-color: rgba(69, 10, 10, 1);
+  --active-border-color: rgba(153, 27, 27, 1);
+  --inactive-text-color: rgba(115, 115, 115, 1);
+  --icon-color: rgba(255, 255, 255, 1);
+}
+
+.light {
+  /* Explicit light mode tokens (same as :root) */
+  --theme-bg-color: rgba(250, 250, 250, 1);
+  --secondary-bg-color: rgba(229, 229, 229, 1);
+  --text-color: rgba(10, 10, 10, 1);
+  --status-color-1: rgba(0, 253, 84, 1);
+  --bg-button-color: rgba(212, 212, 212, 1);
+  --status-color-3: rgba(153, 153, 153, 1);
+  --border-color: rgba(212, 212, 212, 1);
+  --primary-color: rgba(239, 68, 68, 1);
+  --status-color-2: rgba(251, 146, 60, 1);
+  --active-text-color: rgba(153, 27, 27, 1);
+  --active-bg-button-color: rgba(254, 202, 202, 1);
+  --active-border-color: rgba(153, 27, 27, 1);
+  --inactive-text-color: rgba(115, 115, 115, 1);
+  --icon-color: rgba(255, 255, 255, 1);
+}

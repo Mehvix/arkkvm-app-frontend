@@ -1,0 +1,525 @@
+{
+  "sidebar": {
+    "title": "Settings",
+    "regular": "General",
+    "mouse": "Mouse",
+    "keyboard": "Keyboard",
+    "video": "Video",
+    "audio": "Audio",
+    "hardware": "Device",
+    "accessibility": "Access",
+    "appearance": "Appearance",
+    "keyboardMacros": "",
+    "network": "Network",
+    "advanced": "Advanced"
+  },
+  "pages": {
+    "regular": {
+      "title": "General",
+      "description": "Configure device settings and update preferences"
+    },
+    "mouse": {
+      "title": "Mouse",
+      "description": "Configure cursor behavior and interaction settings for your device"
+    },
+    "keyboard": {
+      "title": "Keyboard",
+      "description": "Configure keyboard settings for your device"
+    },
+    "video": {
+      "title": "Video",
+      "description": "Optimize video quality, color, and display compatibility"
+    },
+    "audio": {
+      "title": "Audio",
+      "description": "Manage audio playback and microphone sharing"
+    },
+    "hardware": {
+      "title": "Device",
+      "description": "Configure display settings and hardware options for your ArkKVM device"
+    },
+    "accessibility": {
+      "title": "Access",
+      "description": "Manage access control for your device"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Customize the look and feel of your ArkKVM interface"
+    },
+    "network": {
+      "title": "Network",
+      "description": "Manage your network configuration"
+    },
+    "advanced": {
+      "title": "Advanced",
+      "description": "Access additional advanced configuration options"
+    }
+  },
+  "updateDialog": {
+    "loading": {
+      "title": "Checking for updates...",
+      "desc": "Making sure your device has the latest features and improvements.",
+      "cancel": "Close"
+    },
+    "updateAvailable": {
+      "title": "Update available",
+      "desc": "A new update is available with performance improvements and compatibility enhancements.",
+      "labelSystem": "System:",
+      "labelApp": "App:",
+      "cancel": "Later",
+      "confirm": "Update Now"
+    },
+    "upToDate": {
+      "title": "System is up to date",
+      "desc": "You're running the latest version. No updates are currently available.",
+      "confirm": "Close"
+    },
+    "download": {
+      "title": "Downloading update...",
+      "desc": "Please keep your device powered on. This may take a few minutes.",
+      "cancel": "Download in Background"
+    },
+    "verify": {
+      "title": "Verifying update...",
+      "desc": "Checking the integrity of the downloaded files."
+    },
+    "preparing": {
+      "title": "Installing update...",
+      "desc": "Please keep your device powered on. The system will restart automatically."
+    },
+    "updateCompleted": {
+      "title": "Update Completed",
+      "desc": "Your device has been successfully updated to the latest version."
+    },
+    "error": {
+      "title": "Update Error",
+      "desc": "An error occurred while updating your device. Please try again later.",
+      "detailsLabel": "Error details:",
+      "cancel": "Close",
+      "confirm": "Retry"
+    }
+  },
+  "regular": {
+    "checkForUpdates": "Check for Updates",
+    "appVersion": "App: {{version}}",
+    "systemVersion": "System: {{version}}",
+    "check": "Check",
+    "autoUpdate": "Automatic Updates",
+    "autoUpdateDesc": "Automatically keep your device up to date.",
+    "status": {
+      "upToDate": "You’re up to date.",
+      "checking": "Checking for updates…",
+      "available": "New version available.",
+      "failed": "Update failed."
+    }
+  },
+  "languageDesc": "Choose your preferred language.",
+  "themeDesc": "Choose the app's appearance theme.",
+  "appearance": {
+    "theme": {
+      "title": "Theme",
+      "desc": "Choose your preferred color theme"
+    },
+    "statusBar": {
+      "title": "Status Bar",
+      "desc": "Choose what information is shown in the status bar.",
+      "pressedKeys": {
+        "title": "Pressed Keys",
+        "desc": "Show currently pressed keys."
+      },
+      "diagnosticInfo": {
+        "title": "Diagnostic Info",
+        "desc": "Show technical details for troubleshooting and diagnostics."
+      },
+      "keyboardLeds": {
+        "title": "Keyboard LEDs",
+        "desc": "Show the remote system's keyboard LED indicators."
+      }
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "enable": "Enable",
+    "disable": "Disable",
+    "retry": "Retry"
+  },
+  "panels": {
+    "accessibility": "Access",
+    "appearance": "Appearance",
+    "keyboardMacros": "",
+    "network": "Network",
+    "advanced": "Advanced"
+  },
+  "mouse": {
+    "hideCursor": {
+      "title": "Hide Cursor",
+      "desc": "Hide the cursor while controlling the remote system."
+    },
+    "cursorStyle": {
+      "title": "Cursor style",
+      "desc": "Choose the appearance of the cursor.",
+      "dot": "Dot",
+      "arrow": "Arrow"
+    },
+    "scrollThrottling": {
+      "title": "Scrolling Speed",
+      "desc": "Reduce scrolling speed on the remote system."
+    },
+    "jiggler": {
+      "title": "Mouse Jiggler",
+      "desc": "Simulate small mouse movements at regular intervals to keep the system awake."
+    },
+    "inputMode": {
+      "title": "Mouse Mode",
+      "desc": "Choose how the mouse behaves on the remote system.",
+      "absolute": {
+        "title": "Absolute",
+        "desc": "Most convenient for general use",
+        "tip": "Absolute mode maps your mouse position directly to the remote screen, making it easier to control in most situations."
+      },
+      "relative": {
+        "title": "Relative",
+        "desc": "Traditional mouse behavior",
+        "tip": "Relative mode behaves like a traditional PC mouse and is useful for specific applications."
+
+      }
+    }
+  },
+  "keyboard": {
+    "page": {
+      "title": "Keyboard",
+      "description": "Configure keyboard settings for your device"
+    },
+    "keyboardLayout": {
+      "title": "Keyboard Layout",
+      "desc": "Select the keyboard layout of the remote operating system",
+      "tip": [
+        "The virtual keyboard, text paste, and shortcut keys send individual keystrokes to the remote device.",
+        "The keyboard layout determines how these keystrokes are interpreted.",
+        "Make sure the selected layout matches the keyboard settings of the remote operating system.",
+        "Note: Text paste relies on direct keystroke input. Some non-Latin characters (such as Chinese, Japanese, or Korean) may not be supported due to input method limitations."
+      ]
+    },
+    "ledSync": {
+      "title": "LED state synchronization",
+      "desc": "Synchronize the LED state of the keyboard with the target device"
+    },
+    "showPressedKeys": {
+      "title": "Show Pressed Keys",
+      "desc": "Display currently pressed keys in the status bar"
+    },
+    "modifierKeyRelease": {
+      "title": "Modifier Key Release",
+      "desc": "Control how modifier keys (Shift, Ctrl, Alt, Cmd) are released after a key combination",
+      "auto": "Auto",
+      "manual": "Manual"
+    }
+  },
+  "video": {
+    "cameraEmulation": {
+      "title": "Camera Emulation",
+      "desc": "Enable remote apps to use local camera"
+    },
+    "streamQuality": {
+      "title": "Stream Quality",
+      "desc": "Adjust the quality of the video stream"
+    },
+    "enhancement": {
+      "title": "Video Color",
+      "desc": "Adjust color settings to make the video output more vibrant and colorful",
+       "restoreButton": "Restore to default",
+      "saturation": {
+        "title": "Saturation",
+        "desc": "Color saturation"
+      },
+      "brightness": {
+        "title": "Brightness",
+        "desc": "Brightness level"
+      },
+      "contrast": {
+        "title": "Contrast",
+        "desc": "Contrast level"
+      },
+      "hueRotate": {
+        "title": "Hue Rotate",
+        "desc": "Color temperature adjustment"
+      }
+    },
+
+    "edid": {
+      "title": "EDID",
+      "desc": "Configure EDID settings for display compatibility",
+      "custom": {
+        "title": "Custom EDID",
+        "desc": "EDID determines video mode compatibility.  Default settings work in most cases, but some UEFI/BIOS configurations may require adjustments.",
+        "placeholder":"Paste an EDID hex string (even length, 0–9 and A–F). Spaces are allowed and will be removed automatically.",
+        "fileLabel": "EDID Data",
+        "setButton": "Apply Custom EDID",
+        "restoreButton": "Restore to default"
+      }
+    }
+  },
+  "audio": {
+    "streamQuality": {
+      "title": "Stream quality",
+      "desc": "Adjust the quality of the audio stream"
+    },
+    "playback": {
+      "title": "Playback",
+      "desc": "Stream remote audio to this device"
+    },
+    "microphoneEmulation": {
+      "title": "Microphone emulation",
+      "desc": "Enable remote apps to access local microphone"
+    }
+  },
+  "hardware": {
+    "orientation": {
+      "title": "Display Orientation",
+      "desc": "Set the orientation of the display",
+      "placeholder": "Select orientation",
+      "options": {
+        "normal": "Normal",
+        "inverted": "Upside Down"
+      }
+    },
+    "displayBrightness": {
+      "title": "Display Brightness",
+      "desc": "Set the brightness of the display"
+    },
+    "dimAfter": {
+      "title": "Dim Display After",
+      "desc": "Set the delay before the display dims"
+    },
+    "turnOffAfter": {
+      "title": "Turn off Display After",
+      "desc": "Set the period of inactivity before the display automatically turns off.",
+      "tip": "The display will wake up when the screen is touched."
+    },
+    "usb": {
+      "title": "USB Devices",
+      "desc": "Configure USB device emulation for the remote computer",
+      "classes": {
+        "title": "Classes",
+        "desc": "USB device classes in the composite device"
+      },
+      "virtualUsbDrive": {
+        "title": "Virtual USB Drive",
+        "desc": "Present a writable USB drive for file transfer",
+        "warning": "This drive uses FAT32. Reformatting it may prevent ArkKVM from mounting it again."
+      },
+      "identifiers": {
+        "title": "Identifiers",
+        "desc": "USB device identifiers exposed to the target computer"
+      }
+    }
+  },
+  "network": {
+    "macAddress": {
+      "title": "MAC Address",
+      "desc": "Hardware identifier of the network interface"
+    },
+    "hostname": {
+      "title": "Hostname",
+      "desc": "Network identifier for this device"
+    },
+    "httpProxy": {
+      "title": "HTTP Proxy",
+      "desc": "roxy server for outgoing HTTP and HTTPS requests. Leave blank to connect directly."
+    },
+    "domain": {
+      "title": "Domain",
+      "desc": "Set the DNS search domain for this device.",
+      "customLabel": "Custom Domain"
+    },
+    "mdns": {
+      "title": "mDNS",
+      "desc": "Control how this device is discovered on the local network"
+    },
+    "timeSynchronization": {
+      "title": "Time synchronization",
+      "desc": "Configure how the device synchronizes system time"
+    },
+    "saveButton": "Save Settings",
+    "savingButton": "Saving...",
+    "ipv4Mode": {
+      "title": "IPv4 Mode",
+      "desc": "Configure how the device obtains an IPv4 address"
+    },
+    "ipv6Mode": {
+      "title": "IPv6 Mode",
+      "desc": "Configure how the device obtains an IPv6 address"
+    },
+    "dhcpLease": {
+      "title": "DHCP Lease Information",
+      "ipAddress": "IP Address",
+      "gateway": "Gateway",
+      "subnetMask": "Subnet Mask",
+      "dhcpServer": "DHCP Server",
+      "broadcast": "Broadcast",
+      "bootNextServer": "Boot Next Server",
+      "hostname": "Hostname",
+      "renewButton": "Renew DHCP Lease",
+      "renewTitle": "Renew DHCP Lease",
+      "renewContent": "This will request a new IP address from your DHCP server. Your device may temporarily lose network connectivity during this process.",
+      "renewConfirm": "Renew Lease"
+    },
+    "ipv6Info": {
+      "title": "IPv6 Information",
+      "linkLocal": "Link-local",
+      "ipv6Address": "IPv6 Address",
+      "validLifetime": "Valid Lifetime",
+      "preferredLifetime": "Preferred Lifetime"
+    }
+  },
+  "advanced": {
+    "webTerminal": {
+      "title": "Web Terminal",
+      "desc": "Enable shell access via the web interface"
+    },
+    "developerMode": {
+      "title": "Developer Mode",
+      "desc": "Enable advanced features for developers"
+    },
+    "loopbackOnly": {
+      "title": "Loopback-Only Mode",
+      "desc": "Restrict web interface access to localhost only (127.0.0.1)"
+    },
+    "sshAccess": {
+      "title": "SSH Access",
+      "desc": "Allow SSH access with key-based authentication",
+      "keyLabel": "SSH Public Key",
+      "keyPlaceholder": "Paste your SSH public key here...",
+      "defaultUserText": "The default SSH user is",
+      "updateButton": "Update SSH Key"
+    },
+    "troubleshooting": {
+      "title": "Troubleshooting Mode",
+      "desc": "Diagnostic tools and additional controls for troubleshooting and development purposes",
+      "usbEmulation": {
+        "title": "USB Emulation",
+        "desc": "Control the USB emulation state",
+        "enableButton": "Enable USB Emulation",
+        "disableButton": "Disable USB Emulation"
+      },
+      "resetConfig": {
+        "title": "Reset Configuration",
+        "desc": "Reset most settings to their default values. You will be signed out.",
+        "button": "Reset Configuration"
+      }
+    }
+  },
+  "accessibility": {
+    "local": {
+      "title": "Local",
+      "desc": "Manage local access settings for the device"
+    },
+    "httpsMode": {
+      "title": "HTTPS Mode",
+      "desc": "Choose how secure connections are handled",
+      "disabled": "Disabled",
+      "selfSigned": "Self-signed",
+      "custom": "Custom"
+    },
+    "tlsCertificate": {
+      "title": "TLS Certificate",
+      "desc": "Paste your TLS certificate  below. Include the full chain, such as the leaf, intermediate, and root certificates.",
+      "certLabel": "Certificate",
+      "certPlaceholder": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "keyLabel": "Private Key",
+      "keyPlaceholder": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
+      "keyDescription": "The private key must match the uploaded certificate. For security reasons, it won’t be displayed after applying.",
+      "updateButton": "Apply Certificate"
+    },
+    "authMode": {
+      "title": "Authentication",
+      "currentMode": "Status:",
+      "passwordProtected": "Password set",
+      "noPassword": "Password not set",
+      "enableButton": "Set Password",
+      "disableButton": "Remove Password"
+    },
+    "changePassword": {
+      "title": "Change Password",
+      "desc": "Update the password for local access to this device",
+      "button": "Change Password",
+      "formTitle": "Change Local Password",
+      "formDesc": "Enter your current password and choose a new password.",
+      "oldPasswordPlaceholder": "Enter your current password",
+      "newPasswordPlaceholder": "Enter a strong password",
+      "confirmPasswordPlaceholder": "Re-enter a strong password",
+      "changeButton": "Change Password",
+      "cancel": "Cancel",
+      "successTitle": "Password Updated",
+      "successDesc": "  Your local password has been updated.Use the new password for future access.",
+      "close": "Done",
+      "errorMismatch": "Passwords do not match",
+      "errorOldEmpty": "Please enter your old password",
+      "errorNewEmpty": "Please enter a new password",
+      "errorSpaces": "Password cannot contain spaces",
+      "errorGeneral": "An error occurred while changing the password"
+    },
+    "remote": {
+      "title": "Remote",
+      "desc": "Manage remote access settings for the device"
+    },
+    "cloudProvider": {
+      "title": "Cloud Provider",
+      "desc": "Choose the cloud service used for remote access",
+      "arkkvm": "ArkKVM Cloud",
+      "custom": "Custom"
+    },
+    "cloudSecurity": {
+      "title": "Cloud Security",
+      "feature1": "End-to-end encryption via WebRTC (DTLS and SRTP)",
+      "feature2": "Zero Trust security model",
+      "feature3": "OIDC (OpenID Connect) authentication",
+      "feature4": "All streams encrypted in transit",
+      "openSourceText": "All cloud components are open-source and available on",
+      "learnMoreButton": "Learn more about our cloud security"
+    },
+    "cloudUrls": {
+      "apiLabel": "Cloud API URL",
+      "apiPlaceholder": "https://cloud.arkkvm.com/api",
+      "appLabel": "Cloud App URL",
+      "appPlaceholder": "https://cloud.arkkvm.com/app"
+    },
+    "cloudButtons": {
+      "adopt": "Connect to Cloud",
+      "deregister": "Disconnect from Cloud",
+      "loading": "Loading..."
+    },
+    "localAuth": {
+      "title": "Set Local Password",
+      "desc": "Set a password to prevent unauthorized access to your device.",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter a strong password",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Re-enter your password",
+      "secureDevice": "Set Password",
+      "notNow": "Not Now",
+      "successTitle": "Password Set",
+      "successDesc": "A local password has been set. Your device is now protected against unauthorized local access.",
+      "close": "Done",
+      "errorEmpty": "Please enter a password",
+      "errorSpaces": "Password cannot contain spaces",
+      "errorMismatch": "Passwords do not match",
+      "errorGeneral": "An error occurred while setting the password"
+    },
+    "removePassword": {
+      "title": "Remove Local Password",
+      "desc": "Enter your current password to disable local device protection.",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "disableProtection": "Remove Password",
+      "cancel": "Cancel",
+      "successTitle": "Password Removed",
+      "successDesc": " The local password has been removed. Local access to this device is no longer protected.",
+      "close": "Done",
+      "errorEmpty": "Please enter your current password",
+      "errorGeneral": "An error occurred while removing the password"
+    }
+  }
+}

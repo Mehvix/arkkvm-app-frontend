@@ -1,0 +1,48 @@
+{
+  // 强制使用 Prettier 作为默认格式化工具
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // 临时禁用保存时格式化，避免 Prettier 错误添加分号
+  "editor.formatOnSave": false,
+
+  // 为所有支持的文件类型强制使用 Prettier
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // 强制要求 Prettier 配置文件
+  "prettier.requireConfig": true,
+  "prettier.useEditorConfig": false,
+
+  // 禁用其他可能干扰的格式化设置
+  "editor.formatOnType": false,
+  "editor.formatOnPaste": false,
+
+  // ESLint 设置
+  "eslint.format.enable": false,
+  "eslint.autoFixOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // TypeScript 设置
+  "typescript.format.enable": false,
+  "javascript.format.enable": false,
+
+  // 确保使用项目的 Prettier 配置
+  "prettier.configPath": ".prettierrc"
+}

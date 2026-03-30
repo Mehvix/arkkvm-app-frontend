@@ -1,0 +1,526 @@
+{
+  "sidebar": {
+    "title": "设置",
+    "regular": "常规",
+    "mouse": "鼠标",
+    "keyboard": "键盘",
+    "video": "视频",
+    "audio": "音频",
+    "hardware": "硬件",
+    "accessibility": "辅助功能",
+    "appearance": "外观",
+    "keyboardMacros": "键盘宏",
+    "network": "网络",
+    "advanced": "高级"
+  },
+  "pages": {
+    "regular": {
+      "title": "常规",
+      "description": "配置设备设置和更新偏好"
+    },
+    "mouse": {
+      "title": "鼠标",
+      "description": "配置光标行为和设备交互设置"
+    },
+    "keyboard": {
+      "title": "键盘",
+      "description": "配置设备的键盘设置"
+    },
+    "video": {
+      "title": "视频",
+      "description": "优化视频质量、颜色和显示兼容性"
+    },
+    "audio": {
+      "title": "音频",
+      "description": "管理音频播放和麦克风共享"
+    },
+    "hardware": {
+      "title": "硬件",
+      "description": "配置 ArkKVM 设备的显示设置和硬件选项"
+    },
+    "accessibility": {
+      "title": "辅助功能",
+      "description": "管理设备的访问控制"
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "自定义 ArkKVM 界面的外观和感觉"
+    },
+    "network": {
+      "title": "网络",
+      "description": "管理网络配置"
+    },
+    "advanced": {
+      "title": "高级",
+      "description": "访问其他高级配置选项"
+    }
+  },
+  "updateDialog": {
+    "loading": {
+      "title": "正在检查更新…",
+      "desc": "我们正在确保您的设备具备最新的功能和改进。",
+      "cancel": "关闭"
+    },
+    "updateAvailable": {
+      "title": "发现新更新",
+      "desc": "有可用更新可提升系统性能并改善兼容性。建议立即更新。",
+      "labelSystem": "系统：",
+      "labelApp": "应用：",
+      "cancel": "稍后再说",
+      "confirm": "立即更新"
+    },
+    "upToDate": {
+      "title": "系统已是最新",
+      "desc": "您的系统正在运行最新版本。目前没有可用更新。",
+      "confirm": "关闭"
+    },
+    "download": {
+      "title": "正在下载更新…",
+      "desc": "请不要关闭设备，下载可能需要几分钟。",
+      "cancel": "关闭"
+    },
+    "verify": {
+      "title": "正在验证更新…",
+      "desc": "正在检查下载文件的完整性。"
+    },
+    "preparing": {
+      "title": "正在安装更新…",
+      "desc": "请不要关闭设备，系统将自动重启。"
+    },
+    "updateCompleted": {
+      "title": "更新完成",
+      "desc": "您的设备已成功更新到最新版本。",
+      "confirm": "关闭"
+    },
+    "error": {
+      "title": "更新出错",
+      "desc": "更新设备时发生错误，请稍后重试。",
+      "detailsLabel": "错误详情：",
+      "cancel": "关闭",
+      "confirm": "重试"
+    },
+    "reconnect": {
+      "title": "更新完成",
+      "desc": "您的设备已成功更新。将在 {{seconds}} 秒后自动重新连接...",
+      "reconnectNow": "立即重连"
+    }
+  },
+  "regular": {
+    "checkForUpdates": "检查更新",
+    "checkForUpdatesDesc": "检查更新以保持设备和应用为最新。",
+    "appVersion": "应用：{{version}}",
+    "systemVersion": "系统：{{version}}",
+    "check": "检查",
+    "autoUpdate": "自动更新",
+    "autoUpdateDesc": "自动将设备更新到最新版本。",
+    "status": {
+      "upToDate": "已是最新版本。",
+      "checking": "正在检查更新…",
+      "available": "发现新版本。",
+      "failed": "更新失败。"
+    }
+  },
+  "languageDesc": "选择您偏好的语言",
+  "themeDesc": "选择应用的主题外观",
+  "appearance": {
+    "theme": {
+      "title": "主题",
+      "desc": "选择您偏好的配色主题"
+    },
+    "statusBar": {
+      "title": "状态栏",
+      "desc": "选择状态栏中显示的信息",
+      "pressedKeys": {
+        "title": "按键显示",
+        "desc": "显示当前按下的按键"
+      },
+      "diagnosticInfo": {
+        "title": "诊断信息",
+        "desc": "显示用于故障排除和诊断的技术详情"
+      },
+      "keyboardLeds": {
+        "title": "键盘指示灯",
+        "desc": "显示远程系统的键盘 LED 指示灯状态"
+      }
+    }
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "apply": "应用",
+    "enable": "启用",
+    "disable": "禁用",
+    "retry": "重试"
+  },
+  "panels": {
+    "accessibility": "辅助功能",
+    "appearance": "外观",
+    "keyboardMacros": "键盘宏",
+    "network": "网络",
+    "advanced": "高级"
+  },
+  "mouse": {
+    "hideCursor": {
+      "title": "隐藏光标",
+      "desc": "发送鼠标移动时隐藏光标"
+    },
+    "cursorStyle": {
+      "title": "光标样式",
+      "desc": "选择光标的显示样式。",
+      "dot": "圆点",
+      "arrow": "箭头"
+    },
+    "scrollThrottling": {
+      "title": "滚动节流",
+      "desc": "降低滚动事件频率"
+    },
+    "jiggler": {
+      "title": "摇鼠器",
+      "desc": "模拟鼠标移动，防止进入睡眠、待机或屏保。"
+    },
+    "inputMode": {
+      "title": "输入模式",
+      "desc": "选择鼠标输入模式",
+      "absolute": {
+        "title": "绝对模式",
+        "desc": "更便捷"
+      },
+      "relative": {
+        "title": "相对模式",
+        "desc": "传统行为"
+      }
+    }
+  },
+  "keyboard": {
+    "page": {
+      "title": "键盘",
+      "description": "配置设备的键盘设置"
+    },
+    "keyboardLayout": {
+      "title": "键盘布局",
+      "desc": "选择远程操作系统的键盘布局",
+      "tip": [
+        "虚拟键盘、文本粘贴和快捷键会向远程设备发送单个按键。",
+        "键盘布局决定了这些按键的解释方式。",
+        "请确保所选布局与远程操作系统的键盘设置匹配。",
+        "注意：文本粘贴依赖于直接按键输入。由于输入法限制，某些非拉丁字符（如中文、日文或韩文）可能不受支持。"
+      ]
+    },
+    "ledSync": {
+      "title": "LED 状态同步",
+      "desc": "将键盘 LED 状态与目标设备同步"
+    },
+    "showPressedKeys": {
+      "title": "显示按下的按键",
+      "desc": "在状态栏显示当前按下的按键"
+    },
+    "modifierKeyRelease": {
+      "title": "修饰键释放",
+      "desc": "控制修饰键（Shift、Ctrl、Alt、Cmd）在组合键后的释放方式",
+      "auto": "自动",
+      "manual": "手动"
+    }
+  },
+  "video": {
+    "cameraEmulation": {
+      "title": "摄像头模拟",
+      "desc": "允许远程应用程序使用本地摄像头"
+    },
+    "streamQuality": {
+      "title": "流质量",
+      "desc": "调整视频流的质量"
+    },
+    "enhancement": {
+      "title": "画面增强",
+      "desc": "调整颜色设置，使视频更鲜艳",
+      "saturation": {
+        "title": "饱和度",
+        "desc": "颜色饱和度 (2.0x)"
+      },
+      "brightness": {
+        "title": "亮度",
+        "desc": "亮度等级 (1.0x)"
+      },
+      "contrast": {
+        "title": "对比度",
+        "desc": "对比度等级 (1.0x)"
+      },
+      "hueRotate": {
+        "title": "色温调节",
+        "desc": "色温调整"
+      }
+    },
+    "edid": {
+      "title": "EDID",
+      "desc": "调整显示器的 EDID 设置",
+      "custom": {
+        "title": "自定义 EDID",
+        "desc": "EDID 详细说明视频模式兼容性。默认设置适用于大多数情况，但某些特殊的 UEFI/BIOS 可能需要调整。",
+        "fileLabel": "EDID 文件",
+        "setButton": "设置自定义 EDID",
+        "restoreButton": "恢复为默认"
+      }
+    }
+  },
+  "audio": {
+    "streamQuality": {
+      "title": "音频流质量",
+      "desc": "调整音频流的质量"
+    },
+    "playback": {
+      "title": "播放",
+      "desc": "将远程音频流式传输到此设备"
+    },
+    "microphoneEmulation": {
+      "title": "麦克风模拟",
+      "desc": "允许远程应用访问本地麦克风"
+    }
+  },
+  "hardware": {
+    "orientation": {
+      "title": "流显示方向",
+      "desc": "设置显示方向",
+      "placeholder": "请选择方向",
+      "options": {
+        "normal": "正常",
+        "inverted": "翻转"
+      }
+    },
+    "displayBrightness": {
+      "title": "显示亮度",
+      "desc": "设置显示器亮度"
+    },
+    "dimAfter": {
+      "title": "在此之后调暗",
+      "desc": "设置调暗显示前的等待时间"
+    },
+    "turnOffAfter": {
+      "title": "在此之后关闭显示",
+      "desc": "在无操作时自动关闭显示的时间",
+      "tip": "当连接状态变化或触摸时，显示器会被唤醒。"
+    },
+    "usb": {
+      "title": "USB 设备",
+      "desc": "在目标计算机上模拟的 USB 设备",
+      "classes": {
+        "title": "类别",
+        "desc": "组合设备中的 USB 设备类别"
+      },
+      "virtualUsbDrive": {
+        "title": "虚拟 USB 驱动器",
+        "desc": "提供可写入的 USB 驱动器用于自由文件传输",
+        "warning": "此驱动器使用 FAT32 格式。重新格式化可能会导致 ArkKVM 无法再次挂载它。"
+      },
+      "identifiers": {
+        "title": "标识符",
+        "desc": "暴露给目标计算机的 USB 设备标识符"
+      }
+    }
+  },
+  "network": {
+    "macAddress": {
+      "title": "MAC 地址",
+      "desc": "网络接口的硬件标识符"
+    },
+    "hostname": {
+      "title": "主机名",
+      "desc": "网络上的设备标识符"
+    },
+    "httpProxy": {
+      "title": "HTTP 代理",
+      "desc": "用于设备发出的 HTTP(S) 请求的代理服务器。留空表示不使用代理。"
+    },
+    "domain": {
+      "title": "域名",
+      "desc": "设备的网络域名后缀",
+      "customLabel": "自定义域名"
+    },
+    "mdns": {
+      "title": "mDNS",
+      "desc": "控制 mDNS（组播 DNS）操作模式"
+    },
+    "timeSynchronization": {
+      "title": "时间同步",
+      "desc": "配置时间同步设置"
+    },
+    "saveButton": "保存设置",
+    "savingButton": "保存中...",
+    "ipv4Mode": {
+      "title": "IPv4 模式",
+      "desc": "配置 IPv4 模式"
+    },
+    "ipv6Mode": {
+      "title": "IPv6 模式",
+      "desc": "配置 IPv6 模式"
+    },
+    "dhcpLease": {
+      "title": "DHCP 租约信息",
+      "ipAddress": "IP 地址",
+      "gateway": "网关",
+      "subnetMask": "子网掩码",
+      "dhcpServer": "DHCP 服务器",
+      "broadcast": "广播地址",
+      "bootNextServer": "引导下一服务器",
+      "hostname": "主机名",
+      "renewButton": "续订 DHCP 租约",
+      "renewTitle": "续订 DHCP 租约",
+      "renewContent": "这将从您的 DHCP 服务器请求一个新的 IP 地址。在此过程中，您的设备可能会暂时失去网络连接。",
+      "renewConfirm": "续订租约"
+    },
+    "ipv6Info": {
+      "title": "IPv6 信息",
+      "linkLocal": "本地链接",
+      "ipv6Address": "IPv6 地址",
+      "validLifetime": "有效生命周期",
+      "preferredLifetime": "首选生命周期"
+    }
+  },
+  "advanced": {
+    "webTerminal": {
+      "title": "Web Terminal",
+      "desc": "通过 Web 界面启用 Shell 访问"
+    },
+    "developerMode": {
+      "title": "开发者模式",
+      "desc": "为开发人员启用高级功能"
+    },
+    "loopbackOnly": {
+      "title": "仅本地回环模式",
+      "desc": "限制 Web 界面仅允许本地主机访问 (127.0.0.1)"
+    },
+    "sshAccess": {
+      "title": "SSH 访问",
+      "desc": "添加您的 SSH 公钥以启用对设备的安全远程访问",
+      "keyLabel": "SSH 公钥",
+      "keyPlaceholder": "在此粘贴您的 SSH 公钥...",
+      "defaultUserText": "默认 SSH 用户是",
+      "updateButton": "更新 SSH 密钥"
+    },
+    "troubleshooting": {
+      "title": "故障排除模式",
+      "desc": "用于故障排除和开发目的的诊断工具和附加控件",
+      "usbEmulation": {
+        "title": "USB 模拟",
+        "desc": "控制 USB 模拟状态",
+        "enableButton": "启用 USB 模拟",
+        "disableButton": "禁用 USB 模拟"
+      },
+      "resetConfig": {
+        "title": "重置配置",
+        "desc": "将配置重置为默认值。这将使您退出登录。",
+        "button": "重置配置"
+      }
+    }
+  },
+  "accessibility": {
+    "local": {
+      "title": "本地",
+      "desc": "管理设备的本地访问模式"
+    },
+    "httpsMode": {
+      "title": "HTTPS 模式",
+      "desc": "配置对设备的安全 HTTPS 访问",
+      "disabled": "禁用",
+      "selfSigned": "自签名",
+      "custom": "自定义"
+    },
+    "tlsCertificate": {
+      "title": "TLS 证书",
+      "desc": "在下方粘贴您的 TLS 证书。对于证书链，请包含完整的链（叶子证书、中间证书和根证书）。",
+      "certLabel": "证书",
+      "certPlaceholder": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "keyLabel": "私钥",
+      "keyPlaceholder": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
+      "keyDescription": "出于安全考虑，保存后将不会显示。",
+      "updateButton": "更新 TLS 设置"
+    },
+    "authMode": {
+      "title": "认证模式",
+      "currentMode": "当前模式：",
+      "passwordProtected": "密码保护",
+      "noPassword": "无密码",
+      "enableButton": "启用密码",
+      "disableButton": "禁用保护"
+    },
+    "changePassword": {
+      "title": "更改密码",
+      "desc": "更新设备访问密码",
+      "button": "更改密码",
+      "formTitle": "更改本地设备密码",
+      "formDesc": "输入当前密码和新密码以更新本地设备保护。",
+      "oldPasswordPlaceholder": "请输入当前密码",
+      "newPasswordPlaceholder": "请输入一个强密码",
+      "confirmPasswordPlaceholder": "请再次输入新密码",
+      "changeButton": "更改密码",
+      "cancel": "取消",
+      "successTitle": "密码更新成功",
+      "successDesc": "您已成功更改本地设备保护密码。请务必记住新密码以便后续访问。",
+      "close": "关闭",
+      "errorMismatch": "两次输入的密码不一致",
+      "errorOldEmpty": "请输入旧密码",
+      "errorNewEmpty": "请输入新密码",
+      "errorSpaces": "密码不能包含空格",
+      "errorGeneral": "更改密码时发生错误"
+    },
+    "remote": {
+      "title": "远程",
+      "desc": "管理设备的远程访问模式"
+    },
+    "cloudProvider": {
+      "title": "云服务提供商",
+      "desc": "为您的设备选择云服务提供商",
+      "arkkvm": "ArkKVM 云",
+      "custom": "自定义"
+    },
+    "cloudSecurity": {
+      "title": "云安全",
+      "feature1": "使用 WebRTC 的端到端加密（DTLS 和 SRTP）",
+      "feature2": "零信任安全模型",
+      "feature3": "OIDC（OpenID Connect）认证",
+      "feature4": "所有流在传输中加密",
+      "openSourceText": "所有云组件都是开源的，可在以下网址获取",
+      "learnMoreButton": "了解我们的云安全"
+    },
+    "cloudUrls": {
+      "apiLabel": "云 API URL",
+      "apiPlaceholder": "https://cloud.arkkvm.com/api",
+      "appLabel": "云应用 URL",
+      "appPlaceholder": "https://cloud.arkkvm.com/app"
+    },
+    "cloudButtons": {
+      "adopt": "将 KVM 添加到云",
+      "deregister": "从云中注销",
+      "loading": "加载中..."
+    },
+    "localAuth": {
+      "title": "本地设备保护",
+      "desc": "设置密码以防止未经授权访问您的设备。",
+      "newPassword": "新密码",
+      "newPasswordPlaceholder": "请输入一个强密码",
+      "confirmPassword": "确认新密码",
+      "confirmPasswordPlaceholder": "请再次输入密码",
+      "secureDevice": "保护设备",
+      "notNow": "暂不设置",
+      "successTitle": "密码设置成功",
+      "successDesc": "您已成功设置本地设备保护，您的设备现已受到未经授权的本地访问保护。",
+      "close": "关闭",
+      "errorEmpty": "请输入密码",
+      "errorSpaces": "密码不能包含空格",
+      "errorMismatch": "两次输入的密码不一致",
+      "errorGeneral": "设置密码时发生错误"
+    },
+    "removePassword": {
+      "title": "禁用本地设备保护",
+      "desc": "输入当前密码以禁用本地设备保护。",
+      "currentPassword": "当前密码",
+      "currentPasswordPlaceholder": "请输入当前密码",
+      "disableProtection": "禁用保护",
+      "cancel": "取消",
+      "successTitle": "密码保护已禁用",
+      "successDesc": "您已成功禁用本地访问的密码保护。请注意，您的设备现在安全性较低。",
+      "close": "关闭",
+      "errorEmpty": "请输入当前密码",
+      "errorGeneral": "移除密码时发生错误"
+    }
+  }
+}
