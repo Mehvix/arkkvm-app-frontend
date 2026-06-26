@@ -1,8 +1,13 @@
-import { createKeyDef } from '../../merge'
-import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows'
+import { createKeyDef } from '../../merge';
+import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
 
+/**
+ * Czech AltGr character mapping
+ * Czech keyboard uses AltGr for special characters
+ */
 const CS_CZ_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
   {
+    // Number row
     Backquote: { altGr: '~' },
     Digit1: { altGr: 'ˇ' },
     Digit2: { altGr: '^' },
@@ -15,13 +20,13 @@ const CS_CZ_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
     Digit9: { altGr: '˝' },
     Digit0: { altGr: '¨' },
     Minus: { altGr: '¸' },
-
+    // QWERTY row
     KeyQ: { altGr: '\\' },
     KeyW: { altGr: '|' },
     KeyE: { altGr: '€' },
     BracketLeft: { altGr: '÷' },
     BracketRight: { altGr: '×' },
-
+    // ASDF row
     KeyS: { altGr: 'đ' },
     KeyD: { altGr: 'Đ' },
     KeyF: { altGr: '[' },
@@ -31,7 +36,7 @@ const CS_CZ_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
     Semicolon: { altGr: '$' },
     Quote: { altGr: 'ß' },
     Backslash: { altGr: '¤' },
-
+    // ZXCV row
     KeyX: { altGr: '#' },
     KeyC: { altGr: '&' },
     KeyV: { altGr: '@' },
@@ -41,8 +46,9 @@ const CS_CZ_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
     Comma: { altGr: '<' },
     Period: { altGr: '>' },
     Slash: { altGr: '*' },
-  }
+  };
 
+// CZ (Windows) — Czech QWERTZ keyboard layout
 export const CZ_WIN_LAYOUT = {
   id: 'cz-win',
   name: 'Čeština (Windows)',
@@ -132,7 +138,7 @@ export const CZ_WIN_LAYOUT = {
       createKeyDef('Equal', { base: '´', shift: 'ˇ', fn: 'F12' }),
       createKeyDef('Backspace', undefined, { width: 1.5 }),
     ],
-
+    // Row 2: Tab, QWERTZUIOP, ú), Del
     [
       createKeyDef('Tab', undefined, { width: 1.5 }),
       createKeyDef('KeyQ', CS_CZ_ALTGR.KeyQ),
@@ -163,7 +169,7 @@ export const CZ_WIN_LAYOUT = {
       }),
       createKeyDef('Delete'),
     ],
-
+    // Row 3: Caps, ASDFGHJKL, ů§¨, Enter
     [
       createKeyDef('CapsLock', undefined, { width: 1.8 }),
       createKeyDef('KeyA'),
@@ -183,12 +189,12 @@ export const CZ_WIN_LAYOUT = {
       createKeyDef('Quote', { base: '§', shift: '!', ...CS_CZ_ALTGR.Quote }),
       createKeyDef('Backslash', {
         base: '¨',
-        shift: "'",
+        shift: '\'',
         ...CS_CZ_ALTGR.Backslash,
       }),
       createKeyDef('Enter', undefined, { width: 2.7 }),
     ],
-
+    // Row 4: Shift, \YXCVBNM?:-_, ↑, Shift
     [
       createKeyDef('ShiftLeft', undefined, { width: 1.2 }),
       createKeyDef('IntlBackslash', { base: '\\', shift: '|' }),
@@ -210,7 +216,7 @@ export const CZ_WIN_LAYOUT = {
 
       createKeyDef('ShiftRight', undefined, { width: 2 }),
     ],
-
+    // Row 5: Ctrl, Fn, Win, Alt, Space, AltGr, Ctrl, ←↓→, Menu
     [
       createKeyDef('ControlLeft', undefined, { width: 1.2 }),
       createKeyDef('MetaLeft'),
@@ -223,4 +229,4 @@ export const CZ_WIN_LAYOUT = {
     ],
   ],
   rightPanel: RIGHT_PANEL_ROWS,
-}
+};

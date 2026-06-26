@@ -1,6 +1,6 @@
 /*
- * @Purpose: Read the version number from the .env file and write it to the dist directory
- * @Description: Write the version number into dist/version, dist/device/version, dist/cloud/version
+ * @Purpose: Read version from .env and write to dist directories
+ * @Description: Write version to dist/version, dist/device/version, and dist-v{version}/version
  * @Author: zhanglei
  * @Date: 2026-01-27
  */
@@ -18,7 +18,7 @@ const envName = (args[0] || 'pro').trim()
 const envFilePath = path.join(root, `.env.${envName}`)
 const distDir = path.join(root, 'dist')
 
-// Read version number from .env file
+// Read version from .env file
 function readVersionFromEnv(filePath: string): string {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
@@ -35,13 +35,11 @@ function readVersionFromEnv(filePath: string): string {
 const version = readVersionFromEnv(envFilePath)
 
 if (!version || version === '0.0.0') {
-  console.error(
-    `❌ Valid version number not found, please run generate-version.ts first`
-  )
+  console.error(`❌ No valid version found. Please run generate-version.ts first`)
   process.exit(1)
 }
 
-// Make sure the dist directory exists
+// Ensure dist directory exists
 if (!fs.existsSync(distDir)) {
   fs.mkdirSync(distDir, { recursive: true })
 }
@@ -49,22 +47,20 @@ if (!fs.existsSync(distDir)) {
 // Write dist/version
 const content = version
 fs.writeFileSync(path.join(distDir, 'version'), content, 'utf-8')
-console.log(`✅ Written to dist/version (${version})`)
+console.log(`✅ Written: dist/version (${version})`)
 
 // Write dist/device/version
 const deviceDistDir = path.join(distDir, 'device')
 if (fs.existsSync(deviceDistDir)) {
   fs.writeFileSync(path.join(deviceDistDir, 'version'), content, 'utf-8')
-  console.log(`✅ Written to dist/device/version (${version})`)
+  console.log(`✅ Written: dist/device/version (${version})`)
 }
 
-// Write to dist/cloud/version
-const cloudDistDir = path.join(distDir, 'cloud')
+// Write dist/{version}/version (cloud build with version name)
+const cloudDistDir = path.join(distDir, version)
 if (fs.existsSync(cloudDistDir)) {
   fs.writeFileSync(path.join(cloudDistDir, 'version'), content, 'utf-8')
-  console.log(`✅ Written to dist/cloud/version (${version})`)
+  console.log(`✅ Written: dist/${version}/version (${version})`)
 }
 
-console.log(
-  `\n📦 Version number ${version} has been synchronized to all dist directories`
-)
+console.log(`\n📦 Version ${version} has been synced to all dist directories`)

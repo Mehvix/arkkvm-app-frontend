@@ -1,59 +1,55 @@
-import { Badge } from '@/components/ui/badge'
-import { useJsonRpc } from '@/hooks/useJsonRpc'
-import { useLoadingMap } from '@/hooks/useLoading'
+import { Badge } from '@/components/ui/badge';
+import { useJsonRpc } from '@/hooks/useJsonRpc';
+import { useLoadingMap } from '@/hooks/useLoading';
 import {
-  useActiveDeviceSettings,
-  useSettingsActions,
-} from '@/stores/devicesStore'
-import { isBoolean } from '@/utils/is'
-import { createLogger } from '@/utils/logger'
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
-import { Select } from '../ui/select'
-import { Switch } from '../ui/switch'
-import SettingBlock from './SettingBlock'
-import SettingPageContainer from './SettingPageContainer'
+    useActiveDeviceSettings,
+    useSettingsActions,
+} from '@/stores/devicesStore';
+import { isBoolean } from '@/utils/is';
+import { createLogger } from '@/utils/logger';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Select } from '../ui/select';
+import { Switch } from '../ui/switch';
+import SettingBlock from './SettingBlock';
+import SettingPageContainer from './SettingPageContainer';
 
-const logger = createLogger('SettingAudio')
+const logger = createLogger('SettingAudio');
 const streamQualityOptions = [
   { value: 1, label: 'High' },
   { value: 0.5, label: 'Medium' },
   { value: 0.1, label: 'Low' },
-]
+];
 export default function SettingAudio() {
-  const { t } = useTranslation(['settings', 'messages'])
-  const [send, isChannelReady, sendAsync] = useJsonRpc()
+  const { t } = useTranslation(['settings', 'messages']);
+  const [, isChannelReady, sendAsync] = useJsonRpc();
   const {
     is: isLoading,
     start,
     stop,
-    wrap,
-  } = useLoadingMap(['showAudioPlaybackUI', 'microphoneEmulation'])
-  const { setDeviceSetting, setNestedDeviceSetting } = useSettingsActions()
+  } = useLoadingMap(['showAudioPlaybackUI', 'microphoneEmulation']);
+  const { setDeviceSetting, setNestedDeviceSetting } = useSettingsActions();
+  const usbDeviceConfig = useActiveDeviceSettings(
+      state => state.usbDeviceConfig
+    );
 
   // Audio quality state
   const streamQualityStore = useActiveDeviceSettings(
     state => state.streamQuality
-  )
+  );
   const [streamQuality, setStreamQuality] = useState<number>(
     streamQualityStore || 1
-  )
+  );
 
-  const microphoneEmulationStore = useActiveDeviceSettings(
-    state => state.microphoneEmulation
-  )
-  const audioPlaybackStore = useActiveDeviceSettings(
-    state => state.showAudioPlaybackUI
-  )
   const [microphoneEmulation, setMicrophoneEmulation] = useState(
-    false as Boolean
-  )
-  const [audioPlayback, setAudioPlayback] = useState(false as Boolean)
+    false as boolean
+  );
+  const [audioPlayback, setAudioPlayback] = useState(false as boolean);
 
   useEffect(() => {
-    let cancelled = false
-    if (!isChannelReady) return
+    let cancelled = false;
+    if (!isChannelReady) return;
 
     const loadAudioSettings = async () => {
       try {
@@ -66,62 +62,62 @@ export default function SettingAudio() {
               { resultOnly: true }
             ),
             sendAsync({ method: 'getAudioQuality' }, { resultOnly: true }),
-          ])
+          ]);
 
         // Early return if component unmounted
-        if (cancelled) return
+        if (cancelled) return;
 
         // Update microphone emulation state
         if (isBoolean(microphoneResult)) {
-          const micEnabled = Boolean(microphoneResult)
-          setMicrophoneEmulation(micEnabled)
-          setDeviceSetting('microphoneEmulation', micEnabled)
-          logger.info('Microphone emulation loaded:', micEnabled)
+          const micEnabled = Boolean(microphoneResult);
+          setMicrophoneEmulation(micEnabled);
+          setDeviceSetting('microphoneEmulation', micEnabled);
+          logger.info('Microphone emulation loaded:', micEnabled);
         }
 
         // Update audio playback UI visibility state
-        const hdmiAudioEnabled = uiSwitchResult?.hdmi_audio
+        const hdmiAudioEnabled = uiSwitchResult?.hdmi_audio;
         if (isBoolean(hdmiAudioEnabled)) {
-          const audioEnabled = Boolean(hdmiAudioEnabled)
-          setAudioPlayback(audioEnabled)
-          setDeviceSetting('showAudioPlaybackUI', audioEnabled)
-          logger.info('Audio playback UI visibility loaded:', audioEnabled)
+          const audioEnabled = Boolean(hdmiAudioEnabled);
+          setAudioPlayback(audioEnabled);
+          setDeviceSetting('showAudioPlaybackUI', audioEnabled);
+          logger.info('Audio playback UI visibility loaded:', audioEnabled);
         }
 
         // Update audio quality state
         if (typeof qualityResult === 'number') {
-          setStreamQuality(qualityResult)
-          setDeviceSetting('streamQuality', qualityResult)
-          logger.info('Audio quality loaded:', qualityResult)
+          setStreamQuality(qualityResult);
+          setDeviceSetting('streamQuality', qualityResult);
+          logger.info('Audio quality loaded:', qualityResult);
         }
       } catch (error) {
         if (!cancelled) {
-          logger.error('Failed to load audio settings:', error)
-          toast.error(t('messages:error.loadSettings'))
+          logger.error('Failed to load audio settings:', error);
+          toast.error(t('messages:error.loadSettings'));
         }
       }
-    }
+    };
 
-    void loadAudioSettings()
+    void loadAudioSettings();
 
     return () => {
-      cancelled = true
-    }
-  }, [sendAsync, isChannelReady, setDeviceSetting, setNestedDeviceSetting, t])
+      cancelled = true;
+    };
+  }, [sendAsync, isChannelReady, setDeviceSetting, setNestedDeviceSetting, t]);
 
   const toggleMicrophoneEmulation = useCallback(
     async (enabled: boolean) => {
       try {
-        start('microphoneEmulation')
+        start('microphoneEmulation');
         const response = await sendAsync({
           method: 'setMicrophoneEmulation',
           params: { enabled },
-        })
+        });
 
         if (response?.success) {
-          setMicrophoneEmulation(enabled)
-          setDeviceSetting('microphoneEmulation', enabled)
-          logger.info('Microphone emulation updated:', enabled)
+          setMicrophoneEmulation(enabled);
+          setDeviceSetting('microphoneEmulation', enabled);
+          logger.info('Microphone emulation updated:', enabled);
 
           // Note: Audio stream will be automatically stopped by MediaDeviceControl
           // when microphoneEmulation state changes to false
@@ -130,96 +126,92 @@ export default function SettingAudio() {
             enabled
               ? 'Microphone emulation enabled'
               : 'Microphone emulation disabled'
-          )
+          );
         } else {
-          logger.warn('Failed to update microphone emulation:', response)
-          toast.error('Failed to update microphone emulation')
+          logger.warn('Failed to update microphone emulation:', response);
+          toast.error('Failed to update microphone emulation');
         }
       } catch (error) {
-        logger.error('Error toggling microphone emulation:', error)
-        toast.error('Failed to update microphone emulation')
+        logger.error('Error toggling microphone emulation:', error);
+        toast.error('Failed to update microphone emulation');
       } finally {
-        stop('microphoneEmulation')
+        stop('microphoneEmulation');
       }
     },
     [sendAsync, setDeviceSetting, start, stop]
-  )
+  );
   const changeStreamQuality = useCallback(
     async (value: string | number) => {
       try {
-        const quality = Number(value)
+        const quality = Number(value);
         const response = await sendAsync({
           method: 'setAudioQuality',
           params: { factor: quality },
-        })
+        });
 
         if (response?.success) {
-          setStreamQuality(quality)
-          setDeviceSetting('streamQuality', quality)
-          logger.info('Audio quality updated:', quality)
-          toast.success('Audio quality updated successfully')
+          setStreamQuality(quality);
+          setDeviceSetting('streamQuality', quality);
+          logger.info('Audio quality updated:', quality);
+          toast.success('Audio quality updated successfully');
         } else {
-          logger.warn('Failed to update audio quality:', response)
-          toast.error('Failed to update audio quality')
+          logger.warn('Failed to update audio quality:', response);
+          toast.error('Failed to update audio quality');
         }
       } catch (error) {
-        logger.error('Error changing audio quality:', error)
-        toast.error('Failed to update audio quality')
+        logger.error('Error changing audio quality:', error);
+        toast.error('Failed to update audio quality');
       }
     },
     [sendAsync, setDeviceSetting]
-  )
+  );
 
   const toggleAudioPlayback = useCallback(
     async enabled => {
       try {
-        start('showAudioPlaybackUI')
+        start('showAudioPlaybackUI');
         const response = await sendAsync({
           method: 'setUiSwitch',
           params: { hdmi_audio: enabled },
-        })
+        });
         if (!enabled) {
           const audioPlaybackRes = await sendAsync({
             method: 'setAudioPlayback',
             params: { enabled },
-          })
+          });
           if (audioPlaybackRes.success) {
-            setDeviceSetting('audioPlayback', enabled)
+            setDeviceSetting('audioPlayback', enabled);
           }
         }
 
         if (response?.success) {
-          setAudioPlayback(enabled)
-          setDeviceSetting('showAudioPlaybackUI', enabled)
-          logger.info('Audio playback updated:', enabled)
+          setAudioPlayback(enabled);
+          setDeviceSetting('showAudioPlaybackUI', enabled);
+          logger.info('Audio playback updated:', enabled);
           toast.success(
             enabled ? 'Audio playback enabled' : 'Audio playback disabled'
-          )
+          );
         } else {
-          logger.warn('Failed to update audio playback:', response)
-          toast.error('Failed to update audio playback')
+          logger.warn('Failed to update audio playback:', response);
+          toast.error('Failed to update audio playback');
         }
       } catch (error) {
-        logger.error('Error toggling audio playback:', error)
-        toast.error('Failed to update audio playback')
+        logger.error('Error toggling audio playback:', error);
+        toast.error('Failed to update audio playback');
       } finally {
-        stop('showAudioPlaybackUI')
+        stop('showAudioPlaybackUI');
       }
     },
     [sendAsync, setDeviceSetting, start, stop]
-  )
+  );
   return (
     <SettingPageContainer
       title={t('settings:pages.audio.title')}
       description={t('settings:pages.audio.description')}
     >
+
       <SettingBlock
-        title={
-          <>
-            {t('settings:audio.playback.title')}{' '}
-            <Badge variant="beta">beta</Badge>
-          </>
-        }
+        title={<>{t('settings:audio.playback.title')} <Badge variant="beta">beta</Badge></>}
         content={t('settings:audio.playback.desc')}
       >
         <SettingBlock.Right>
@@ -230,37 +222,34 @@ export default function SettingAudio() {
           />
         </SettingBlock.Right>
       </SettingBlock>
-      <SettingBlock
+       <SettingBlock
         title={t('settings:audio.streamQuality.title')}
         content={t('settings:audio.streamQuality.desc')}
       >
         <SettingBlock.Right>
           <Select
+            size="xs"
             value={String(streamQuality)}
             onChange={changeStreamQuality}
             options={streamQualityOptions}
-            size="xs"
+
           />
         </SettingBlock.Right>
       </SettingBlock>
       <SettingBlock
-        title={
-          <>
-            {t('settings:audio.microphoneEmulation.title')}{' '}
-            <Badge variant="beta">beta</Badge>
-          </>
-        }
+        title={<>{t('settings:audio.microphoneEmulation.title')} <Badge variant="beta">beta</Badge></>}
         content={t('settings:audio.microphoneEmulation.desc')}
       >
         <SettingBlock.Right>
           <Switch
-            disabled={isLoading('microphoneEmulation')}
+            disabled={isLoading('microphoneEmulation')||!usbDeviceConfig?.microphone}
             checked={microphoneEmulation}
             onCheckedChange={toggleMicrophoneEmulation}
+
           />
         </SettingBlock.Right>
         <SettingBlock.Bottom>
-          <div className="text-xs">
+          <div className="text-sm ">
             <ul>
               <li className="mb-[10px]">
                 {t('messages:microphoneEmulation.tips.title')}
@@ -277,5 +266,5 @@ export default function SettingAudio() {
         </SettingBlock.Bottom>
       </SettingBlock>
     </SettingPageContainer>
-  )
+  );
 }

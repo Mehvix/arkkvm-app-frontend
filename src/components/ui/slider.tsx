@@ -1,11 +1,12 @@
-import * as SliderPrimitive from '@radix-ui/react-slider'
-import * as React from 'react'
+import * as SliderPrimitive from '@radix-ui/react-slider';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 type SliderProps = React.ComponentProps<typeof SliderPrimitive.Root> & {
+  // Custom thumb size (dot size); numbers are treated as px, or pass '16px', '1rem', etc.
   thumbSize?: number | string
-
+  // Custom class name appended to thumb
   thumbClassName?: string
 }
 
@@ -27,7 +28,7 @@ function Slider({
           ? defaultValue
           : [min, max],
     [value, defaultValue, min, max]
-  )
+  );
 
   return (
     <SliderPrimitive.Root
@@ -57,21 +58,21 @@ function Slider({
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => {
         const size =
-          typeof thumbSize === 'number' ? `${thumbSize}px` : thumbSize
+          typeof thumbSize === 'number' ? `${thumbSize}px` : thumbSize;
         return (
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
             className={cn(
               'border-[var(--btn-primary-bg)] bg-[var(--btn-primary-bg)] ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50',
-              thumbClassName
+              thumbClassName,
+              size ? cn(`w-[${size}]`, `h-[${size}]`) : ''
             )}
-            style={size ? { width: size, height: size } : undefined}
           />
-        )
+        );
       })}
     </SliderPrimitive.Root>
-  )
+  );
 }
 
-export { Slider }
+export { Slider };

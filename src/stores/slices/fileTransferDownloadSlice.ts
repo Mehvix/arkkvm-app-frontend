@@ -1,5 +1,14 @@
-import type { TransferState } from '@/hooks/useFileDownload'
-import type { StateCreator } from 'zustand'
+/*
+ * @Author: Lei Zhang daisy_zlei@163.com
+ * @Date: 2025-10-27 16:25:25
+ * @LastEditors: Lei Zhang daisy_zlei@163.com
+ * @LastEditTime: 2026-06-23 14:45:10
+ * @FilePath: /git-arkkvm-app-frontend/src/stores/slices/fileTransferDownloadSlice.ts
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+import type { StateCreator } from 'zustand';
+import type { TransferState } from '@/hooks/useFileDownload';
+import type { RootState } from '../types';
 
 export interface DownloadItem {
   // === TransferPersistMeta ===
@@ -35,34 +44,26 @@ export interface DownloadListState {
 
 export interface DownloadListActions {
   setDownloadFileList: (items: DownloadItem[]) => void
-
   updateProgress: (id: string, row: DownloadItem) => void
-
   removeRow: (id: string) => void
 }
 
 export type DownloadListSlice = DownloadListState & DownloadListActions
-
-export const createFileTransferDownloadListSlice: StateCreator<
-  any,
-  [],
-  [],
-  DownloadListSlice
-> = (set, get) => ({
+export const createFileTransferDownloadListSlice: StateCreator<RootState, [], [], DownloadListSlice> = (set) => ({
   byId: {},
   order: [],
 
   setDownloadFileList: items => {
-    if (!Array.isArray(items) || items.length === 0) return
-    set((s: any) => {
-      const prevById = s.fileDownloadList?.byId || {}
-      const prevOrder: string[] = s.fileDownloadList?.order || []
-      const nextById = { ...prevById } as Record<string, DownloadItem>
-      const nextOrder = [...prevOrder]
+    if (!Array.isArray(items) || items.length === 0) return;
+    set((s: RootState) => {
+      const prevById = s.fileDownloadList?.byId || {};
+      const prevOrder: string[] = s.fileDownloadList?.order || [];
+      const nextById = { ...prevById } as Record<string, DownloadItem>;
+      const nextOrder = [...prevOrder];
       for (const it of items) {
-        if (!it || !it.id) continue
-        nextById[it.id] = { ...(prevById[it.id] || {}), ...it } as DownloadItem
-        if (!prevOrder.includes(it.id)) nextOrder.push(it.id)
+        if (!it || !it.id) continue;
+        nextById[it.id] = { ...(prevById[it.id] || {}), ...it } as DownloadItem;
+        if (!prevOrder.includes(it.id)) nextOrder.push(it.id);
       }
       return {
         fileDownloadList: {
@@ -70,14 +71,14 @@ export const createFileTransferDownloadListSlice: StateCreator<
           byId: nextById,
           order: nextOrder,
         },
-      }
-    })
+      };
+    });
   },
 
   updateProgress: (id, item) => {
-    set((s: any) => {
-      const it = s.fileDownloadList?.byId?.[id]
-      if (!it) return s
+    set((s: RootState) => {
+      const it = s.fileDownloadList?.byId?.[id];
+      if (!it) return s;
 
       return {
         fileDownloadList: {
@@ -90,13 +91,13 @@ export const createFileTransferDownloadListSlice: StateCreator<
             },
           },
         },
-      }
-    })
+      };
+    });
   },
 
   removeRow: id => {
-    set((s: any) => {
-      const { [id]: _, ...rest } = s.fileDownloadList?.byId || {}
+    set((s: RootState) => {
+      const { [id]: _, ...rest } = s.fileDownloadList?.byId || {};
       return {
         fileDownloadList: {
           ...s.fileDownloadList,
@@ -105,7 +106,7 @@ export const createFileTransferDownloadListSlice: StateCreator<
             (x: string) => x !== id
           ),
         },
-      }
-    })
+      };
+    });
   },
-})
+});

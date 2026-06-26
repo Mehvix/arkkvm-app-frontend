@@ -11,41 +11,36 @@
  *
  * @author zhanglei
  */
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+    memo,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from 'react';
 
 // Internal imports
-import { WindowsLayout } from './components'
+import { WindowsLayout } from './components';
 
 // External imports
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 
 // Local utils imports
 import {
-  createInitialModifierState,
-  type VirtualKeyboardModifierState,
-} from './utils/modifierStateManager'
+    createInitialModifierState,
+    isModifierKey,
+    type VirtualKeyboardModifierState,
+} from './utils/modifierStateManager';
 
 import {
-  getLanguageLayoutModule,
-  languageLayoutMetaMap,
-  languageLayoutOptions,
-} from './data/language-layouts'
+    getLanguageLayoutModule,
+    languageLayoutOptions,
+} from './data/language-layouts';
 
 // Utils imports
 // import { simulateKeyboardEvent } from './utils'
-import { toHidReport } from './utils/hidReportGenerator'
-
-function simulateKeyboardEvent(_keyCode: string, _options: any) {
-  // Placeholder - actual implementation should be imported
-}
+import { externalModifierMask, toHidReport, type HidReport } from './utils/hidReportGenerator';
 /**
  * Virtual Keyboard Component Props
  *
@@ -84,9 +79,9 @@ export interface VirtualKeyboardProps extends Partial<VirtualKeyboardModifierSta
   /** Callback when a key is pressed */
   onKeyPress?: (keyCode: string, label: string) => void
   /** Callback when a key is pressed down */
-  onKeyDown?: (data: { keyCode: string; label: string; hidReport: any }) => void
+  onKeyDown?: (data: { keyCode: string; label: string; hidReport: HidReport[] }) => void
   /** Callback when a key is released */
-  onKeyUp?: (data: { keyCode: string; label: string; hidReport: any }) => void
+  onKeyUp?: (data: { keyCode: string; label: string; hidReport: HidReport }) => void
   /** Callback when modifier key state changes */
   onModifierKeyChange?: (keyCode: string, isActive: boolean) => void
   /** Callback when keyboard should be hidden */
@@ -118,7 +113,6 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   showLanguageSwitcher = true,
   draggable = false,
   pressedKeys = new Set(),
-  onKeyPress,
   onKeyDown,
   onKeyUp,
   onModifierKeyChange,
@@ -130,7 +124,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   simulateEvents = true,
   leftSlot,
   rightSlot,
-
+  // Expanded modifier key booleans
   CapsLock = false,
   ShiftLeft = false,
   ShiftRight = false,
@@ -143,14 +137,16 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   MetaRight = false,
 }) => {
   const [modifierKeysState, setModifierKeysState] =
-    useState<VirtualKeyboardModifierState>(createInitialModifierState())
+    useState<VirtualKeyboardModifierState>(createInitialModifierState());
 
+  // Use ref to store latest modifier key state to avoid useCallback closure issues
   const modifierKeysStateRef =
-    useRef<VirtualKeyboardModifierState>(modifierKeysState)
+    useRef<VirtualKeyboardModifierState>(modifierKeysState);
 
+  // Sync state to ref
   useEffect(() => {
-    modifierKeysStateRef.current = modifierKeysState
-  }, [modifierKeysState])
+    modifierKeysStateRef.current = modifierKeysState;
+  }, [modifierKeysState]);
 
   useEffect(() => {
     setModifierKeysState({
@@ -164,7 +160,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       AltGr,
       MetaLeft,
       MetaRight,
-    })
+    });
   }, [
     CapsLock,
     ShiftLeft,
@@ -176,138 +172,141 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
     AltGr,
     MetaLeft,
     MetaRight,
-  ])
+  ]);
 
   // State management
   const [currentKeyboardLayoutMeta, setCurrentKeyboardLayoutMeta] =
-    useState<any>(null)
-  const [lastPressed, setLastPressed] = useState<string>('')
+    useState<Record<string, unknown> | null>(null);
+  const [lastPressed, setLastPressed] = useState<string>('');
   const [currentLanguage, setCurrentLanguage] =
-    useState<string>(defaultLanguage)
+    useState<string>(defaultLanguage);
 
+  // Initialize layout
   useEffect(() => {
     setCurrentKeyboardLayoutMeta(
       getLanguageLayoutModule(defaultLanguage)?.[defaultLayout || 'windows']
-    )
-  }, [])
+    );
+  }, []);
   useEffect(() => {
     if (defaultLanguage) {
-      setCurrentLanguage(defaultLanguage)
+      setCurrentLanguage(defaultLanguage);
     }
-  }, [defaultLanguage])
+  }, [defaultLanguage]);
   useEffect(() => {
     setCurrentKeyboardLayoutMeta(
       getLanguageLayoutModule(currentLanguage)?.[defaultLayout || 'windows']
-    )
-  }, [currentLanguage])
+    );
+  }, [currentLanguage]);
+  // Use passed layout, if not passed use default
+  const layout = defaultLayout;
 
-  const layout = defaultLayout
-
-  const hasAltGr = useMemo(() => {
-    const meta = languageLayoutMetaMap[currentLanguage]
-    return meta?.hasAltGr ?? true
-  }, [currentLanguage])
-
+  // Handle language switch
   const handleLanguageChange = useCallback(
     (languageId: string) => {
-      setCurrentLanguage(languageId)
-      onLanguageChange?.(languageId)
+      setCurrentLanguage(languageId);
+      onLanguageChange?.(languageId);
     },
     [onLanguageChange]
-  )
+  );
 
   // Check if a key is currently pressed (from external events)
-
+  // Use useCallback to cache, avoid frequent recreation and calculation
   const checkKeyPressed = useCallback(
     (keyCode: string) => {
       if (pressedKeys instanceof Set) {
-        return pressedKeys.has(keyCode)
+        return pressedKeys.has(keyCode);
       }
       if (Array.isArray(pressedKeys)) {
-        return pressedKeys.includes(keyCode)
+        return pressedKeys.includes(keyCode);
       }
-      return false
+      return false;
     },
     [pressedKeys]
-  )
+  );
 
+  // Modifier key events - performance optimized
   // prettier-ignore
   const handleModifierKeyDown = useCallback(
-    (keyCode: string, label?: string) => {
-      const currentValue = modifierKeysStateRef.current[keyCode]
-      const newValue = !currentValue
+    (keyCode: string, _label?: string) => {
+      const currentValue = modifierKeysStateRef.current[keyCode];
+      const newValue = !currentValue;
 
       setModifierKeysState(prev => ({
         ...prev,
         [keyCode]: newValue,
-      }))
+      }));
 
-       onModifierKeyChange?.(keyCode, newValue)
+       onModifierKeyChange?.(keyCode, newValue);
     },
     [, onModifierKeyChange]
-  )
+  );
 
   // prettier-ignore
   const handleKeyDown = useCallback(
-    (keyCode: string, label?: string) => {
-      setLastPressed(label)
-
-      const currentModifierState = modifierKeysStateRef.current
+    (keyCode: string, label = '') => {
+      setLastPressed(label);
+      // Use ref to get latest modifier key state to avoid closure issues
+      const currentModifierState = modifierKeysStateRef.current;
       const hidReport = toHidReport(keyCode, {
         ...currentModifierState,
-      })
+      });
 
       onKeyDown?.({
         keyCode,
         label,
         hidReport
-      })
+      });
     },
     [
       onKeyDown,
       simulateEvents,
       onModifierKeyChange,
     ]
-  )
+  );
 
   const handleKeyUp = useCallback(
-    (keyCode: string, label?: string) => {
-      setLastPressed('')
-
+    (keyCode: string, label = '') => {
+      let modifier = 0;
+      if (modifierReleaseMode === 'manual' && !isModifierKey(keyCode)) {
+        const currentModifierState = modifierKeysStateRef.current;
+        modifier = externalModifierMask(currentModifierState);
+      }
+      setLastPressed('');
       onKeyUp?.({
         keyCode,
         label,
         hidReport: {
           keys: [0, 0, 0, 0, 0, 0],
-          modifier: 0,
+          modifier,
         },
-      })
+      });
     },
-    [onKeyUp]
-  )
+    [onKeyUp, modifierReleaseMode]
+  );
 
   return (
     <div
-      className={cn('p-2 w-full select-none overflow-auto', className)}
+      className={cn('p-2 w-full select-none overflow-y-auto  overflow-x-hidden', className)}
       style={style}
+      data-kvm-ignore="true"
     >
       {/* Header Controls */}
       {showControls && (
         <div
           className={cn(
-            'flex justify-between text-xs text-gray-400 mb-2 items-center relative z-[1000] pointer-events-auto',
+            ' flex justify-between text-sm text-gray-400 mb-2 items-center relative z-[1000] pointer-events-auto',
             draggable && 'drag-handle cursor-move'
           )}
         >
           {/* Left slot for custom content */}
           {leftSlot ? (
-            <div className="flex items-center">{leftSlot}</div>
+            <div className="hidden md:flex items-center">{leftSlot}</div>
           ) : (
             <div>{lastPressed && <span>Last pressed: {lastPressed}</span>}</div>
           )}
 
           {/* Right controls area */}
-          <div className="flex items-center gap-[10px]">
+          <div className="flex-1 md:flex-none justify-between flex  items-center gap-[10px] overflow:hidden">
             {/* Right slot for custom content */}
             {rightSlot && <div className="flex items-center">{rightSlot}</div>}
 
@@ -319,7 +318,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                   onChange={e => handleLanguageChange(e.target.value)}
                   onMouseDown={e => e.stopPropagation()}
                   onTouchStart={e => e.stopPropagation()}
-                  className="h-6 px-2 text-xs bg-[var(--btn-outline-bg)] border border-[var(--btn-outline-border)] rounded text-[var(--btn-outline-text)] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="h-[28px] px-2 text-sm bg-[var(--btn-outline-bg)] border border-[var(--btn-outline-border)] rounded text-[var(--btn-outline-text)] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
                   {languageLayoutOptions.map(option => (
                     <option key={option.id} value={option.id}>
@@ -332,7 +331,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
 
             {/* Layout switcher */}
             {showLayoutSwitcher && (
-              <div className="flex items-center gap-2">
+              <div className="items-center gap-2 hidden md:flex">
                 <span className="hidden sm:inline">Layout:</span>
                 <div>
                   <Button
@@ -358,7 +357,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
               onClick={() => onHide?.()}
               variant="text"
               size="sm"
-              className="text-xs h-6 px-2 relative z-[1001]"
+              className="text-sm h-6 px-2 relative z-[1001]"
             >
               Hide
             </Button>
@@ -394,7 +393,8 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
         // />
       )}
     </div>
-  )
-}
+  );
+};
 
-export default memo(VirtualKeyboard)
+// Wrap with React.memo to avoid unnecessary re-renders when parent state changes
+export default memo(VirtualKeyboard);

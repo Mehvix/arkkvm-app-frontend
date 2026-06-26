@@ -1,12 +1,12 @@
-import * as TabsPrimitive from '@radix-ui/react-tabs'
-import * as React from 'react'
+import * as TabsPrimitive from '@radix-ui/react-tabs';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
-import { sizeVariants } from './variants'
+import { cn } from '@/lib/utils';
+import { sizeVariants } from './variants';
 
 type SizeKey = keyof typeof sizeVariants
 
-const TabsSizeContext = React.createContext<SizeKey | undefined>(undefined)
+const TabsSizeContext = React.createContext<SizeKey | undefined>(undefined);
 
 function Tabs({
   className,
@@ -17,21 +17,18 @@ function Tabs({
     <TabsSizeContext.Provider value={size}>
       <TabsPrimitive.Root
         data-slot="tabs"
-        className={cn(
-          'flex flex-col gap-2 relative overflow-hidden',
-          className
-        )}
+        className={cn('flex flex-col gap-2 relative overflow-hidden', className)}
         {...props}
       />
     </TabsSizeContext.Provider>
-  )
+  );
 }
 
 function TabsList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
-  const size = React.useContext(TabsSizeContext) ?? 'md'
+  const _size = React.useContext(TabsSizeContext) ?? 'md';
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
@@ -42,7 +39,7 @@ function TabsList({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TabsTrigger({
@@ -50,12 +47,12 @@ function TabsTrigger({
   size: sizeProp,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger> & { size?: SizeKey }) {
-  const ctxSize = React.useContext(TabsSizeContext) ?? 'md'
-  const size = sizeProp ?? ctxSize
+  const ctxSize = React.useContext(TabsSizeContext) ?? 'md';
+  const size = sizeProp ?? ctxSize;
   const textSizeByVariant: Record<SizeKey, string> = {
-    xs: 'text-xs',
-    mini: 'text-xs', // alias in sizeVariants
-    sm: 'text-xs',
+    xs: 'text-sm ',
+    mini: 'text-sm ', // alias in sizeVariants
+    sm: 'text-sm ',
     md: 'text-sm',
     default: 'text-sm', // alias
     lg: 'text-sm',
@@ -63,19 +60,19 @@ function TabsTrigger({
     xxl: 'text-base',
     xxxl: 'text-lg',
     icon: 'text-base',
-  } as any
+  } as Record<SizeKey, string>;
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
         sizeVariants[size],
         textSizeByVariant[size],
-        "data-[state=active]:bg-background dark:data-[state=active]:text-[var(--text-color)] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-[var(--border-color)] dark:data-[state=active]:bg-input/30 text-[var(--text-color)] dark: inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        'data-[state=active]:bg-background dark:data-[state=active]:text-[var(--text-color)] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-[var(--border-color)] dark:data-[state=active]:bg-input/30 text-[var(--text-color)] dark: inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4',
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TabsContent({
@@ -94,7 +91,7 @@ function TabsContent({
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Tabs, TabsContent, TabsList, TabsTrigger }
+export { Tabs, TabsContent, TabsList, TabsTrigger };

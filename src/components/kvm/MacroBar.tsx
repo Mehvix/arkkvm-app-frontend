@@ -7,45 +7,44 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-01-31 19:59:03
  */
-import { useJsonRpc } from '@/hooks/useJsonRpc'
-import { createLogger } from '@/utils/logger'
+import { useJsonRpc } from '@/hooks/useJsonRpc';
+import { createLogger } from '@/utils/logger';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 import {
   useActiveDeviceSettings,
   type KeySequence,
-} from '@/stores/devicesStore'
-import { Command } from 'lucide-react'
-import { Button } from '../ui/button'
-import { toHidReport } from '../VirtualKeyboard'
+} from '@/stores/devicesStore';
+import { Command } from 'lucide-react';
+import { Button } from '../ui/button';
+import { toHidReport } from '../VirtualKeyboard';
 
-const logger = createLogger('MacroBar')
+const logger = createLogger('MacroBar');
 
 interface MacroBarProps {
-  onExecuteMacro?: (macroId: string, macroName: string, steps: any[]) => void
+  onExecuteMacro?: (macroId: string, macroName: string, steps: KeySequence['steps']) => void
   className?: string
 }
-function isSending() {}
-export default function MacroBar({ onExecuteMacro, className }: MacroBarProps) {
-  const currentSettings = useActiveDeviceSettings()
+export default function MacroBar({ className: _className }: MacroBarProps) {
+  const currentSettings = useActiveDeviceSettings();
 
-  const macros = currentSettings?.keyboardMacros?.macros || []
-  const [send, isChannelReady] = useJsonRpc()
+  const macros = currentSettings?.keyboardMacros?.macros || [];
+  const [send, isChannelReady] = useJsonRpc();
 
   const handleMacroClick = async (macro: KeySequence) => {
-    const { steps } = macro
-    if (!steps?.length) return
+    const { steps } = macro;
+    if (!steps?.length) return;
     for (const step of steps) {
-      const { delay, keys, modifiers } = step
+      const { delay, keys, modifiers } = step;
       setTimeout(async () => {
         for (const modifier of modifiers) {
-          const report = toHidReport(modifier)
-          logger.debug('Modifier report', { modifier, report })
+          const report = toHidReport(modifier);
+          logger.debug('Modifier report', { modifier, report });
         }
-        logger.debug('Processing keys', { keys })
+        logger.debug('Processing keys', { keys });
         for (const key of keys) {
-          const report1 = toHidReport(key)
-          send({ method: 'keyboardReport', params: report1 })
+          const report1 = toHidReport(key);
+          send({ method: 'keyboardReport', params: report1 });
         }
         send({
           method: 'keyboardReport',
@@ -53,12 +52,12 @@ export default function MacroBar({ onExecuteMacro, className }: MacroBarProps) {
             keys: [0, 0, 0, 0, 0, 0],
             modifier: 0,
           },
-        })
-      }, delay)
+        });
+      }, delay);
     }
-  }
+  };
 
-  if (macros?.length === 0) return <></>
+  if (macros?.length === 0) return <></>;
   return (
     <div className={cn('flex flex-col gap-2 w-full')}>
       {/* Macro button bar */}
@@ -79,9 +78,9 @@ export default function MacroBar({ onExecuteMacro, className }: MacroBarProps) {
             >
               {macro.name}
             </Button>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

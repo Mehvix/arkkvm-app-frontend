@@ -7,43 +7,43 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-04 22:40:56
  */
-import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
-import * as React from 'react'
+import { Slot } from '@radix-ui/react-slot';
+import { cva, type VariantProps } from 'class-variance-authority';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
-import { sizeVariants } from './variants'
+import { cn } from '@/lib/utils';
+import { sizeVariants } from './variants';
 
 // Extract shared CSS fragments for reuse across variants
 const filledInteractive = [
   'hover:opacity-90 hover:saturate-110',
   'active:opacity-80 active:saturate-125',
   'data-[state=pressed]:opacity-80 data-[state=pressed]:saturate-125',
-].join(' ')
+].join(' ');
 
 const opacityInteractive = [
   'hover:opacity-95',
   'active:opacity-90',
   'data-[state=pressed]:opacity-90',
-].join(' ')
+].join(' ');
 
 const pressedOpacity = [
   'active:opacity-80',
   'data-[state=pressed]:opacity-80',
-].join(' ')
+].join(' ');
 
 const ghostPressedBgSecondary = [
   'active:bg-[var(--secondary-bg-color)]/80 font-[400]',
   'data-[state=pressed]:bg-[var(--secondary-bg-color)]/80',
-].join(' ')
+].join(' ');
 
 const defaultPressedGradient = [
   'active:bg-[linear-gradient(0deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.04)_100%),var(--bg-button-color)] active:border-[var(--border-color)]',
   'data-[state=pressed]:bg-[linear-gradient(0deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.04)_100%),var(--bg-button-color)] data-[state=pressed]:border-[var(--border-color)]',
-].join(' ')
+].join(' ');
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[6px] text-xs font-[400] transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=size-])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-[3px] cursor-pointer',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[6px] text-sm font-[400] transition-all disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=size-])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-[3px] cursor-pointer',
   {
     variants: {
       variant: {
@@ -158,10 +158,7 @@ const buttonVariants = cva(
       {
         variant: 'default',
         status: 'success',
-        className: [
-          'border',
-          'border-[var(--btn-outline-border)] bg-[var(--btn-outline-bg)]',
-        ].join(' '),
+        className: ['border', 'border-[var(--btn-outline-border)] bg-[var(--btn-outline-bg)]'].join(' '),
       },
       {
         variant: 'default',
@@ -214,7 +211,7 @@ const buttonVariants = cva(
       },
     ],
   }
-)
+);
 function Button({
   className,
   variant,
@@ -231,19 +228,19 @@ function Button({
     /** Force the button to display pressed state visually (e.g. toggle buttons) */
     pressed?: boolean
   }) {
-  const Comp = asChild ? Slot : 'button'
+  const Comp = asChild ? Slot : 'button';
 
   // Safely extract onClick and only forward if it's a function
   const { onClick, disabled, children, ...rest } = props as {
     onClick?: unknown
     disabled?: boolean
     children?: React.ReactNode
-  } & Record<string, any>
-  const isDisabled = Boolean(disabled || loading)
+  } & Record<string, unknown>;
+  const isDisabled = Boolean(disabled || loading);
   const safeOnClick =
     !loading && typeof onClick === 'function'
       ? (onClick as React.MouseEventHandler<HTMLButtonElement>)
-      : undefined
+      : undefined;
 
   return (
     <Comp
@@ -265,7 +262,7 @@ function Button({
       ) : null}
       {children}
     </Comp>
-  )
+  );
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants };

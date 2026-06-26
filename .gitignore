@@ -3,33 +3,34 @@
 *.local
 *.log*
 
-# Documentation files
-*.md
-**/*.md
+# Environment variables (local overrides)
+.env.local
+.env.*.local
 
+# Documentation files
+# *.md
+**/*.md
+!/README.md
+!/CONTRIBUTING.md
+!/.github/pull_request_template.md
+.windsurf
 # Dist
 node_modules
 dist/
 docs/
+
 # Profile
 .rspack-profile-*/
-LICENSE
+# LICENSE
 
 # IDE
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+.vscode/
 .idea
+
+# Auto-generated files
 src/assets/icons/index.ts
+src/components/index.ts
+src/router/routeConfig.ts
+
+# Temporary files
 src/hooks/useWebRtcFile copy.ts
-src/assets/icons/index.ts
-src/assets/icons/index.ts
-src/components/index.ts
-src/components/index.ts
-src/assets/icons/index.ts
-.env.local.device
-/src/components/index.ts
-.env.local.device
-/.env.local.device
-/src/assets/icons/index.ts
-/src/router/routeConfig.ts

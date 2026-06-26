@@ -1,16 +1,17 @@
 /**
  * Upload component type definitions.
  */
-import React from 'react'
+import React from 'react';
 
 /**
  * Upload state machine.
  * - `idle`: No upload in progress
+ * - `waiting`: File queued, waiting for current upload to finish
  * - `uploading`: File transfer active
  * - `success`: Upload completed
  * - `error`: Upload failed
  */
-export type UploadState = 'idle' | 'uploading' | 'success' | 'error'
+export type UploadState = 'idle' | 'waiting' | 'uploading' | 'success' | 'error'
 
 /**
  * Information emitted when an upload starts.
@@ -42,6 +43,8 @@ export interface UploadPauseInfo {
   totalBytes: number
 }
 
+export type UploadBeforeUploadResult = boolean | void
+
 /**
  * Real-time upload detail for UI display.
  */
@@ -69,7 +72,7 @@ export const INITIAL_UPLOAD_DETAIL: UploadDetail = {
   transferredFormatted: '0 B',
   progressFormatted: '0%',
   speedFormatted: '0 B/s',
-}
+};
 
 /**
  * Storage space information.
@@ -116,10 +119,10 @@ export interface UploadDropZoneProps {
   // Whether to render the idle upload drop zone (for list-only usages)
   showUploader?: boolean
   // Build extra params for the start RPC based on the selected file
-  startParams?: (file: File) => any | Promise<any>
+  startParams?: (file: File) => Record<string, unknown> | Promise<Record<string, unknown>>
   // Notify parent when internal uploadState changes
   onStateChange?: (state: UploadState) => void
-  onUploadSpeed?: (any: any) => void
+  onUploadSpeed?: (data: unknown) => void
   /** Callback when paused, returns current transfer state */
   onPause?: (info: UploadPauseInfo) => void
   /** Custom upload trigger element (e.g., Button). If provided, replaces default upload box */
@@ -128,9 +131,13 @@ export interface UploadDropZoneProps {
   uploaderContainerClassName?: string
   /** Maximum file size in bytes. If exceeded, upload will be rejected with a toast message */
   maxFileSize?: number
+  /** Hook called before upload starts; return false to block upload. undefined/true means allow */
+  beforeUpload?: (
+    file: File
+  ) => UploadBeforeUploadResult | Promise<UploadBeforeUploadResult>
   // Undeclared but used props
   showInputAlways?: boolean
-  inputProps?: any
+  inputProps?: Record<string, unknown>
   lowWaterMark?: number
   highWaterMark?: number
 }

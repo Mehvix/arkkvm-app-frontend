@@ -7,8 +7,8 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-01-24 16:58:50
  */
-import { createKeyDef } from '../../merge'
-import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows'
+import { createKeyDef } from '../../merge';
+import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
 export const US_WIN_LAYOUT = {
   id: 'us-win',
   name: 'English (US)',
@@ -30,7 +30,7 @@ export const US_WIN_LAYOUT = {
       createKeyDef('Equal'),
       createKeyDef('Backspace', undefined, { width: 1.5 }),
     ],
-
+    // Row 2: Tab, Q-P, [, ], \, Del
     [
       createKeyDef('Tab', undefined, { width: 1.5 }),
       createKeyDef('KeyQ'),
@@ -48,7 +48,7 @@ export const US_WIN_LAYOUT = {
       createKeyDef('Backslash'),
       createKeyDef('Delete'),
     ],
-
+    // Row 3: Caps, A-L, ;, ', Enter
     [
       createKeyDef('CapsLock', undefined, { width: 1.8 }),
       createKeyDef('KeyA'),
@@ -64,7 +64,7 @@ export const US_WIN_LAYOUT = {
       createKeyDef('Quote'),
       createKeyDef('Enter', undefined, { width: 2.7 }),
     ],
-
+    // Row 4: Shift, Z-M, ,, ., /, ↑, Shift
     [
       createKeyDef('ShiftLeft', undefined, { width: 2.5 }),
       createKeyDef('KeyZ'),
@@ -80,7 +80,7 @@ export const US_WIN_LAYOUT = {
 
       createKeyDef('ShiftRight', undefined, { width: 2 }),
     ],
-
+    // Row 5: Ctrl, Fn, Win, Alt, Space, Alt, Ctrl, ←, ↓, →, Menu
     [
       createKeyDef('ControlLeft'),
       createKeyDef('MetaLeft'),
@@ -93,4 +93,4 @@ export const US_WIN_LAYOUT = {
     ],
   ],
   rightPanel: RIGHT_PANEL_ROWS,
-}
+};

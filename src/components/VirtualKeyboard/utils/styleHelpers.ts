@@ -5,9 +5,9 @@
  * @Author: zhanglei
  * @Date: 2025-11-03 14:42:29
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-01-22 23:36:14
+ * @LastEditTime: 2026-05-15 18:20:27
  */
-import { KEY_STYLES } from '../constants'
+import { KEY_STYLES } from '../constants';
 
 /**
  * Utility functions for generating key styles
@@ -29,22 +29,22 @@ export interface StyleConfig {
  * @returns Array of CSS class strings
  */
 export const getKeyStateStyles = (config: StyleConfig) => {
-  const { disabled, isPressed, isActive } = config
+  const { disabled, isPressed, isActive } = config;
 
   if (disabled) {
-    return KEY_STYLES.states.disabled
+    return KEY_STYLES.states.disabled;
   }
 
   if (isPressed) {
-    return KEY_STYLES.states.pressed
+    return KEY_STYLES.states.pressed;
   }
 
   if (isActive) {
-    return KEY_STYLES.states.active
+    return KEY_STYLES.states.active;
   }
 
-  return KEY_STYLES.states.normal
-}
+  return KEY_STYLES.states.normal;
+};
 
 /**
  * Get conditional styles for a key
@@ -53,13 +53,13 @@ export const getKeyStateStyles = (config: StyleConfig) => {
  * @returns Array of CSS class strings
  */
 export const getKeyConditionalStyles = (config: StyleConfig) => {
-  const { compact, heightClass, isFixedWidth } = config
+  const { compact, heightClass, isFixedWidth } = config;
 
   return [
     compact ? `m-0 ${heightClass}` : `m-[2px] ${heightClass}`,
-    isFixedWidth ? 'flex-none' : 'flex-1 basis-0 min-w-[32px]',
-  ]
-}
+    isFixedWidth ? 'flex-none' : 'flex-1 basis-0  min-w-[10px] md:min-w-[32px]',
+  ];
+};
 
 /**
  * Generate complete key styles
@@ -72,5 +72,5 @@ export const generateKeyStyles = (config: StyleConfig) => {
     ...KEY_STYLES.base,
     ...getKeyConditionalStyles(config),
     ...getKeyStateStyles(config),
-  ]
-}
+  ];
+};

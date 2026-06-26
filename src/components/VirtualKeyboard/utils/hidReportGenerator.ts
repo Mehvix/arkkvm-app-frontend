@@ -5,14 +5,14 @@
 import {
   HID_KEY_USAGE_MAP as HID_KEY_CODES,
   HID_MODIFIER_BITMASK_MAP,
-} from '../data/hidKeyCodes'
-import { getLanguageKeyboardLayout } from '../data/language-layouts'
-import { generateCharMapFromLayout, type LayoutChars } from './generateCharMap'
+} from '../data/hidKeyCodes';
+import { languageLayoutOptions, getLanguageKeyboardLayout } from '../data/language-layouts';
+import { generateCharMapFromLayout, type LayoutChars } from './generateCharMap';
 import {
   HID_MODIFIERS,
   isModifierKey as isModifierKeyCheck,
   resolveModifierCode,
-} from './modifierStateManager'
+} from './modifierStateManager';
 export type ModifierState = Partial<Record<keyof typeof HID_MODIFIERS, boolean>>
 
 export type LayoutEntry = {
@@ -20,7 +20,7 @@ export type LayoutEntry = {
   mod?: string[]
   accentKey?: { code: string; mod?: string[] }
 }
-export type { LayoutChars } from './generateCharMap'
+export type { LayoutChars } from './generateCharMap';
 export type HidReport = { keys: number[]; modifier: number }
 
 type KeyInput = KeyboardEvent | string
@@ -46,31 +46,34 @@ export function toHidReport(
   input: KeyInput,
   modifiers?: ModifierState
 ): HidReport {
+
   if (isKeyboardEvent(input)) {
-    const code = input.code || resolveModifierCode(input)
+    // Prioritize code; when code is empty, infer through key+location
+    const code = input.code || resolveModifierCode(input);
     if (!code || !HID_KEY_CODES[code]) {
-      return { keys: [0, 0, 0, 0, 0, 0], modifier: 0 }
+      return { keys: [0, 0, 0, 0, 0, 0], modifier: 0 };
     }
 
     if (isModifierKeyCheck(code)) {
+
       return {
         keys: [0, 0, 0, 0, 0, 0],
         modifier: (HID_MODIFIERS as Record<string, number>)[code] || 0,
-      }
+      };
     }
 
     const modifier = modifiers
       ? externalModifierMask(modifiers)
-      : calculateModifierMask(eventModifiers(input))
+      : calculateModifierMask(eventModifiers(input));
     return {
       keys: [HID_KEY_CODES[code], 0, 0, 0, 0, 0],
       modifier,
-    }
+    };
   }
 
   if (typeof input === 'string') {
     if (!HID_KEY_CODES[input]) {
-      return { keys: [0, 0, 0, 0, 0, 0], modifier: 0 }
+      return { keys: [0, 0, 0, 0, 0, 0], modifier: 0 };
     }
 
     if (isModifierKeyCheck(input)) {
@@ -81,23 +84,23 @@ export function toHidReport(
         return {
           keys: [0, 0, 0, 0, 0, 0],
           modifier: 0,
-        }
+        };
       }
 
       return {
         keys: [0, 0, 0, 0, 0, 0],
         modifier: (HID_MODIFIERS as Record<string, number>)[input] || 0,
-      }
+      };
     }
 
-    const modifier = modifiers ? externalModifierMask(modifiers) : 0
+    const modifier = modifiers ? externalModifierMask(modifiers) : 0;
     return {
       keys: [HID_KEY_CODES[input], 0, 0, 0, 0, 0],
       modifier,
-    }
+    };
   }
 
-  return { keys: [0, 0, 0, 0, 0, 0], modifier: 0 }
+  return { keys: [0, 0, 0, 0, 0, 0], modifier: 0 };
 }
 
 /**
@@ -105,7 +108,7 @@ export function toHidReport(
  *
  * Supports dynamic generation based on layout data.
  */
-const layoutConfigCache = new Map<string, { chars: LayoutChars }>()
+const layoutConfigCache = new Map<string, { chars: LayoutChars }>();
 
 function getLayoutConfig(
   layout: KeyboardLayout | string,
@@ -113,21 +116,21 @@ function getLayoutConfig(
 ): {
   chars: LayoutChars
 } {
-  const cacheKey = `${layout}:${layoutType}`
+  const cacheKey = `${layout}:${layoutType}`;
 
   if (layoutConfigCache.has(cacheKey)) {
-    return layoutConfigCache.get(cacheKey)!
+    return layoutConfigCache.get(cacheKey)!;
   }
 
-  const isoCode = extractIsoCode(layout)
-  const layoutId = findLayoutIdByIsoCode(isoCode)
+  const isoCode = extractIsoCode(layout);
+  const layoutId = findLayoutIdByIsoCode(isoCode);
   if (layoutId) {
-    const keyboardLayout = getLanguageKeyboardLayout(layoutId, layoutType)
+    const keyboardLayout = getLanguageKeyboardLayout(layoutId, layoutType);
     if (keyboardLayout) {
-      const chars = generateCharMapFromLayout(keyboardLayout)
-      const config = { chars }
-      layoutConfigCache.set(cacheKey, config)
-      return config
+      const chars = generateCharMapFromLayout(keyboardLayout);
+      const config = { chars };
+      layoutConfigCache.set(cacheKey, config);
+      return config;
     }
   }
 }
@@ -138,11 +141,11 @@ function getLayoutConfig(
  * @example 'cs-CZ' -> 'cs-CZ'
  */
 function extractIsoCode(layout: string): string {
-  const parts = layout.split('-')
+  const parts = layout.split('-');
   if (parts.length >= 2) {
-    return `${parts[0]}-${parts[1]}`
+    return `${parts[0]}-${parts[1]}`;
   }
-  return layout
+  return layout;
 }
 
 /**
@@ -150,38 +153,36 @@ function extractIsoCode(layout: string): string {
  * @example 'cs-CZ' -> 'cs-CZ-qwerty'
  */
 function findLayoutIdByIsoCode(isoCode: string): string | undefined {
-  const { languageLayoutOptions } = require('../data/language-layouts')
-
   const option = languageLayoutOptions.find((opt: { id: string }) =>
     opt.id.startsWith(isoCode)
-  )
+  );
 
-  return option?.id
+  return option?.id;
 }
 
-function isKeyboardEvent(x: any): x is KeyboardEvent {
-  return x && typeof x === 'object' && 'key' in x && 'code' in x
+function isKeyboardEvent(x: unknown): x is KeyboardEvent {
+  return !!x && typeof x === 'object' && 'key' in x && 'code' in x;
 }
 
 function eventModifiers(e: KeyboardEvent): string[] {
-  const mod: string[] = []
-  if (e.ctrlKey) mod.push('ControlLeft')
-  if (e.shiftKey) mod.push('ShiftLeft')
-  if (e.altKey) mod.push('AltLeft')
-  if (e.metaKey) mod.push('MetaLeft')
-  return mod
+  const mod: string[] = [];
+  if (e.ctrlKey) mod.push('ControlLeft');
+  if (e.shiftKey) mod.push('ShiftLeft');
+  if (e.altKey) mod.push('AltLeft');
+  if (e.metaKey) mod.push('MetaLeft');
+  return mod;
 }
 
 // isModifierKey is now imported from modifierStateManager as isModifierKeyCheck
 
-function externalModifierMask(ms: ModifierState): number {
+export function externalModifierMask(ms: ModifierState): number {
   let m = 0
   ;(Object.keys(HID_MODIFIERS) as Array<keyof typeof HID_MODIFIERS>).forEach(
     k => {
-      if (ms[k]) m |= HID_MODIFIERS[k]
+      if (ms[k]) m |= HID_MODIFIERS[k];
     }
-  )
-  return m
+  );
+  return m;
 }
 
 /**
@@ -190,16 +191,16 @@ function externalModifierMask(ms: ModifierState): number {
  * @returns Modifier bitmask
  */
 function calculateModifierMask(modifiers?: string[]): number {
-  let mask = 0
+  let mask = 0;
   if (modifiers && modifiers.length > 0) {
     for (const modKey of modifiers) {
-      const bitMask = HID_MODIFIER_BITMASK_MAP[modKey]
+      const bitMask = HID_MODIFIER_BITMASK_MAP[modKey];
       if (bitMask !== undefined) {
-        mask |= bitMask
+        mask |= bitMask;
       }
     }
   }
-  return mask
+  return mask;
 }
 
 /**
@@ -223,37 +224,30 @@ export function toHidReportForChar(
     layoutType?: 'windows' | 'apple'
   }
 ): HidReport[] {
-  const { layout = 'cs-CZ-qwerty', layoutType = 'windows' } = options || {}
-  const layoutConfig = getLayoutConfig(layout, layoutType)
+  const { layout = 'cs-CZ-qwerty', layoutType = 'windows' } = options || {};
 
-  const entry = layoutConfig.chars[char]
+  const layoutConfig = getLayoutConfig(layout, layoutType);
+  const entry = layoutConfig.chars[char];
 
   if (!entry) {
-    return []
+    return [];
   }
 
-  const { code, mod, deadKey } = entry
-  const keyCode = HID_KEY_CODES[code]
+  const { code, mod, deadKey } = entry;
+  const keyCode = HID_KEY_CODES[code];
   if (!keyCode) {
-    return []
+    return [];
   }
   if (deadKey) {
-    const deadKeyReports = createDeadKeyReports(deadKey)
+    const deadKeyReports = createDeadKeyReports(deadKey);
     if (deadKeyReports) {
-      return deadKeyReports.concat(createCharacterReports(keyCode, mod))
+      return deadKeyReports.concat(createCharacterReports(keyCode, mod));
     } else {
-      return createMergedDeadKeyReports(deadKey, keyCode, mod)
+      return createMergedDeadKeyReports(deadKey, keyCode, mod);
     }
   }
 
-  return createCharacterReports(keyCode, mod)
-}
-
-/**
- * Create empty HID report for unmapped characters.
- */
-function createEmptyReport(): HidReport[] {
-  return [{ keys: [0, 0, 0, 0, 0, 0], modifier: 0 }]
+  return createCharacterReports(keyCode, mod);
 }
 
 /**
@@ -267,7 +261,7 @@ function createCharacterReports(
   keyCode: number,
   modifiers?: string[]
 ): HidReport[] {
-  const modifierMask = calculateModifierMask(modifiers)
+  const modifierMask = calculateModifierMask(modifiers);
 
   return [
     {
@@ -278,7 +272,7 @@ function createCharacterReports(
       keys: [0, 0, 0, 0, 0, 0],
       modifier: 0,
     },
-  ]
+  ];
 }
 
 /**
@@ -295,14 +289,14 @@ function createDeadKeyReports(deadKey: {
   code: string
   mod?: string[]
 }): HidReport[] | null {
-  const deadKeyCode = HID_KEY_CODES[deadKey.code]
+  const deadKeyCode = HID_KEY_CODES[deadKey.code];
 
   if (!deadKeyCode) {
-    return null
+    return null;
   }
 
   if (deadKey.mod && deadKey.mod.length > 0) {
-    const deadModifierMask = calculateModifierMask(deadKey.mod)
+    const deadModifierMask = calculateModifierMask(deadKey.mod);
 
     return [
       {
@@ -313,10 +307,10 @@ function createDeadKeyReports(deadKey: {
         keys: [0, 0, 0, 0, 0, 0],
         modifier: 0,
       },
-    ]
+    ];
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -336,8 +330,8 @@ function createMergedDeadKeyReports(
   charKeyCode: number,
   charModifiers?: string[]
 ): HidReport[] {
-  const deadKeyCode = HID_KEY_CODES[deadKey.code]
-  const modifierMask = calculateModifierMask(charModifiers)
+  const deadKeyCode = HID_KEY_CODES[deadKey.code];
+  const modifierMask = calculateModifierMask(charModifiers);
 
   return [
     {
@@ -348,5 +342,5 @@ function createMergedDeadKeyReports(
       keys: [0, 0, 0, 0, 0, 0],
       modifier: 0,
     },
-  ]
+  ];
 }

@@ -1,6 +1,6 @@
 /**
- * @Purpose: Automatically generate component export files
- * @Descripttion: Scan the components directory and subdirectories and automatically generate the index.ts export file
+ * @Purpose: Auto-generate component export file
+ * @Descripttion: Scan the components directory recursively and generate `index.ts` exports
  * @Author: zhanglei
  * @Date: 2025-07-24 14:57:28
  * @LastEditors: zhanglei
@@ -10,41 +10,88 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-// ESM compatible: define __filename and __dirname
+// ESM compatibility: define __filename and __dirname
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Component directory path
+// Components directory path
 const componentsDir = path.resolve(__dirname, '../../src/components')
 // Output file path
 const outPath = path.resolve(__dirname, '../../src/components/index.ts')
 
-// Files or directories that need to be excluded
+// Files or directories to exclude
 const excludes = [
-  'index.ts', // exclude oneself
-  '.DS_Store', // macOS system files
+  'index.ts', // Exclude self-generated index file
+  '.DS_Store', // macOS system file
   'node_modules',
   '.git',
-  'data', // exclude data folder
+  'data', // Exclude data directory
 ]
 
-// Check if the file is a component file
+const noExportRE = /\/\/\s*@no-export\b/
+const copySuffixRE = /(?:^|[\s_-])copy(?:[\s_-]*\d+)?$/i
+
+function stripExtension(filePath: string): string {
+  return filePath.replace(/\.(tsx|ts)$/, '')
+}
+
+function hasCopySuffix(filePath: string): boolean {
+  return filePath
+    .split(path.sep)
+    .some(segment => copySuffixRE.test(stripExtension(segment)))
+}
+
+function hasNoExportMarker(filePath: string): boolean {
+  try {
+    return noExportRE.test(fs.readFileSync(filePath, 'utf-8'))
+  } catch (error) {
+    console.warn(`⚠️ Failed to read file ${filePath}:`, (error as any).message)
+    return false
+  }
+}
+
+// Check whether a file is a component source file
 function isComponentFile(filePath: string): boolean {
-  // Supports .tsx and .ts files
+  // Support both .tsx and .ts files
   return (
     (filePath.endsWith('.tsx') || filePath.endsWith('.ts')) &&
     !excludes.some(exclude => filePath.includes(exclude))
   )
 }
 
-// Scan directories recursively to get all components
+function shouldExportSourceFile(filePath: string): boolean {
+  if (!isComponentFile(filePath)) return false
+
+  if (hasCopySuffix(filePath)) {
+    return false
+  }
+
+  if (hasNoExportMarker(filePath)) {
+    console.log('🚫 识别到 @no-export，跳过自动导出:', filePath)
+    return false
+  }
+
+  return true
+}
+
+function getExistingPath(paths: string[]): string | null {
+  return paths.find(candidate => fs.existsSync(candidate)) ?? null
+}
+
+function normalizeGeneratedContent(content: string): string {
+  return content
+    .replace(/^\/\/ Last updated: .*\r?\n/, '')
+    .replace(/\* @LastEditTime: .*/g, ' * @LastEditTime: <generated>')
+}
+
+// Recursively scan directory tree to collect component entries
 function walk(dir: string, baseDir = componentsDir): string[] {
   if (!fs.existsSync(dir)) {
-    console.warn(`⚠️ Directory not found: ${dir}`)
+    console.warn(`⚠️ Directory does not exist: ${dir}`)
     return []
   }
 
-  const entries = fs.readdirSync(dir)
+  const entries = fs.readdirSync(dir).sort()
   const components: string[] = []
 
   for (const entry of entries) {
@@ -52,12 +99,18 @@ function walk(dir: string, baseDir = componentsDir): string[] {
     if (excludes.includes(entry)) continue
 
     const fullPath = path.join(dir, entry)
+    if (hasCopySuffix(fullPath)) {
+      console.log('🚫 过滤副本文件/夹:', fullPath)
+      continue
+    }
+
     const stat = fs.statSync(fullPath)
 
     if (stat.isDirectory()) {
-      // Determine whether it is a "component module directory": there is index + entry file with the same name
-      // Example: VirtualUsbDrive/ contains index.tsx + VirtualUsbDrive.tsx → component module
-      // And: ControlToolbar/ contains index.tsx but does not have ControlToolbar.tsx → group directory, recursion is required
+      // Detect whether this is a component module directory:
+      // has index + same-name entry file
+      // Example: VirtualUsbDrive/ with index.tsx + VirtualUsbDrive.tsx
+      // Otherwise treat as a grouping directory and recurse
       const dirName = path.basename(fullPath)
       const hasBarrel =
         fs.existsSync(path.join(fullPath, 'index.ts')) ||
@@ -65,27 +118,36 @@ function walk(dir: string, baseDir = componentsDir): string[] {
       const hasSameNameEntry =
         fs.existsSync(path.join(fullPath, `${dirName}.ts`)) ||
         fs.existsSync(path.join(fullPath, `${dirName}.tsx`))
-
       if (hasBarrel && hasSameNameEntry) {
-        // Component module directory: only export directory entries, not recursive internal files
+        const barrelPath = getExistingPath([
+          path.join(fullPath, 'index.tsx'),
+          path.join(fullPath, 'index.ts'),
+        ])
+
+        if (barrelPath && hasNoExportMarker(barrelPath)) {
+          console.log('🚫 识别到 @no-export，跳过自动导出:', barrelPath)
+          continue
+        }
+
+        // Component module directory: export directory entry only
         let relativePath = path.relative(baseDir, fullPath)
         relativePath = relativePath.replace(/\\/g, '/')
         components.push(relativePath)
         continue
       }
-      // Grouped directories: recursively scan subdirectories
+      // Grouping directory: recurse into subdirectories
       const subComponents = walk(fullPath, baseDir)
       components.push(...subComponents)
       continue
     }
 
-    // Determine whether it is a component file
-    if (isComponentFile(fullPath)) {
-      // Compute relative paths (relative to the components directory)
+    // Handle component files
+    if (shouldExportSourceFile(fullPath)) {
+      // Compute path relative to components directory
       let relativePath = path.relative(baseDir, fullPath)
       // Remove file extension
       relativePath = relativePath.replace(/\.(tsx|ts)$/, '')
-      // Convert Windows path separators
+      // Normalize Windows separators
       relativePath = relativePath.replace(/\\/g, '/')
 
       components.push(relativePath)
@@ -95,17 +157,16 @@ function walk(dir: string, baseDir = componentsDir): string[] {
   return components
 }
 
-// Convert component name to legal PascalCase format
+// Convert component name into a valid PascalCase identifier
 function toPascalCase(name: string): string {
-  // Handle separators such as hyphens and underscores
+  // Handle delimiters like hyphen/underscore/space
   return name
-    .split(/[-_\s]+/) // Split by hyphen, underscore, or space
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1)) // Capitalize the first letter of each part
+    .split(/[-_\s]+/) // Split by delimiters
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1)) // Uppercase initials
     .join('')
 }
 
-// Generate export statement
-// Detect the export method of component files (default export or named export)
+// Detect export style from component file (default vs named exports)
 function detectExportType(filePath: string): {
   hasDefaultExport: boolean
   namedValueExports: string[]
@@ -114,10 +175,10 @@ function detectExportType(filePath: string): {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
 
-    // Check if there is export default
+    // Check whether `export default` exists
     const hasDefaultExport = /export\s+default\s+/m.test(content)
 
-    // Extract named exports (differentiate between values ​​and types)
+    // Extract named exports and split value exports vs type exports
     const namedValueExports: string[] = []
     const namedTypeExports: string[] = []
     const namedExportRegex =
@@ -134,17 +195,17 @@ function detectExportType(filePath: string): {
       }
     }
 
-    // Check for exports of the form export { X, Y, Z }
+    // Parse block exports, e.g. `export { X, Y, Z }`
     const exportBlockRegex = /export\s+\{([^}]+)\}/g
     while ((match = exportBlockRegex.exec(content)) !== null) {
       const exportItems = match[1].split(',').map(item => item.trim())
       for (const item of exportItems) {
-        // Handle export { X as Y } case
+        // Handle aliases like `export { X as Y }`
         const asMatch = item.match(
           /([a-zA-Z0-9_$]+)(?:\s+as\s+([a-zA-Z0-9_$]+))?/
         )
         if (asMatch && asMatch[1]) {
-          // Unable to determine type from block export, conservatively export as value
+          // Type info is unknown in block exports; conservatively treat as value export
           namedValueExports.push(asMatch[1])
         }
       }
@@ -163,18 +224,18 @@ function detectExportType(filePath: string): {
 
 function generateExports(components: string[]): string {
   const header = `/**
- * @Purpose: Export all components uniformly
+ * @Purpose: Unified export surface for all components
  * @Author: zhanglei
  * @Date: 2025-07-15 19:05:10
  * @LastEditors: zhanglei
  * @LastEditTime: ${new Date().toISOString().replace('T', ' ').substring(0, 19)}
  */
 
-// ⚠️ This file is generated by an automatic script, please do not modify it manually
+// ⚠️ This file is auto-generated. Do not edit manually.
 `
 
   const exports = components.map(component => {
-    // For components in the ui directory, use the named export form
+    // For ui/* components, prefer named exports
     if (component.startsWith('ui/')) {
       const fullPath = path.join(componentsDir, `${component}.ts`)
       const tsxPath = path.join(componentsDir, `${component}.tsx`)
@@ -185,11 +246,11 @@ function generateExports(components: string[]): string {
         return `// ⚠️ Component file not found: ${component}`
       }
 
-      // Detecting how UI components are exported
+      // Detect UI component export style
       const { hasDefaultExport, namedValueExports, namedTypeExports } =
         detectExportType(filePath)
 
-      // Special handling for ui/select: force known types to be moved from value export to type export
+      // Special handling for ui/select: move known type names into type exports
       if (component === 'ui/select') {
         const knownTypeNames = new Set(['AppSelectOption', 'AppSelectProps'])
         const fixedTypeExports = Array.from(
@@ -201,7 +262,7 @@ function generateExports(components: string[]): string {
         const fixedValueExports = namedValueExports.filter(
           n => !knownTypeNames.has(n)
         )
-        // Overwrite with corrected list
+        // Overwrite original arrays with normalized lists
         ;(namedTypeExports as string[]).length = 0
         ;(namedTypeExports as string[]).push(...fixedTypeExports)
         ;(namedValueExports as string[]).length = 0
@@ -209,7 +270,7 @@ function generateExports(components: string[]): string {
       }
 
       if (namedValueExports.length > 0 || namedTypeExports.length > 0) {
-        // If there is a named export, distinguish between value export and type export.
+        // Keep value exports and type exports separate
         const parts: string[] = []
         if (namedTypeExports.length > 0) {
           parts.push(
@@ -223,26 +284,26 @@ function generateExports(components: string[]): string {
         }
         return parts.join('\n')
       } else if (hasDefaultExport) {
-        // If there is a default export, use the component name as the export name
+        // If default export exists, map it to PascalCase component name
         const componentName = path.basename(component)
         const pascalCaseName = toPascalCase(componentName)
         return `export { default as ${pascalCaseName} } from './${component}';`
       } else {
-        // If the export method cannot be determined, use the export * form
+        // Fallback when export style cannot be inferred
         return `export * from './${component}';`
       }
     }
 
-    // For other components, detect the export method and generate corresponding export statements
+    // For non-ui components, infer and generate export statements
     const componentName = path.basename(component)
     const pascalCaseName = toPascalCase(componentName)
     const fullPath = path.join(componentsDir, `${component}.ts`)
     const tsxPath = path.join(componentsDir, `${component}.tsx`)
-    // Directory modules are also supported (index.ts/tsx in the directory)
+    // Also support directory modules with index.ts/index.tsx
     const dirIndexTs = path.join(componentsDir, component, 'index.ts')
     const dirIndexTsx = path.join(componentsDir, component, 'index.tsx')
 
-    // Determine file path
+    // Resolve the source file path
     let filePath: string | null = null
     if (fs.existsSync(fullPath)) filePath = fullPath
     else if (fs.existsSync(tsxPath)) filePath = tsxPath
@@ -254,25 +315,25 @@ function generateExports(components: string[]): string {
       return `// ⚠️ Component file not found: ${component}`
     }
 
-    // Check export method
+    // Detect export style
     const { hasDefaultExport, namedValueExports } = detectExportType(filePath)
 
-    // Generate different export statements based on the export method
+    // Generate export statement based on detected style
     if (hasDefaultExport) {
       return `export { default as ${pascalCaseName} } from './${component}';`
     } else if (namedValueExports.includes(pascalCaseName)) {
-      // If there is a named export that matches the component name
+      // Use matching named export when available
       return `export { ${pascalCaseName} } from './${component}';`
     } else if (namedValueExports.length > 0) {
-      // If there are other named exports, export the first one
+      // Otherwise map the first named export to PascalCase alias
       return `export { ${namedValueExports[0]} as ${pascalCaseName} } from './${component}';`
     } else {
-      // If the export method cannot be determined, use the export * form
+      // Fallback when export style cannot be inferred
       return `export * from './${component}';`
     }
   })
 
-  // Export grouped by category
+  // Group exports by category
   const uiExports = exports.filter(exp => exp.includes('ui/'))
   const businessExports = exports.filter(
     exp => !exp.includes('ui/') && !exp.includes('⚠️')
@@ -280,20 +341,20 @@ function generateExports(components: string[]): string {
   const warningExports = exports.filter(exp => exp.includes('⚠️'))
 
   return `${header}
-// UI components
+// UI Components
 ${uiExports.join('\n')}
 
-// business components
+// Business Components
 ${businessExports.join('\n')}
 
-${warningExports.length > 0 ? '// Warning: There is a problem with the following components\n' + warningExports.join('\n') : ''}
+${warningExports.length > 0 ? '// Warning: Issues found in the following components\n' + warningExports.join('\n') : ''}
 `
 }
 
 // Generate index.ts file
 async function generate(): Promise<void> {
   try {
-    // Make sure the output directory exists
+    // Ensure output directory exists
     const outDir = path.dirname(outPath)
     if (!fs.existsSync(outDir)) {
       fs.mkdirSync(outDir, { recursive: true })
@@ -305,13 +366,20 @@ async function generate(): Promise<void> {
     // Generate export content
     const content = generateExports(components)
 
-    // write file
+    if (
+      fs.existsSync(outPath) &&
+      normalizeGeneratedContent(fs.readFileSync(outPath, 'utf-8')) ===
+        normalizeGeneratedContent(content)
+    ) {
+      return Promise.resolve()
+    }
+
+    // Write file only when the generated export surface changed.
     fs.writeFileSync(outPath, content, 'utf-8')
-    // console.log('✅ components/index.ts generated successfully');
 
     return Promise.resolve()
   } catch (err) {
-    console.error('❌ Generate components/index.ts failed:', err)
+    console.error('❌ Failed to generate components/index.ts:', err)
     return Promise.reject(err)
   }
 }

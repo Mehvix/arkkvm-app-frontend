@@ -4,19 +4,19 @@
  * @Date: 2026-01-24
  */
 
-import { IconCloud } from '@/assets/icons'
-import { AspectRatioContainer, TopNavbar } from '@/components'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { IconCloud } from '@/assets/icons';
+import { AspectRatioContainer, TopNavbar } from '@/components';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export const meta = {
   auth: false,
   title: '404 - Page Not Found',
-}
+};
 
 export default function NotFound() {
-  const navigate = useNavigate()
-  const [topbarShowLoggedIn, setTopbarShowLoggedIn] = useState(true)
+  const navigate = useNavigate();
+  const [topbarShowLoggedIn] = useState(true);
   return (
     <div className="flex flex-col overflow-hidden">
       <TopNavbar
@@ -54,5 +54,5 @@ export default function NotFound() {
         </div>
       </AspectRatioContainer>
     </div>
-  )
+  );
 }

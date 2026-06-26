@@ -1,6 +1,8 @@
+// HID Key Mapping Table - Mapping of keyboard keys to HID usage values based on USB HID specification
+// Reference documents:
 // [Linux USB HID gadget driver](https://www.kernel.org/doc/Documentation/usb/gadget_hid.txt)
 // [Universal Serial Bus HID Usage Tables: Section 10](https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf)
-
+// Includes all key mappings for standard 85/101/102-key keyboards (HID usage values, not scan codes)
 export const HID_KEY_USAGE_MAP = {
   Again: 0x79,
   AlternateErase: 0x9d,
@@ -240,8 +242,9 @@ export const HID_KEY_USAGE_MAP = {
   Bksp: 0x2a, // Backspace
   Del: 0x4c, // Delete (Forward)
   Ins: 0x49, // Insert
-} as Record<string, number>
+} as Record<string, number>;
 
+// Dead key mapping table - special keys for combining character input
 export const DEAD_KEY_UNICODE_MAP = {
   Acute: 0x00b4,
   Breve: 0x02d8,
@@ -258,8 +261,9 @@ export const DEAD_KEY_UNICODE_MAP = {
   Slash: 0x02f8,
   Tilde: 0x007e,
   Umlaut: 0x00a8,
-} as Record<string, number>
+} as Record<string, number>;
 
+// Modifier key bitmask mapping table - for modifier field in HID reports
 export const HID_MODIFIER_BITMASK_MAP = {
   ControlLeft: 0x01,
   ControlRight: 0x10,
@@ -270,8 +274,9 @@ export const HID_MODIFIER_BITMASK_MAP = {
   MetaLeft: 0x08,
   MetaRight: 0x80,
   AltGr: 0x40,
-} as Record<string, number>
+} as Record<string, number>;
 
+// HID usage value to modifier bitmask reverse mapping table - for getting modifier bitmask from HID usage value
 export const HID_USAGE_TO_MODIFIER_BITMASK_MAP = {
   0xe0: HID_MODIFIER_BITMASK_MAP.ControlLeft,
   0xe1: HID_MODIFIER_BITMASK_MAP.ShiftLeft,
@@ -281,8 +286,9 @@ export const HID_USAGE_TO_MODIFIER_BITMASK_MAP = {
   0xe5: HID_MODIFIER_BITMASK_MAP.ShiftRight,
   0xe6: HID_MODIFIER_BITMASK_MAP.AltRight,
   0xe7: HID_MODIFIER_BITMASK_MAP.MetaRight,
-} as Record<number, number>
+} as Record<number, number>;
 
+// Lock key list - special keys with toggle states
 export const LATCHING_KEY_NAMES = [
   'CapsLock',
   'ScrollLock',
@@ -290,8 +296,13 @@ export const LATCHING_KEY_NAMES = [
   'Meta',
   'Compose',
   'Kana',
-]
+];
 
+/**
+ * Decode modifier bitmask to active states of each modifier
+ * @param modifierBitmask - Modifier bitmask in HID report
+ * @returns Active state object of each modifier
+ */
 export function decodeModifierBitmask(modifierBitmask: number) {
   return {
     isShiftActive:
@@ -315,12 +326,13 @@ export function decodeModifierBitmask(modifierBitmask: number) {
           HID_MODIFIER_BITMASK_MAP.MetaRight)) !==
       0,
     isAltGrActive: (modifierBitmask & HID_MODIFIER_BITMASK_MAP.AltGr) !== 0,
-  }
+  };
 }
 
-export const keys = HID_KEY_USAGE_MAP
-export const deadKeys = DEAD_KEY_UNICODE_MAP
-export const modifiers = HID_MODIFIER_BITMASK_MAP
-export const hidKeyToModifierMask = HID_USAGE_TO_MODIFIER_BITMASK_MAP
-export const latchingKeys = LATCHING_KEY_NAMES
-export const decodeModifiers = decodeModifierBitmask
+// Backward-compatible alias exports
+export const keys = HID_KEY_USAGE_MAP;
+export const deadKeys = DEAD_KEY_UNICODE_MAP;
+export const modifiers = HID_MODIFIER_BITMASK_MAP;
+export const hidKeyToModifierMask = HID_USAGE_TO_MODIFIER_BITMASK_MAP;
+export const latchingKeys = LATCHING_KEY_NAMES;
+export const decodeModifiers = decodeModifierBitmask;

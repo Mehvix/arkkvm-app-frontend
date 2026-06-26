@@ -1,10 +1,10 @@
-import { cn } from '@/utils'
-import type { FC } from 'react'
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react'
-import { KeyLabel, LEDIndicator } from '.'
-import type { KeyDefinition } from '../data/keyboard-types'
-import { useGlobalEventCleanup } from '../hooks'
-import { generateKeyStyles } from '../utils'
+import { cn } from '@/utils';
+import type { FC } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { KeyLabel, LEDIndicator } from '.';
+import type { KeyDefinition, KeyLegends } from '../data/keyboard-types';
+import { useGlobalEventCleanup } from '../hooks';
+import { generateKeyStyles } from '../utils';
 
 interface KeycapProps {
   keyCode?: string
@@ -32,42 +32,47 @@ interface KeycapProps {
   keyDef: KeyDefinition
 }
 
+interface DisplayLabelParams {
+  legends?: KeyLegends
+  shiftActive?: boolean
+  capsLockActive?: boolean
+  altGrActive?: boolean
+  isModifier?: boolean
+  showDualState?: boolean
+  ignoreAltGr?: boolean
+}
+
 const getDisplayLabel = ({
   legends,
   shiftActive,
   capsLockActive,
   altGrActive,
   isModifier,
-  pressedColor = 'bg-blue-500',
   showDualState,
   ignoreAltGr,
-}) => {
-  if (!legends) return ''
+}: DisplayLabelParams) => {
+  if (!legends) return '';
 
-  if (isModifier || ignoreAltGr) return legends.base
+  if (isModifier || ignoreAltGr) return legends.base;
 
-  if (altGrActive) return legends.altGr
+  if (altGrActive) return legends.altGr;
 
   if (legends.caps) {
-    return shiftActive
-      ? legends.shift
-      : showDualState
-        ? [legends.base, legends.shift]
-        : legends.base
+    return shiftActive ? legends.shift : (showDualState ? [legends.base, legends.shift] : legends.base);
   }
 
   if (shiftActive && legends.shift) {
-    return capsLockActive ? legends.base : legends.shift
+    return capsLockActive ? legends.base : legends.shift;
   }
 
   if (capsLockActive && legends.shift) {
-    return legends.shift
+    return legends.shift;
   }
 
-  if (showDualState) return [legends.base, legends.shift]
+  if (showDualState) return [legends.base, legends.shift];
 
-  return legends.base || ''
-}
+  return legends.base || '';
+};
 
 export const Keycap: FC<KeycapProps> = memo(
   ({
@@ -87,14 +92,14 @@ export const Keycap: FC<KeycapProps> = memo(
     onKeyDown,
     onKeyUp,
   }) => {
-    if (!keyDef) return <span></span>
+    if (!keyDef) return <span></span>;
 
-    const { keyCode, legends, width, style, className = '' } = keyDef
-    const isFixedWidth = width !== 'auto' && Boolean(width)
-    const flexGrow = width || 1
-    const heightClass_ = heightClass || (compact ? 'h-5' : 'h-10')
-    const [internalPressed, setInternalPressed] = useState(false)
-    const pressedRef = useRef(false)
+    const { keyCode, width, style, className = '' } = keyDef;
+    const isFixedWidth = width !== 'auto' && Boolean(width);
+    const flexGrow = width || 1;
+    const heightClass_ = heightClass || (compact ? 'h-5' : 'h-10');
+    const [internalPressed, setInternalPressed] = useState(false);
+    const pressedRef = useRef(false);
     const keyStyles = useMemo(() => {
       const styleConfig = {
         disabled,
@@ -103,9 +108,9 @@ export const Keycap: FC<KeycapProps> = memo(
         compact,
         heightClass: heightClass_,
         isFixedWidth,
-      }
+      };
 
-      const baseStyles = generateKeyStyles(styleConfig)
+      const baseStyles = generateKeyStyles(styleConfig);
 
       if (isPressed && !disabled) {
         const filteredStyles = baseStyles.filter(
@@ -113,11 +118,11 @@ export const Keycap: FC<KeycapProps> = memo(
             !style.includes('bg-') ||
             style.includes('hover:') ||
             style.includes('active:')
-        )
-        return [...filteredStyles, pressedColor, 'text-white', 'shadow-inner']
+        );
+        return [...filteredStyles, pressedColor, 'text-white', 'shadow-inner'];
       }
 
-      return baseStyles
+      return baseStyles;
     }, [
       disabled,
       internalPressed,
@@ -127,7 +132,7 @@ export const Keycap: FC<KeycapProps> = memo(
       heightClass_,
       isFixedWidth,
       pressedColor,
-    ])
+    ]);
 
     const computedLabel = useMemo(() => {
       const label = getDisplayLabel({
@@ -135,124 +140,124 @@ export const Keycap: FC<KeycapProps> = memo(
         shiftActive,
         capsLockActive,
         altGrActive,
-      })
+      });
       return {
         label,
         isStringLabel: typeof label === 'string',
         isArrayLabel: Array.isArray(label),
-      }
-    }, [keyDef, shiftActive, capsLockActive, altGrActive])
+      };
+    }, [keyDef, shiftActive, capsLockActive, altGrActive]);
 
     const computedSendLabel = useMemo(() => {
-      if (typeof sendValue === 'string') return sendValue
-      if (computedLabel.isStringLabel) return computedLabel.label as string
+      if (typeof sendValue === 'string') return sendValue;
+      if (computedLabel.isStringLabel) return computedLabel.label as string;
       if (computedLabel.isArrayLabel)
-        return String((computedLabel.label as string[])[0] ?? '')
-      return ''
-    }, [sendValue, computedLabel])
+        return String((computedLabel.label as string[])[0] ?? '');
+      return '';
+    }, [sendValue, computedLabel]);
 
     const tooltipText = useMemo(() => {
-      if (typeof title === 'string') return title
-      if (computedLabel.isStringLabel) return computedLabel.label as string
+      if (typeof title === 'string') return title;
+      if (computedLabel.isStringLabel) return computedLabel.label as string;
       if (computedLabel.isArrayLabel) {
-        const [primary, secondary] = computedLabel.label as string[]
-        return `${primary} / ${secondary ?? ''}`
+        const [primary, secondary] = computedLabel.label as string[];
+        return `${primary} / ${secondary ?? ''}`;
       }
-      return computedSendLabel || keyCode
-    }, [title, computedLabel, computedSendLabel, keyCode])
+      return computedSendLabel || keyCode;
+    }, [title, computedLabel, computedSendLabel, keyCode]);
 
     const fullTooltip = useMemo(() => {
-      const baseTooltip = `${tooltipText} (${keyCode})`
-      if (!showStatusIndicator) return baseTooltip
-      const statusText = isActive ? 'Active' : 'Inactive'
-      return `${baseTooltip} - Status: ${statusText}`
-    }, [tooltipText, keyCode, showStatusIndicator, isActive])
+      const baseTooltip = `${tooltipText} (${keyCode})`;
+      if (!showStatusIndicator) return baseTooltip;
+      const statusText = isActive ? 'Active' : 'Inactive';
+      return `${baseTooltip} - Status: ${statusText}`;
+    }, [tooltipText, keyCode, showStatusIndicator, isActive]);
 
     useGlobalEventCleanup(internalPressed, () => {
       if (pressedRef.current) {
-        pressedRef.current = false
-        setInternalPressed(false)
-        onKeyUp?.(keyCode, computedSendLabel)
+        pressedRef.current = false;
+        setInternalPressed(false);
+        onKeyUp?.(keyCode, computedSendLabel);
       }
-    })
+    });
 
     const handleKeyDown = useCallback(() => {
-      if (disabled || pressedRef.current) return
-      pressedRef.current = true
-      setInternalPressed(true)
-      onKeyDown?.(keyCode, computedSendLabel)
-    }, [disabled, onKeyDown, keyCode, computedSendLabel])
+      if (disabled || pressedRef.current) return;
+      pressedRef.current = true;
+      setInternalPressed(true);
+      onKeyDown?.(keyCode, computedSendLabel);
+    }, [disabled, onKeyDown, keyCode, computedSendLabel]);
 
     const handleKeyUp = useCallback(() => {
-      if (disabled || !pressedRef.current) return
-      pressedRef.current = false
-      setInternalPressed(false)
-      onKeyUp?.(keyCode, computedSendLabel)
-    }, [disabled, onKeyUp, keyCode, computedSendLabel])
+      if (disabled || !pressedRef.current) return;
+      pressedRef.current = false;
+      setInternalPressed(false);
+      onKeyUp?.(keyCode, computedSendLabel);
+    }, [disabled, onKeyUp, keyCode, computedSendLabel]);
 
     const handleMouseDown = useCallback(
       (e: React.MouseEvent) => {
-        e.preventDefault()
-        handleKeyDown()
+        e.preventDefault();
+        handleKeyDown();
       },
       [handleKeyDown]
-    )
+    );
 
     const handleMouseUp = useCallback(
       (e: React.MouseEvent) => {
-        e.preventDefault()
-        handleKeyUp()
+        e.preventDefault();
+        handleKeyUp();
       },
       [handleKeyUp]
-    )
+    );
 
     const handleMouseLeave = useCallback(() => {
       if (internalPressed) {
-        handleKeyUp()
+        handleKeyUp();
       }
-    }, [internalPressed, handleKeyUp])
+    }, [internalPressed, handleKeyUp]);
 
     const handleTouchStart = useCallback(
       (e: React.TouchEvent) => {
-        e.preventDefault()
-        handleKeyDown()
+        e.preventDefault();
+        handleKeyDown();
       },
       [handleKeyDown]
-    )
+    );
 
     const handleTouchEnd = useCallback(
       (e: React.TouchEvent) => {
-        e.preventDefault()
-        handleKeyUp()
+        e.preventDefault();
+        handleKeyUp();
       },
       [handleKeyUp]
-    )
+    );
 
     const handleTouchCancel = useCallback(() => {
       if (internalPressed) {
-        handleKeyUp()
+        handleKeyUp();
       }
-    }, [internalPressed, handleKeyUp])
+    }, [internalPressed, handleKeyUp]);
 
     const handleKeyboardDown = useCallback(
       (e: React.KeyboardEvent) => {
         if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault()
-          handleKeyDown()
+          e.preventDefault();
+          handleKeyDown();
         }
       },
       [handleKeyDown]
-    )
+    );
 
     const handleKeyboardUp = useCallback(
       (e: React.KeyboardEvent) => {
         if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault()
-          handleKeyUp()
+          e.preventDefault();
+          handleKeyUp();
         }
       },
       [handleKeyUp]
-    )
+    );
 
     return (
       <button
@@ -286,30 +291,30 @@ export const Keycap: FC<KeycapProps> = memo(
           showDualState={keyDef.showDualState && !isActive}
         />
       </button>
-    )
+    );
   },
   (prevProps, nextProps) => {
-    if (prevProps.isPressed !== nextProps.isPressed) return false
-    if (prevProps.isActive !== nextProps.isActive) return false
+    if (prevProps.isPressed !== nextProps.isPressed) return false;
+    if (prevProps.isActive !== nextProps.isActive) return false;
 
     if (prevProps.keyDef !== nextProps.keyDef) {
-      const prevLegends = prevProps.keyDef?.legends
-      const nextLegends = nextProps.keyDef?.legends
+      const prevLegends = prevProps.keyDef?.legends;
+      const nextLegends = nextProps.keyDef?.legends;
       if (JSON.stringify(prevLegends) !== JSON.stringify(nextLegends)) {
-        return false
+        return false;
       }
     }
 
-    const hasShiftLegend = prevProps.keyDef?.legends?.shift !== undefined
-    const hasDualState = prevProps.keyDef?.showDualState === true
-    const hasAltGrLegend = prevProps.keyDef?.legends?.altGr !== undefined
+    const hasShiftLegend = prevProps.keyDef?.legends?.shift !== undefined;
+    const hasDualState = prevProps.keyDef?.showDualState === true;
+    const hasAltGrLegend = prevProps.keyDef?.legends?.altGr !== undefined;
 
     if (hasShiftLegend || hasDualState || hasAltGrLegend) {
-      if (prevProps.shiftActive !== nextProps.shiftActive) return false
-      if (prevProps.capsLockActive !== nextProps.capsLockActive) return false
-      if (prevProps.altGrActive !== nextProps.altGrActive) return false
+      if (prevProps.shiftActive !== nextProps.shiftActive) return false;
+      if (prevProps.capsLockActive !== nextProps.capsLockActive) return false;
+      if (prevProps.altGrActive !== nextProps.altGrActive) return false;
     }
 
-    return true
+    return true;
   }
-)
+);

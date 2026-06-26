@@ -7,8 +7,8 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-08 02:03:19
  */
-import { cn } from '@/lib/utils'
-import React from 'react'
+import { cn } from '@/lib/utils';
+import React from 'react';
 
 const variantStyles = {
   beta: 'text-white',
@@ -16,15 +16,15 @@ const variantStyles = {
   warning: 'text-white',
   error: 'text-white',
   info: 'text-white',
-} as const
+} as const;
 
-const variantBg = {
-  beta: 'var(--btn-filled-bg-disabled, rgba(0, 146, 255, 0.30))',
-  success: 'rgba(34, 197, 94, 0.30)',
-  warning: 'rgba(234, 179, 8, 0.30)',
-  error: 'rgba(239, 68, 68, 0.30)',
-  info: 'rgba(59, 130, 246, 0.30)',
-} as const
+const variantClasses = {
+  beta: 'bg-[var(--btn-filled-bg-disabled,rgba(0,146,255,0.30))]',
+  success: 'bg-[rgba(34,197,94,0.30)]',
+  warning: 'bg-[rgba(234,179,8,0.30)]',
+  error: 'bg-[rgba(239,68,68,0.30)]',
+  info: 'bg-[rgba(59,130,246,0.30)]',
+} as const;
 
 export type BadgeVariant = keyof typeof variantStyles
 
@@ -40,13 +40,13 @@ export function Badge({ variant = 'beta', className, children }: BadgeProps) {
       className={cn(
         'inline-flex items-center rounded-[4px] p-[4px] text-[10px] font-medium leading-none',
         variantStyles[variant],
+        variantClasses[variant],
         className
       )}
-      style={{ background: variantBg[variant] }}
     >
       {children}
     </span>
-  )
+  );
 }
 
-export default Badge
+export default Badge;

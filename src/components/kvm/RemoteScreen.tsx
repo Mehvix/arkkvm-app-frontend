@@ -11,10 +11,14 @@
  * @author zhanglei
  */
 
-import { useDesktopRtc, type DataChannels } from '@/hooks/useDesktopRtc'
-import { useOcrCapture } from '@/hooks/useOcrCapture'
-import { cn } from '@/utils'
-import { env } from '@/utils/env'
+import {
+  useDesktopRtc,
+  type DataChannels,
+  type ViewerStatus,
+} from '@/hooks/useDesktopRtc';
+import { useOcrCapture } from '@/hooks/useOcrCapture';
+import { cn } from '@/utils';
+import { env } from '@/utils/env';
 import {
   forwardRef,
   useCallback,
@@ -22,12 +26,12 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
-} from 'react'
-import { useTranslation } from 'react-i18next'
-import { Loading } from '../ui/Loading'
-import ConnectionIssuePanel from './ConnectionIssuePanel'
-import { OcrSelectionOverlay } from './OcrSelectionOverlay'
+  useState
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import ConnectionIssuePanel from './ConnectionIssuePanel';
+import { OcrSelectionOverlay } from './OcrSelectionOverlay';
+import { VideoAreaOverlay } from './VideoAreaOverlay';
 
 // ============================================================================
 // Types & Interfaces
@@ -35,12 +39,7 @@ import { OcrSelectionOverlay } from './OcrSelectionOverlay'
 
 type MouseInputMode = 'absolute' | 'relative'
 type CursorStyle = 'dot' | 'arrow'
-type HdmiErrorState =
-  | 'no_signal'
-  | 'no_lock'
-  | 'out_of_range'
-  | 'hdmi_disconnected'
-  | 'hdmi_no_signal'
+type HdmiErrorState = 'no_signal' | 'no_lock' | 'out_of_range' | 'hdmi_disconnected' | 'hdmi_no_signal'
 
 interface VideoEnhancement {
   saturation: number
@@ -71,6 +70,7 @@ interface RemoteScreenProps extends React.HTMLAttributes<HTMLDivElement> {
   onPeerConnection?: (pc: RTCPeerConnection) => void
   onDataChannels?: (channels: DataChannels) => void
   onPeerConnectionStateChange?: (state: RTCPeerConnectionState) => void
+  onViewerStatusChange?: (status: ViewerStatus) => void
   onVideoSizeChange?: (size: { width: number; height: number }) => void
 }
 
@@ -92,11 +92,11 @@ const HDMI_ERROR_STATES: readonly HdmiErrorState[] = [
   'out_of_range',
   'hdmi_disconnected',
   'hdmi_no_signal',
-] as const
+] as const;
 
-const DISCONNECTED_WEBRTC_STATES = ['disconnected', 'failed', 'closed'] as const
+const DISCONNECTED_WEBRTC_STATES = ['disconnected', 'failed', 'closed'] as const;
 
-const DOT_CURSOR_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='4' fill='rgba(59, 130, 246, 0.8)' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 6 6, auto`
+const DOT_CURSOR_SVG = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Ccircle cx=\'6\' cy=\'6\' r=\'4\' fill=\'rgba(59, 130, 246, 0.8)\' stroke=\'white\' stroke-width=\'1.5\'/%3E%3C/svg%3E") 6 6, auto';
 
 // ============================================================================
 // Helper Functions
@@ -107,28 +107,26 @@ const DOT_CURSOR_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
  */
 const getHdmiStateKey = (hdmiState: string): string => {
   if (hdmiState === 'no_signal' || hdmiState === 'hdmi_no_signal') {
-    return 'noSignal'
+    return 'noSignal';
   }
   if (hdmiState === 'no_lock') {
-    return 'noLock'
+    return 'noLock';
   }
   if (hdmiState === 'hdmi_disconnected') {
-    return 'disconnected'
+    return 'disconnected';
   }
   if (hdmiState === 'out_of_range') {
-    return 'outOfRange'
+    return 'outOfRange';
   }
-  return 'noSignal'
-}
+  return 'noSignal';
+};
 
 /**
  * Checks if HDMI state is an error state
  */
 const isHdmiErrorState = (hdmiState?: string): hdmiState is HdmiErrorState => {
-  return hdmiState
-    ? HDMI_ERROR_STATES.includes(hdmiState as HdmiErrorState)
-    : false
-}
+  return hdmiState ? HDMI_ERROR_STATES.includes(hdmiState as HdmiErrorState) : false;
+};
 
 // ============================================================================
 // Component
@@ -140,12 +138,13 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       isCursorHidden = false,
       mouseInputMode = 'absolute',
       cursorStyle = 'dot',
-      enhancement = { saturation: 1, brightness: 1, contrast: 1, hueRotate: 0 },
+      enhancement = { saturation: 1, brightness: 1, contrast: 1,hueRotate:0 },
       serverUrl = env.signalingUrl as string,
       rtcConfig,
       hdmiState,
       ocrEnabled = false,
       onPeerConnectionStateChange,
+      onViewerStatusChange,
       onPeerConnection,
       onDataChannels,
       onVideoSizeChange,
@@ -154,15 +153,15 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
     },
     ref
   ) => {
-    const { t } = useTranslation('messages')
-    const containerRef = useRef<HTMLDivElement>(null)
-    const audioRef = useRef<HTMLAudioElement>(null)
-    const videoRef = useRef<HTMLVideoElement>(null)
+    const { t } = useTranslation('messages');
+    const containerRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const lastVideoSizeRef = useRef<{ width: number; height: number } | null>(
       null
-    )
-    const [hasVideoContent, setHasVideoContent] = useState(false)
-    const [videoAspectRatio, setVideoAspectRatio] = useState<string>('16/9')
+    );
+    const [hasVideoContent, setHasVideoContent] = useState(false);
+    const [videoAspectRatio, setVideoAspectRatio] = useState<string>('1920/1080');
 
     // ========================================================================
     // OCR Functionality
@@ -172,6 +171,9 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       isSelecting: isOcrSelecting,
       selection: ocrSelection,
       isRecognizing: isOcrRecognizing,
+      recognizedText: ocrRecognizedText,
+      copyRecognizedText: copyOcrRecognizedText,
+      resetOcrTask,
       startSelection: startOcrSelection,
       updateSelection: updateOcrSelection,
       endSelection: endOcrSelection,
@@ -180,16 +182,20 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       videoRef,
       language: 'eng+chi_sim',
       onTextRecognized,
-    })
+    });
 
     /**
      * Handle OCR cancel action
      * Cancels the current selection and triggers parent callback
      */
     const handleOcrCancel = useCallback(() => {
-      cancelOcrSelection()
-      onOcrCancel?.()
-    }, [cancelOcrSelection, onOcrCancel])
+      cancelOcrSelection();
+      onOcrCancel?.();
+    }, [cancelOcrSelection, onOcrCancel]);
+
+    const handleOcrCopy = useCallback(async () => {
+      await copyOcrRecognizedText();
+    }, [copyOcrRecognizedText]);
 
     // ========================================================================
     // WebRTC Connection
@@ -197,6 +203,7 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
 
     const {
       connectionState,
+      viewerStatus,
       connectionStatusMessage,
       unmute,
       disconnect,
@@ -211,7 +218,12 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       onPeerConnection,
       onDataChannels,
       onPeerConnectionStateChange,
-    })
+    });
+
+    useEffect(() => {
+      onViewerStatusChange?.(viewerStatus);
+    }, [viewerStatus, onViewerStatusChange]);
+    // console.log('ConnectionStateConnectionState',connectionState)
 
     // ========================================================================
     // Video Content State Management
@@ -223,44 +235,55 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
      * Calculate aspect ratio based on actual video resolution
      */
     useEffect(() => {
-      const video = videoRef.current
-      if (!video) return
+      const video = videoRef.current;
+      if (!video) return;
+
+      const updateAspectRatioFromVideo = () => {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        if (width && height) {
+          setVideoAspectRatio(`${width}/${height}`);
+        }
+      };
 
       const handleLoadedData = () => {
-        setHasVideoContent(true)
-      }
+        setHasVideoContent(true);
+      };
 
       const handleEmptied = () => {
-        setHasVideoContent(false)
-      }
+        setHasVideoContent(false);
+      };
 
       const handleLoadedMetadata = () => {
-        // Calculate aspect ratio from actual video dimensions
-        const width = video.videoWidth
-        const height = video.videoHeight
-        if (width && height) {
-          setVideoAspectRatio(`${width}/${height}`)
-        }
-      }
+        updateAspectRatioFromVideo();
+      };
 
-      video.addEventListener('loadeddata', handleLoadedData)
-      video.addEventListener('emptied', handleEmptied)
-      video.addEventListener('loadedmetadata', handleLoadedMetadata)
+      const handleVideoResize = () => {
+        updateAspectRatioFromVideo();
+      };
 
+      video.addEventListener('loadeddata', handleLoadedData);
+      video.addEventListener('emptied', handleEmptied);
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      video.addEventListener('resize', handleVideoResize);
+
+      // Check if video already has content
       if (video.readyState >= 2) {
-        setHasVideoContent(true)
+        setHasVideoContent(true);
       }
 
+      // Check if video metadata has been loaded
       if (video.readyState >= 1 && video.videoWidth && video.videoHeight) {
-        setVideoAspectRatio(`${video.videoWidth}/${video.videoHeight}`)
+        updateAspectRatioFromVideo();
       }
 
       return () => {
-        video.removeEventListener('loadeddata', handleLoadedData)
-        video.removeEventListener('emptied', handleEmptied)
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      }
-    }, [])
+        video.removeEventListener('loadeddata', handleLoadedData);
+        video.removeEventListener('emptied', handleEmptied);
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        video.removeEventListener('resize', handleVideoResize);
+      };
+    }, []);
 
     // ========================================================================
     // Mobile Video Playback Setup
@@ -271,87 +294,87 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
      * Prevents fullscreen controls and ensures video displays correctly
      */
     useEffect(() => {
-      const v = videoRef.current
-      if (!v) return
+      const v = videoRef.current;
+      if (!v) return;
       try {
-        v.setAttribute('playsinline', 'true')
-        v.setAttribute('webkit-playsinline', 'true')
-
-        v.setAttribute('controls', 'false')
-        v.controls = false
-
-        v.setAttribute('disablePictureInPicture', 'true')
+        v.setAttribute('playsinline', 'true');
+        v.setAttribute('webkit-playsinline', 'true');
+        // Force disable controls
+        v.setAttribute('controls', 'false');
+        v.controls = false;
+        // Mobile-specific attributes
+        v.setAttribute('disablePictureInPicture', 'true');
         v.setAttribute(
           'controlsList',
           'nodownload nofullscreen noremoteplayback'
-        )
-
-        v.style.webkitTouchCallout = 'none'
-        v.style.webkitUserSelect = 'none'
-
-        v.style.touchAction = 'none'
-
-        v.setAttribute('x-webkit-airplay', 'deny')
-        v.setAttribute('webkit-playsinline', 'true')
-        v.removeAttribute('controls')
-
-        v.oncontextmenu = () => false
-        v.ondragstart = () => false
-        v.onselectstart = () => false
+        );
+        // Prevent default touch behavior
+        v.style.webkitTouchCallout = 'none';
+        v.style.webkitUserSelect = 'none';
+        // Maintain interactivity on mobile, support simulated mouse events
+        v.style.touchAction = 'none';
+        // Force disable all possible control attributes
+        v.setAttribute('x-webkit-airplay', 'deny');
+        v.setAttribute('webkit-playsinline', 'true');
+        v.removeAttribute('controls');
+        // Remove any possible control-related events
+        v.oncontextmenu = () => false;
+        v.ondragstart = () => false;
+        v.onselectstart = () => false;
       } catch {}
 
       const tryPlay = () => {
-        v.play().catch(() => {})
-      }
+        v.play().catch(() => {});
+      };
 
-      const onLoaded = () => tryPlay()
+      const onLoaded = () => tryPlay();
       const onVisibility = () => {
-        if (!document.hidden) tryPlay()
-      }
+        if (!document.hidden) tryPlay();
+      };
       const touchUnlock = () => {
-        tryPlay()
-        document.removeEventListener('touchend', touchUnlock as any)
-      }
+        tryPlay();
+        document.removeEventListener('touchend', touchUnlock as EventListener);
+      };
 
       // Prevent mobile playback controls from appearing
       const preventControls = (e: Event) => {
-        e.preventDefault()
-        e.stopPropagation()
-        return false
-      }
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
 
       // Add mobile event listeners
-      v.addEventListener('webkitfullscreenchange', preventControls)
-      v.addEventListener('fullscreenchange', preventControls)
-      v.addEventListener('webkitbeginfullscreen', preventControls)
-      v.addEventListener('webkitendfullscreen', preventControls)
+      v.addEventListener('webkitfullscreenchange', preventControls);
+      v.addEventListener('fullscreenchange', preventControls);
+      v.addEventListener('webkitbeginfullscreen', preventControls);
+      v.addEventListener('webkitendfullscreen', preventControls);
 
-      v.addEventListener('loadedmetadata', onLoaded)
-      document.addEventListener('visibilitychange', onVisibility)
+      v.addEventListener('loadedmetadata', onLoaded);
+      document.addEventListener('visibilitychange', onVisibility);
       document.addEventListener(
         'touchend',
-        touchUnlock as any,
-        { once: true } as any
-      )
+        touchUnlock as EventListener,
+        { once: true }
+      );
 
       return () => {
         try {
-          v.removeEventListener('loadedmetadata', onLoaded)
+          v.removeEventListener('loadedmetadata', onLoaded);
         } catch {}
         try {
-          document.removeEventListener('visibilitychange', onVisibility)
+          document.removeEventListener('visibilitychange', onVisibility);
         } catch {}
         try {
-          document.removeEventListener('touchend', touchUnlock as any)
+          document.removeEventListener('touchend', touchUnlock as EventListener);
         } catch {}
         try {
-          v.removeEventListener('webkitfullscreenchange', preventControls)
-          v.removeEventListener('fullscreenchange', preventControls)
-          v.removeEventListener('webkitbeginfullscreen', preventControls)
-          v.removeEventListener('webkitendfullscreen', preventControls)
+          v.removeEventListener('webkitfullscreenchange', preventControls);
+          v.removeEventListener('fullscreenchange', preventControls);
+          v.removeEventListener('webkitbeginfullscreen', preventControls);
+          v.removeEventListener('webkitendfullscreen', preventControls);
         } catch {}
-      }
-    }, [videoRef])
+      };
+    }, [videoRef]);
 
     // ========================================================================
     // Event Handlers
@@ -363,13 +386,13 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
     const handleEnableSound = useCallback(
       (e?: React.MouseEvent) => {
         if (e) {
-          e.preventDefault()
-          e.stopPropagation()
+          e.preventDefault();
+          e.stopPropagation();
         }
-        unmute()
+        unmute();
       },
       [unmute]
-    )
+    );
 
     // ========================================================================
     // Video Styling
@@ -379,14 +402,14 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
      * Compute video element styles including cursor and filters
      */
     const videoStyle = useMemo(() => {
-      const { saturation, brightness, contrast, hueRotate } = enhancement
-      const isDefault = saturation === 1 && brightness === 1 && contrast === 1
+      const { saturation, brightness, contrast,hueRotate } = enhancement;
+      const isDefault = saturation === 1 && brightness === 1 && contrast === 1;
 
       const cursor = isCursorHidden
         ? 'none'
         : cursorStyle === 'arrow'
           ? 'auto'
-          : DOT_CURSOR_SVG
+          : DOT_CURSOR_SVG;
 
       return {
         cursor,
@@ -395,8 +418,8 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
           : {
               filter: `saturate(${saturation}) brightness(${brightness}) contrast(${contrast}) hue-rotate(${hueRotate}deg)`,
             }),
-      }
-    }, [enhancement, isCursorHidden, cursorStyle])
+      };
+    }, [enhancement, isCursorHidden, cursorStyle]);
 
     // ========================================================================
     // Imperative Handle (Ref API)
@@ -410,7 +433,7 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
         // OCR mode auto-handles selection via overlay
       },
       cancelOcrCapture: cancelOcrSelection,
-    }))
+    }));
 
     // ========================================================================
     // Video Size Monitoring
@@ -420,42 +443,45 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
      * Monitor video element size changes and notify parent
      */
     useEffect(() => {
-      const el = videoRef.current
-      if (!el) return
+      const el = videoRef.current;
+      if (!el) return;
 
       const updateSize = () => {
-        const rect = el.getBoundingClientRect()
-        const w = Math.round(rect.width)
-        const h = Math.round(rect.height)
+        const rect = el.getBoundingClientRect();
+        const w = Math.round(rect.width);
+        const h = Math.round(rect.height);
 
-        const last = lastVideoSizeRef.current
+        const last = lastVideoSizeRef.current;
         if (last && last.width === w && last.height === h) {
-          return
+          return;
         }
-        lastVideoSizeRef.current = { width: w, height: h }
-        onVideoSizeChange?.({ width: w, height: h })
-      }
+        lastVideoSizeRef.current = { width: w, height: h };
+        onVideoSizeChange?.({ width: w, height: h });
+      };
 
-      const ro = new ResizeObserver(entries => {
-        requestAnimationFrame(updateSize)
-      })
+      const ro = new ResizeObserver(() => {
+        requestAnimationFrame(updateSize);
+      });
 
-      ro.observe(el)
+      ro.observe(el);
 
-      const parent = el.parentElement
+      const parent = el.parentElement;
       if (parent) {
-        ro.observe(parent)
+
+        ro.observe(parent);
       }
 
-      const grandParent = parent?.parentElement
+      const grandParent = parent?.parentElement;
       if (grandParent) {
-        ro.observe(grandParent)
+
+        ro.observe(grandParent);
       }
 
       return () => {
-        ro.disconnect()
-      }
-    }, [onVideoSizeChange])
+
+        ro.disconnect();
+      };
+    }, [onVideoSizeChange]);
 
     // ========================================================================
     // Keyboard Shortcuts
@@ -465,105 +491,127 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
      * ESC key to cancel OCR mode
      */
     useEffect(() => {
-      if (!ocrEnabled) return
+      if (!ocrEnabled) return;
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
-          e.preventDefault()
-          e.stopPropagation()
-          handleOcrCancel()
+          e.preventDefault();
+          e.stopPropagation();
+          handleOcrCancel();
         }
-      }
+      };
 
-      window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [ocrEnabled, handleOcrCancel])
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [ocrEnabled, handleOcrCancel]);
 
     return useMemo(
       () => (
-        <div
-          className={cn('w-full h-full p-[4px]', className)}
-          ref={containerRef}
-        >
-          {DISCONNECTED_WEBRTC_STATES.includes(connectionState.webrtc as any) &&
-          !connectionStatusMessage ? (
-            <ConnectionIssuePanel
-              title={t(`webrtcConnection.${connectionState.webrtc}.title`)}
-              items={t(`webrtcConnection.${connectionState.webrtc}.items`, {
-                returnObjects: true,
-              })}
-            />
-          ) : (
-            <div className="relative w-full h-full flex items-center justify-center">
-              {connectionStatusMessage &&
-              (connectionState.webrtc !== 'connected' || !hasVideoContent) &&
-              !isHdmiErrorState(hdmiState) ? (
-                <div className="absolute inset-0 flex items-center justify-center z-[10]">
-                  <div className="flex items-center flex-col gap-3">
-                    <Loading type="spinner" size={32} color="#3b82f6" />
-                    <div className="text-sm font-[400] text-white">
-                      {connectionStatusMessage}
+        <div className={cn('w-full h-full p-[4px]', className)} ref={containerRef}>
+            {(DISCONNECTED_WEBRTC_STATES as readonly string[]).includes(String(connectionState.webrtc)) && !connectionStatusMessage ? (
+              <ConnectionIssuePanel
+                title={t(`webrtcConnection.${connectionState.webrtc}.title`)}
+                items={t(`webrtcConnection.${connectionState.webrtc}.items`, {
+                  returnObjects: true,
+                })}
+              />
+            ) : (
+              <div className="relative w-full h-full flex items-center justify-center">
+                {(
+                  (connectionStatusMessage &&
+                    (connectionState.webrtc !== 'connected' || !hasVideoContent) &&
+                    !isHdmiErrorState(hdmiState)) ||
+                  (connectionState.ws === 'error' && connectionState.webrtc === 'new')
+                ) ? (
+                 <VideoAreaOverlay aspectRatio={videoAspectRatio}>
+                    <div className="flex items-center flex-col gap-3">
+                      <svg
+                        className="animate-spin"
+                        width={32}
+                        height={32}
+                        viewBox="0 0 32 32"
+                        fill="none"
+                      >
+                        <circle
+                          cx="16" cy="16" r="12"
+                          stroke="#3b82f6"
+                          strokeOpacity="0.3"
+                          strokeWidth="3"
+                        />
+                        <path
+                          d="M16 4a12 12 0 0 1 12 12"
+                          stroke="#3b82f6"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="text-sm font-[400] text-white">
+                        {connectionStatusMessage}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : null}
+                  </VideoAreaOverlay>
+                ) : null}
 
-              {/* HDMI Error State Panel - Only show after WebRTC connection established */}
-              {connectionState.webrtc === 'connected' &&
-                isHdmiErrorState(hdmiState) &&
-                (() => {
-                  const stateKey = getHdmiStateKey(hdmiState)
-                  const items = t(`hdmiSignal.${stateKey}.items`, {
-                    returnObjects: true,
-                  })
+                {/* HDMI Error State Panel - Only show after WebRTC connection established */}
+                {connectionState.webrtc === 'connected' && isHdmiErrorState(hdmiState) && (() => {
+                  const stateKey = getHdmiStateKey(hdmiState);
+                  const items = t(`hdmiSignal.${stateKey}.items`, { returnObjects: true });
 
                   return (
-                    <div className="absolute inset-0 flex items-center justify-center items-center z-[10] bg-black/50 backdrop-blur-sm">
+                    <VideoAreaOverlay aspectRatio={videoAspectRatio}>
                       <ConnectionIssuePanel
                         title={t(`hdmiSignal.${stateKey}.title`)}
                         items={Array.isArray(items) ? items : undefined}
                       />
-                    </div>
-                  )
+                    </VideoAreaOverlay>
+                  );
                 })()}
 
-              <audio ref={audioRef} autoPlay playsInline className="hidden" />
-              <video
-                ref={videoRef}
-                className={cn(
-                  'inset-0 w-auto h-auto m-auto block max-w-full max-h-full object-contain outline-none focus:outline-none focus:ring-0 focus-visible:outline-none',
-                  hasVideoContent && 'border border-[var(--border-color)]',
-                  ocrEnabled && 'pointer-events-none'
-                )}
-                muted
-                autoPlay
-                controls={false}
-                playsInline
-                disablePictureInPicture
-                onClick={handleEnableSound}
-                style={{
-                  cursor: videoStyle.cursor,
-                  aspectRatio: videoAspectRatio,
-                  ...(mouseInputMode === 'absolute' ? videoStyle : {}),
-                }}
-                onKeyDown={e => e.preventDefault()}
-                onContextMenu={e => e.preventDefault()}
-              />
-
-              {ocrEnabled && (
-                <OcrSelectionOverlay
-                  isActive={ocrEnabled}
-                  isSelecting={isOcrSelecting}
-                  selection={ocrSelection}
-                  isRecognizing={isOcrRecognizing}
-                  onMouseDown={startOcrSelection}
-                  onMouseMove={updateOcrSelection}
-                  onMouseUp={endOcrSelection}
-                  onCancel={handleOcrCancel}
+                <audio
+                  ref={audioRef}
+                  autoPlay
+                  playsInline
+                  className="hidden"
                 />
-              )}
-            </div>
-          )}
+                <video
+                  ref={videoRef}
+                  className={cn(
+                    'inset-0 w-auto h-auto m-auto block max-w-full max-h-full object-contain outline-none focus:outline-none focus:ring-0 focus-visible:outline-none',
+                    hasVideoContent && !isHdmiErrorState(hdmiState) && 'border border-[var(--border-color)]',
+                    ocrEnabled && 'pointer-events-none'
+                  )}
+                    muted
+                    autoPlay
+                    controls={false}
+                    playsInline
+                    disablePictureInPicture
+                    onClick={handleEnableSound}
+                    style={{
+                      cursor: videoStyle.cursor,
+                      aspectRatio: videoAspectRatio,
+                      ...(mouseInputMode === 'absolute' ? videoStyle : {}),
+                    }}
+                    onKeyDown={e => e.preventDefault()}
+                    onContextMenu={e => e.preventDefault()}
+                  />
+
+                  {ocrEnabled && (
+                    <OcrSelectionOverlay
+                      isActive={ocrEnabled}
+                      isSelecting={isOcrSelecting}
+                      selection={ocrSelection}
+                      isRecognizing={isOcrRecognizing}
+                      recognizedText={ocrRecognizedText}
+                      onCopyText={handleOcrCopy}
+                      onResetTask={resetOcrTask}
+                      onMouseDown={startOcrSelection}
+                      onMouseMove={updateOcrSelection}
+                      onMouseUp={endOcrSelection}
+                      onCancel={handleOcrCancel}
+                    />
+                  )}
+              </div>
+            )}
         </div>
       ),
       [
@@ -582,12 +630,15 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
         isOcrSelecting,
         ocrSelection,
         isOcrRecognizing,
+        ocrRecognizedText,
+        handleOcrCopy,
+        resetOcrTask,
         startOcrSelection,
         updateOcrSelection,
         endOcrSelection,
         handleOcrCancel,
         t,
       ]
-    )
+    );
   }
-)
+);

@@ -11,4 +11,4 @@
  * Hooks for VirtualKeyboard components
  */
 
-export { useGlobalEventCleanup } from './useGlobalEventCleanup'
+export { useGlobalEventCleanup } from './useGlobalEventCleanup';

@@ -1,0 +1,3 @@
+{
+  "usbDevicesRuntimeApplyRejected":"Cannot disable Virtual Storage while the Virtual USB Drive is mounted to the remote system. Mount it back to ArkKVM and try again."
+}

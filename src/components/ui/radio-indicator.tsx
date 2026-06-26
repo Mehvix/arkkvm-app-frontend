@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 
 export type RadioIndicatorProps = {
   checked?: boolean
@@ -27,38 +27,27 @@ export const RadioIndicator: React.FC<RadioIndicatorProps> = ({
   borderColor = 'var(--inactive-text-color)',
   checkedBorderColor,
   dotColor = 'var(--btn-primary-bg)',
-  backgroundColor = 'var(--card)',
   className = '',
-  style,
 }) => {
-  const outer = size
-  const inner = Math.max(Math.round(size * 0.625), 6) // ~10px when size=16
+  const outer = size;
+  const inner = Math.max(Math.round(size * 0.625), 6); // ~10px when size=16
   const finalBorder = checked
     ? checkedBorderColor || dotColor || borderColor
-    : borderColor
+    : borderColor;
 
   return (
-    <span
-      aria-hidden
-      className={['grid place-items-center rounded-full', className].join(' ')}
+    <div
+      className={['grid place-items-center rounded-full radio-indicator-outer', className].join(' ')}
       style={{
-        width: outer,
-        height: outer,
-        border: `1px solid ${finalBorder}`,
-        backgroundColor,
-        ...style,
-      }}
+        '--radio-outer-size': outer,
+        '--radio-border-color': finalBorder,
+        '--radio-inner-size': inner,
+        '--radio-inner-color': checked ? dotColor : 'transparent',
+      } as React.CSSProperties}
     >
-      <span
-        className="rounded-full"
-        style={{
-          width: inner,
-          height: inner,
-          backgroundColor: checked ? dotColor : 'transparent',
-        }}
-      />
-    </span>
-  )
-}
+      <div className="rounded-full radio-indicator-inner" />
+    </div>
+  );
+};
 
-export default RadioIndicator
+export default RadioIndicator;

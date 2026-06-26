@@ -7,33 +7,34 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-11 20:48:24
  */
-import { useAppStore } from '@/stores'
-import { createLogger } from '@/utils/logger'
-import React, { memo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Select } from '../ui/select'
+import { useAppStore } from '@/stores';
+import { createLogger } from '@/utils/logger';
+import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Select } from '../ui/select';
 
-const logger = createLogger('ThemeSwitcher')
+
+const logger = createLogger('ThemeSwitcher');
 
 interface ThemeSwitcherProps {
   className?: string
 }
 
 export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = memo(
-  ({ className }) => {
-    const { t } = useTranslation()
-    const currentTheme = useAppStore(state => state.currentTheme)
-    const setTheme = useAppStore(state => state.setTheme)
+  () => {
+    const { t } = useTranslation();
+    const currentTheme = useAppStore(state => state.currentTheme);
+    const setTheme = useAppStore(state => state.setTheme);
     const themeOptions = [
       { value: 'dark', label: t('theme.dark') },
       { value: 'light', label: t('theme.light') },
-    ]
+    ];
     const handleThemeChange = (value: string) => {
-      logger.info('Theme change requested', { theme: value })
+      logger.info('Theme change requested', { theme: value });
 
-      localStorage.setItem('ui-theme', value)
-      setTheme(value)
-    }
+      localStorage.setItem('ui-theme', value);
+      setTheme(value);
+    };
     return (
       <Select
         value={currentTheme}
@@ -41,6 +42,6 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = memo(
         options={themeOptions}
         size="mini"
       />
-    )
+    );
   }
-)
+);

@@ -8,18 +8,18 @@
  * @LastEditTime: 2025-10-11 14:08:17
  */
 // components/Panel.tsx
-import { memo, ReactNode } from 'react'
+import { memo, ReactNode } from 'react';
 
 type ActionPanelProps = {
-  title?: ReactNode
-  subtitle?: ReactNode
-  footer?: ReactNode
-  className?: string
-  headerClassName?: string
-  bodyClassName?: string
-  footerClassName?: string
-  children?: ReactNode
-
+  title?: ReactNode // Top primary title (string or custom node)
+  subtitle?: ReactNode // Top subtitle
+  footer?: ReactNode // Bottom slot (action area)
+  className?: string // Custom wrapper class
+  headerClassName?: string // Custom header class
+  bodyClassName?: string // Custom content-area class
+  footerClassName?: string // Custom footer class
+  children?: ReactNode // Main content slot
+  // Optional right-side custom area (e.g. Button / dropdown)
   rightSlot?: ReactNode
 }
 
@@ -50,6 +50,7 @@ export default memo(function ActionPanel({
             {typeof subtitle === 'string' ? (
               <p className="text-caption">{subtitle}</p>
             ) : (
+              // If subtitle is a ReactNode, render directly and preserve caller structure
               <div className="w-full">{subtitle}</div>
             )}
           </div>
@@ -68,5 +69,5 @@ export default memo(function ActionPanel({
         </footer>
       )}
     </section>
-  )
-})
+  );
+});

@@ -7,19 +7,23 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2025-11-03 17:46:00
  */
+/**
+ * Keyboard layout configurations
+ * Keyboard layout configuration
+ */
 
-import type { KeyRow } from './keyboard-types'
+import type { KeyRow } from './keyboard-types';
 import {
-  functionKeys,
-  numberKeys,
-  qwertyKeys,
-  asdfKeys,
-  zxcvKeys,
-  windSpecialKeys,
-  macSpecialKeys,
-  navKeys,
-  arrowKeys,
-} from './rows'
+    arrowKeys,
+    asdfKeys,
+    functionKeys,
+    macSpecialKeys,
+    navKeys,
+    numberKeys,
+    qwertyKeys,
+    windSpecialKeys,
+    zxcvKeys,
+} from './rows';
 
 export interface KeyboardLayout {
   name: string
@@ -59,8 +63,8 @@ export const KEYBOARD_LAYOUTS: Record<string, KeyboardLayout> = {
       label: key.appleLabel || key.label,
     })),
   },
-}
+};
 
 export const getKeyboardLayout = (layoutName: string): KeyboardLayout => {
-  return KEYBOARD_LAYOUTS[layoutName] || KEYBOARD_LAYOUTS.windows
-}
+  return KEYBOARD_LAYOUTS[layoutName] || KEYBOARD_LAYOUTS.windows;
+};

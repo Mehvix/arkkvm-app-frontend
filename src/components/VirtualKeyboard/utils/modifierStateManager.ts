@@ -18,7 +18,7 @@ export const MODIFIER_KEY_CODES = {
   FN: 'Fn',
   NUM_LOCK: 'NumLock',
   SCROLL_LOCK: 'ScrollLock',
-} as const
+} as const;
 
 export type ModifierKeyCode =
   (typeof MODIFIER_KEY_CODES)[keyof typeof MODIFIER_KEY_CODES]
@@ -50,7 +50,7 @@ export const MODIFIER_KEY_GROUPS = {
     MODIFIER_KEY_CODES.META_LEFT,
     MODIFIER_KEY_CODES.META_RIGHT,
   ],
-} as const
+} as const;
 
 export const HID_MODIFIERS = {
   ControlLeft: 1 << 0, // 0x01
@@ -62,7 +62,7 @@ export const HID_MODIFIERS = {
   AltRight: 1 << 6, // 0x40
   MetaRight: 1 << 7, // 0x80
   AltGr: 1 << 6, // 0x40
-} as const
+} as const;
 
 export interface VirtualKeyboardModifierState {
   CapsLock: boolean
@@ -106,43 +106,46 @@ export function createInitialModifierState(): VirtualKeyboardModifierState {
     AltGr: false,
     MetaLeft: false,
     MetaRight: false,
-  }
+  };
 }
 
+// Mapping from key value to code, used as fallback when code is empty
 const MODIFIER_KEY_TO_CODES: Record<string, ModifierKeyCode[]> = {
   Shift: [MODIFIER_KEY_CODES.SHIFT_LEFT, MODIFIER_KEY_CODES.SHIFT_RIGHT],
   Control: [MODIFIER_KEY_CODES.CONTROL_LEFT, MODIFIER_KEY_CODES.CONTROL_RIGHT],
   Alt: [MODIFIER_KEY_CODES.ALT_LEFT, MODIFIER_KEY_CODES.ALT_RIGHT],
   Meta: [MODIFIER_KEY_CODES.META_LEFT, MODIFIER_KEY_CODES.META_RIGHT],
   AltGraph: [MODIFIER_KEY_CODES.ALT_GR],
-}
 
-const MODIFIER_KEY_VALUES = new Set(Object.keys(MODIFIER_KEY_TO_CODES))
 
+};
+
+// Set of all modifier key values
+const MODIFIER_KEY_VALUES = new Set(Object.keys(MODIFIER_KEY_TO_CODES));
+
+// Set of all modifier key code values (including lock keys)
 const ALL_MODIFIER_CODES_SET = new Set<string>([
   ...MODIFIER_KEY_GROUPS.ALL_MODIFIERS,
   MODIFIER_KEY_CODES.FN,
-])
+]);
 
 /**
  * Check if a key code or keyboard event is a modifier key.
  * Supports both string (code) and KeyboardEvent input.
  * When code is empty, falls back to event.key for detection.
  */
-export function isModifierKey(
-  input: string | KeyboardEvent
-): input is ModifierKeyCode {
+export function isModifierKey(input: string | KeyboardEvent): input is ModifierKeyCode {
   if (typeof input === 'string') {
-    return ALL_MODIFIER_CODES_SET.has(input)
+    return ALL_MODIFIER_CODES_SET.has(input);
   }
   if (input.code && ALL_MODIFIER_CODES_SET.has(input.code)) {
-    return true
+    return true;
   }
 
   if (input.key && MODIFIER_KEY_VALUES.has(input.key)) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -150,64 +153,65 @@ export function isModifierKey(
  * When event.code is empty, infers code from event.key + event.location.
  * Returns empty string if not a modifier key.
  */
-export function resolveModifierCode(
-  event: KeyboardEvent
-): ModifierKeyCode | '' {
+export function resolveModifierCode(event: KeyboardEvent): ModifierKeyCode | '' {
+  // Prioritize code
   if (event.code && ALL_MODIFIER_CODES_SET.has(event.code)) {
-    return event.code as ModifierKeyCode
+    return event.code as ModifierKeyCode;
   }
 
-  const candidates = MODIFIER_KEY_TO_CODES[event.key]
-  if (!candidates) return ''
+  // When code is empty, infer from key + location
+  const candidates = MODIFIER_KEY_TO_CODES[event.key];
+  if (!candidates) return '';
 
-  if (candidates.length === 1) return candidates[0]
+  if (candidates.length === 1) return candidates[0];
 
+  // When multiple candidates, distinguish left/right based on location
   if (event.location === KeyboardEvent.DOM_KEY_LOCATION_RIGHT) {
-    return candidates.find(c => c.endsWith('Right')) || candidates[0]
+    return candidates.find(c => c.endsWith('Right')) || candidates[0];
   }
-  return candidates.find(c => c.endsWith('Left')) || candidates[0]
+  return candidates.find(c => c.endsWith('Left')) || candidates[0];
 }
 
 /**
  * Check if a key code is a Shift key.
  */
 export function isShiftKey(keyCode: string): boolean {
-  return MODIFIER_KEY_GROUPS.SHIFT_KEYS.includes(keyCode as ModifierKeyCode)
+  return MODIFIER_KEY_GROUPS.SHIFT_KEYS.includes(keyCode as ModifierKeyCode);
 }
 
 /**
  * Check if a key code is a Control key.
  */
 export function isControlKey(keyCode: string): boolean {
-  return MODIFIER_KEY_GROUPS.CONTROL_KEYS.includes(keyCode as ModifierKeyCode)
+  return MODIFIER_KEY_GROUPS.CONTROL_KEYS.includes(keyCode as ModifierKeyCode);
 }
 
 /**
  * Check if a key code is an Alt key.
  */
 export function isAltKey(keyCode: string): boolean {
-  return MODIFIER_KEY_GROUPS.ALT_KEYS.includes(keyCode as ModifierKeyCode)
+  return MODIFIER_KEY_GROUPS.ALT_KEYS.includes(keyCode as ModifierKeyCode);
 }
 
 /**
  * Check if a key code is a Meta key.
  */
 export function isMetaKey(keyCode: string): boolean {
-  return MODIFIER_KEY_GROUPS.META_KEYS.includes(keyCode as ModifierKeyCode)
+  return MODIFIER_KEY_GROUPS.META_KEYS.includes(keyCode as ModifierKeyCode);
 }
 
 /**
  * Check if a key code is the Caps Lock key.
  */
 export function isCapsLockKey(keyCode: string): boolean {
-  return keyCode === MODIFIER_KEY_CODES.CAPS_LOCK
+  return keyCode === MODIFIER_KEY_CODES.CAPS_LOCK;
 }
 
 /**
  * Check if a key code is a lock key (Caps/Num/Scroll Lock).
  */
 export function isLockKey(keyCode: string): boolean {
-  return MODIFIER_KEY_GROUPS.LOCK_KEYS.includes(keyCode as ModifierKeyCode)
+  return MODIFIER_KEY_GROUPS.LOCK_KEYS.includes(keyCode as ModifierKeyCode);
 }
 
 /**
@@ -225,7 +229,7 @@ export function getComboModifierStates(
     capsLockActive: state.CapsLock,
     numLockActive: state.NumLock || false,
     scrollLockActive: state.ScrollLock || false,
-  }
+  };
 }
 
 /**
@@ -233,27 +237,27 @@ export function getComboModifierStates(
  * Encapsulates all modifier key operations required by virtual keyboard components.
  */
 export class VirtualKeyboardModifierManager {
-  private state: VirtualKeyboardModifierState
+  private state: VirtualKeyboardModifierState;
 
   constructor(initialState?: Partial<VirtualKeyboardModifierState>) {
     this.state = {
       ...createInitialModifierState(),
       ...initialState,
-    }
+    };
   }
 
   /**
    * Get current modifier key state.
    */
   getState(): VirtualKeyboardModifierState {
-    return { ...this.state }
+    return { ...this.state };
   }
 
   /**
    * Set modifier key state.
    */
   setState(newState: Partial<VirtualKeyboardModifierState>): void {
-    this.state = { ...this.state, ...newState }
+    this.state = { ...this.state, ...newState };
   }
 
   /**
@@ -263,9 +267,9 @@ export class VirtualKeyboardModifierManager {
     const newState = {
       ...this.state,
       [keyCode]: !this.state[keyCode as keyof VirtualKeyboardModifierState],
-    }
-    this.state = newState
-    return newState
+    };
+    this.state = newState;
+    return newState;
   }
 
   /**
@@ -278,38 +282,38 @@ export class VirtualKeyboardModifierManager {
     const newState = {
       ...this.state,
       [keyCode]: isActive,
-    }
-    this.state = newState
-    return newState
+    };
+    this.state = newState;
+    return newState;
   }
 
   /**
    * Reset all modifier key states to initial values.
    */
   resetAllModifiers(): VirtualKeyboardModifierState {
-    this.state = createInitialModifierState()
-    return this.getState()
+    this.state = createInitialModifierState();
+    return this.getState();
   }
 
   /**
    * Get combined modifier key states for display logic.
    */
   getComboStates(): ComboModifierStates {
-    return getComboModifierStates(this.state)
+    return getComboModifierStates(this.state);
   }
 
   /**
    * Check if any modifier key is active.
    */
   hasActiveModifiers(): boolean {
-    const combo = this.getComboStates()
+    const combo = this.getComboStates();
     return (
       combo.shiftActive ||
       combo.controlActive ||
       combo.altActive ||
       combo.metaActive ||
       combo.capsLockActive
-    )
+    );
   }
 
   /**
@@ -318,14 +322,14 @@ export class VirtualKeyboardModifierManager {
   getActiveModifiers(): ModifierKeyCode[] {
     return MODIFIER_KEY_GROUPS.ALL_MODIFIERS.filter(
       keyCode => this.state[keyCode as keyof VirtualKeyboardModifierState]
-    )
+    );
   }
 
   /**
    * Check if a specific modifier key is active.
    */
   isModifierActive(keyCode: ModifierKeyCode): boolean {
-    return Boolean(this.state[keyCode as keyof VirtualKeyboardModifierState])
+    return Boolean(this.state[keyCode as keyof VirtualKeyboardModifierState]);
   }
 
   /**
@@ -334,12 +338,12 @@ export class VirtualKeyboardModifierManager {
   setMultipleModifiers(
     modifiers: Record<ModifierKeyCode, boolean>
   ): VirtualKeyboardModifierState {
-    const newState = { ...this.state }
+    const newState = { ...this.state };
     Object.entries(modifiers).forEach(([keyCode, isActive]) => {
-      newState[keyCode as keyof VirtualKeyboardModifierState] = isActive
-    })
-    this.state = newState
-    return newState
+      newState[keyCode as keyof VirtualKeyboardModifierState] = isActive;
+    });
+    this.state = newState;
+    return newState;
   }
 }
 
@@ -349,7 +353,7 @@ export class VirtualKeyboardModifierManager {
 export function createVirtualKeyboardModifierManager(
   initialState?: Partial<VirtualKeyboardModifierState>
 ): VirtualKeyboardModifierManager {
-  return new VirtualKeyboardModifierManager(initialState)
+  return new VirtualKeyboardModifierManager(initialState);
 }
 
 /**
@@ -358,18 +362,18 @@ export function createVirtualKeyboardModifierManager(
 export function generateHidModifierMask(
   state: VirtualKeyboardModifierState
 ): number {
-  let mask = 0
+  let mask = 0;
 
-  if (state.ControlLeft) mask |= HID_MODIFIERS.ControlLeft
-  if (state.ShiftLeft) mask |= HID_MODIFIERS.ShiftLeft
-  if (state.AltLeft) mask |= HID_MODIFIERS.AltLeft
-  if (state.MetaLeft) mask |= HID_MODIFIERS.MetaLeft
-  if (state.ControlRight) mask |= HID_MODIFIERS.ControlRight
-  if (state.ShiftRight) mask |= HID_MODIFIERS.ShiftRight
-  if (state.AltRight) mask |= HID_MODIFIERS.AltRight
-  if (state.MetaRight) mask |= HID_MODIFIERS.MetaRight
+  if (state.ControlLeft) mask |= HID_MODIFIERS.ControlLeft;
+  if (state.ShiftLeft) mask |= HID_MODIFIERS.ShiftLeft;
+  if (state.AltLeft) mask |= HID_MODIFIERS.AltLeft;
+  if (state.MetaLeft) mask |= HID_MODIFIERS.MetaLeft;
+  if (state.ControlRight) mask |= HID_MODIFIERS.ControlRight;
+  if (state.ShiftRight) mask |= HID_MODIFIERS.ShiftRight;
+  if (state.AltRight) mask |= HID_MODIFIERS.AltRight;
+  if (state.MetaRight) mask |= HID_MODIFIERS.MetaRight;
 
-  return mask
+  return mask;
 }
 
 /**
@@ -380,12 +384,12 @@ export function shouldAffectCharacterDisplay(
   state: VirtualKeyboardModifierState
 ): boolean {
   if (/^Key[A-Z]$/.test(keyCode)) {
-    const combo = getComboModifierStates(state)
-    return combo.capsLockActive !== combo.shiftActive
+    const combo = getComboModifierStates(state);
+    return combo.capsLockActive !== combo.shiftActive;
   }
 
-  const combo = getComboModifierStates(state)
-  return combo.shiftActive
+  const combo = getComboModifierStates(state);
+  return combo.shiftActive;
 }
 
 /**
@@ -396,30 +400,30 @@ export function shouldAffectCharacterDisplay(
 export function getCurrentModChord(
   state: VirtualKeyboardModifierState
 ): ModChord {
-  const hasShift = state.ShiftLeft || state.ShiftRight
-  const hasCtrl = state.ControlLeft || state.ControlRight
-  const hasAlt = state.AltLeft || state.AltRight
-  const hasAltGr = state.AltRight || (hasCtrl && hasAlt)
-  const hasCaps = state.CapsLock
-  const hasFn = state.Fn || false
+  const hasShift = state.ShiftLeft || state.ShiftRight;
+  const hasCtrl = state.ControlLeft || state.ControlRight;
+  const hasAlt = state.AltLeft || state.AltRight;
+  const hasAltGr = state.AltRight || (hasCtrl && hasAlt);
+  const hasCaps = state.CapsLock;
+  const hasFn = state.Fn || false;
 
   if (hasFn) {
-    if (hasShift && hasAltGr) return 'fn+shift+altGr'
-    if (hasShift) return 'fn+shift'
-    if (hasAltGr) return 'fn+altGr'
-    return 'fn'
+    if (hasShift && hasAltGr) return 'fn+shift+altGr';
+    if (hasShift) return 'fn+shift';
+    if (hasAltGr) return 'fn+altGr';
+    return 'fn';
   }
 
   if (hasAltGr) {
-    if (hasShift) return 'shift+altGr'
-    return 'altGr'
+    if (hasShift) return 'shift+altGr';
+    return 'altGr';
   }
 
-  if (hasCaps && hasShift) return 'shift+caps'
-  if (hasCaps) return 'caps'
-  if (hasShift) return 'shift'
+  if (hasCaps && hasShift) return 'shift+caps';
+  if (hasCaps) return 'caps';
+  if (hasShift) return 'shift';
 
-  return 'base'
+  return 'base';
 }
 
 /**
@@ -434,58 +438,58 @@ export function getKeyLegendByModifierState(
   options?: { hasAltGr?: boolean }
 ): string {
   if (!legends || typeof legends !== 'object') {
-    return ''
+    return '';
   }
 
-  const hasAltGr = options?.hasAltGr ?? true
+  const hasAltGr = options?.hasAltGr ?? true;
 
-  const chord = getCurrentModChord(state)
+  const chord = getCurrentModChord(state);
 
   if (legends[chord] !== undefined) {
-    return legends[chord]!
+    return legends[chord]!;
   }
 
-  const definedChords = Object.keys(legends) as ModChord[]
+  const definedChords = Object.keys(legends) as ModChord[];
   const isFixedDisplayKey =
-    definedChords.length === 1 && definedChords[0] === 'base'
+    definedChords.length === 1 && definedChords[0] === 'base';
 
   if (isFixedDisplayKey && legends.base) {
-    return legends.base
+    return legends.base;
   }
 
   const isAltGrChord =
     chord === 'altGr' ||
     chord === 'shift+altGr' ||
     chord === 'fn+altGr' ||
-    chord === 'fn+shift+altGr'
+    chord === 'fn+shift+altGr';
 
   if (isAltGrChord) {
     if (!hasAltGr) {
-      const shiftActive = state.ShiftLeft || state.ShiftRight
-      const capsActive = state.CapsLock
+      const shiftActive = state.ShiftLeft || state.ShiftRight;
+      const capsActive = state.CapsLock;
       if (shiftActive && capsActive && legends['shift+caps']) {
-        return legends['shift+caps']
+        return legends['shift+caps'];
       }
       if (shiftActive && legends.shift) {
-        return legends.shift
+        return legends.shift;
       }
       if (capsActive && legends.caps) {
-        return legends.caps
+        return legends.caps;
       }
-      return legends.base || ''
+      return legends.base || '';
     }
-    return ''
+    return '';
   }
 
-  const fallbackOrder: ModChord[] = ['base', 'shift', 'caps', 'fn']
+  const fallbackOrder: ModChord[] = ['base', 'shift', 'caps', 'fn'];
 
   for (const fallback of fallbackOrder) {
     if (legends[fallback]) {
-      return legends[fallback]!
+      return legends[fallback]!;
     }
   }
 
-  return ''
+  return '';
 }
 
 export function getModifierAwareKeyLabel(
@@ -494,14 +498,14 @@ export function getModifierAwareKeyLabel(
   state: VirtualKeyboardModifierState
 ): string {
   if (!Array.isArray(baseLabel)) {
-    return baseLabel
+    return baseLabel;
   }
 
   if (shouldAffectCharacterDisplay(keyCode, state)) {
-    return baseLabel[0]
+    return baseLabel[0];
   }
 
-  return baseLabel[1]
+  return baseLabel[1];
 }
 
 /**
@@ -513,7 +517,7 @@ export function createSafeModifierState(
   return {
     ...createInitialModifierState(),
     ...state,
-  }
+  };
 }
 
 /**
@@ -526,14 +530,14 @@ export function toggleModifierKey(
   return {
     ...state,
     [keyCode]: !state[keyCode as keyof VirtualKeyboardModifierState],
-  }
+  };
 }
 
 /**
  * Reset all modifier key states.
  */
 export function resetAllModifierKeys(): VirtualKeyboardModifierState {
-  return createInitialModifierState()
+  return createInitialModifierState();
 }
 
 /**
@@ -543,7 +547,7 @@ export function getModifierStateFromEvent(
   event: KeyboardEvent
 ): Partial<VirtualKeyboardModifierState> {
   if (!event.getModifierState) {
-    return {}
+    return {};
   }
 
   return {
@@ -574,7 +578,7 @@ export function getModifierStateFromEvent(
       event.location === KeyboardEvent.DOM_KEY_LOCATION_RIGHT,
     NumLock: event.getModifierState('NumLock'),
     ScrollLock: event.getModifierState('ScrollLock'),
-  }
+  };
 }
 
 /**
@@ -583,7 +587,7 @@ export function getModifierStateFromEvent(
 export function detectSystemModifierKeys(
   event: KeyboardEvent
 ): Partial<VirtualKeyboardModifierState> {
-  return getModifierStateFromEvent(event)
+  return getModifierStateFromEvent(event);
 }
 
 /**
@@ -592,7 +596,7 @@ export function detectSystemModifierKeys(
 export function detectShiftModifierKeys(
   event: KeyboardEvent
 ): Partial<VirtualKeyboardModifierState> {
-  return getModifierStateFromEvent(event)
+  return getModifierStateFromEvent(event);
 }
 
 /**
@@ -620,7 +624,7 @@ export const VirtualKeyboardModifierUtils = {
   getKeyLegendByModifierState,
   getModifierAwareKeyLabel,
   detectSystemModifierKeys,
-}
+};
 
 /**
  * Default export: complete virtual keyboard modifier key management system.
@@ -634,4 +638,4 @@ export default {
 
   VirtualKeyboardModifierManager,
   createVirtualKeyboardModifierManager,
-}
+};

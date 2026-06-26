@@ -1,27 +1,31 @@
 import {
-  SettingLocalAuthCreatePassword,
-  SettingLocalAuthRemovePassword,
-  SettingLocalAuthChangePassword,
-} from '@/components'
+    SettingLocalAuthChangePassword,
+    SettingLocalAuthCreatePassword,
+    SettingLocalAuthRemovePassword,
+} from '@/components';
 export interface SettingLocalAuthProps {
   localAuthAction?: 'initPwd' | 'changePwd' | 'removePwd'
   onClose?: () => void
+  onAuthModeChange?: (mode: 'password' | 'no') => void
 }
 const SettingLocalAuth = function SettingLocalAuth({
   localAuthAction,
   onClose,
+  onAuthModeChange,
 }: SettingLocalAuthProps) {
   return (
     <>
       {localAuthAction == 'initPwd' && (
         <SettingLocalAuthCreatePassword
           onClose={onClose}
+          onAuthModeChange={onAuthModeChange}
         ></SettingLocalAuthCreatePassword>
       )}
 
       {localAuthAction == 'removePwd' && (
         <SettingLocalAuthRemovePassword
           onClose={onClose}
+          onAuthModeChange={onAuthModeChange}
         ></SettingLocalAuthRemovePassword>
       )}
 
@@ -31,7 +35,7 @@ const SettingLocalAuth = function SettingLocalAuth({
         ></SettingLocalAuthChangePassword>
       )}
     </>
-  )
-}
+  );
+};
 
-export default SettingLocalAuth
+export default SettingLocalAuth;

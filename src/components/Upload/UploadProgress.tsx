@@ -4,8 +4,8 @@
  * Shows current progress percentage, speed, and a progress bar.
  * Only rendered when an upload is actively transferring or resuming.
  */
-import React from 'react'
-import type { UploadDetail } from './types'
+import React from 'react';
+import type { UploadDetail } from './types';
 
 interface UploadProgressProps {
   step?: 'overview' | 'upload' | 'resume'
@@ -36,21 +36,21 @@ function UploadProgress({
       )}
       {step === 'resume' || uploadState === 'uploading' ? (
         <>
-          <div className="text-xs  mb-2">
+          <div className="text-sm  mb-2">
             {`${currentUploadDetail.progressFormatted || ''} • ${currentUploadDetail.speedFormatted}`}
           </div>
           <div className="h-2 bg-white/10 rounded">
             <div
-              className="h-full bg-[var(--btn-primary-bg)] rounded"
+              className="h-full bg-[var(--btn-primary-bg)] rounded upload-progress-bar"
               style={{
-                width: `${currentUploadDetail.progress}%`,
-              }}
+                '--upload-width': `${currentUploadDetail.progress}%`,
+              } as React.CSSProperties}
             />
           </div>
         </>
       ) : null}
     </div>
-  )
+  );
 }
 
-export default React.memo(UploadProgress)
+export default React.memo(UploadProgress);

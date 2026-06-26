@@ -1,23 +1,29 @@
-import i18n from '@/i18n'
-import type { StateCreator } from 'zustand'
+import i18n from '@/i18n';
+import type { MouseInputMode } from '@/components/settings/UsbMouseModeSync';
+import type { StateCreator } from 'zustand';
+import type { RootState } from '../types';
 
 export type GlobalSettingsData = {
+  // Language settings.
   currentLang: string
   supportedLanguages: { code: string; name: string }[]
 
+  // Theme settings.
   currentTheme: string
 
+  // UI/local preferences (not strongly bound to device settings).
   hideCursor: boolean
   cursorStyle: 'dot' | 'arrow'
-  mouseInputMode: string
-  modifierReleaseMode: 'auto' | 'manual'
-
+  mouseInputMode: MouseInputMode
+  preferredMouseInputMode: MouseInputMode
+  modifierReleaseMode: 'auto' | 'manual' // Modifier release mode.
+  // Numeric throttling where 0 disables throttling.
   scrollThrottling: number // 0 | 10 | 25 | 50 | 100
-  keyboardLanguage: string
-  showStatusBar: boolean
-  showPressedKeys: boolean
-  showDiagnosticInfo: boolean
-  showKeyboardLeds: boolean
+  keyboardLanguage: string // Keyboard layout ID (for example, 'en-US-qwerty').
+  showStatusBar: boolean // Toggle status bar visibility.
+  showPressedKeys: boolean // Toggle pressed-key indicators.
+  showDiagnosticInfo: boolean // Toggle diagnostic information visibility.
+  showKeyboardLeds: boolean // Toggle keyboard LED indicators.
   enhancement: {
     preset: 'none' | 'balanced' | 'warm' | 'text' | 'custom'
     saturation: number
@@ -28,8 +34,9 @@ export type GlobalSettingsData = {
 }
 
 export type GlobalSettingsActions = {
+  // Language actions.
   setLanguage: (lang: string) => void
-
+  // Theme actions.
   setTheme: (theme: string) => void
   setHideCursor: (v: boolean) => void
   setCursorStyle: (v: 'dot' | 'arrow') => void
@@ -39,7 +46,8 @@ export type GlobalSettingsActions = {
   setShowPressedKeys: (v: boolean) => void
   setShowDiagnosticInfo: (v: boolean) => void
   setShowKeyboardLeds: (v: boolean) => void
-  setMouseInputMode: (v: string) => void
+  setMouseInputMode: (v: MouseInputMode) => void
+  setTemporaryMouseInputMode: (v: MouseInputMode) => void
   setModifierReleaseMode: (v: 'auto' | 'manual') => void
   setEnhancement: (v: GlobalSettingsData['enhancement']) => void
 }
@@ -56,14 +64,16 @@ const DEFAULTS: GlobalSettingsData = {
   showDiagnosticInfo: false,
   showKeyboardLeds: true,
   mouseInputMode: 'absolute',
+  preferredMouseInputMode: 'absolute',
   modifierReleaseMode: 'auto',
-
+  // Default language is English unless user preference is explicitly set.
   currentLang: 'en',
   supportedLanguages: [
-    { code: 'zh', name: '中文' },
+    { code: 'zh', name: 'Chinese' },
     { code: 'en', name: 'English' },
   ],
 
+  // Theme default values.
   currentTheme: localStorage.getItem('ui-theme') || 'dark',
   enhancement: {
     preset: 'none',
@@ -72,10 +82,10 @@ const DEFAULTS: GlobalSettingsData = {
     contrast: 1,
     hueRotate: 0,
   },
-}
+};
 
 export const createGlobalSettingsSlice: StateCreator<
-  GlobalSettingsSlice,
+  RootState,
   [],
   [],
   GlobalSettingsSlice
@@ -98,57 +108,66 @@ export const createGlobalSettingsSlice: StateCreator<
           showPressedKeys: true,
           showDiagnosticInfo: true,
           showKeyboardLeds: true,
-        }
+        };
       }
-      return { ...state, showStatusBar: false }
+      return { ...state, showStatusBar: false };
     }),
   setShowPressedKeys: v => set(state => ({ ...state, showPressedKeys: !!v })),
-  setShowDiagnosticInfo: v =>
-    set(state => ({ ...state, showDiagnosticInfo: !!v })),
+  setShowDiagnosticInfo: v => set(state => ({ ...state, showDiagnosticInfo: !!v })),
   setShowKeyboardLeds: v => set(state => ({ ...state, showKeyboardLeds: !!v })),
-  setMouseInputMode: v => set(state => ({ mouseInputMode: v })),
-  setModifierReleaseMode: v => set(state => ({ modifierReleaseMode: v })),
-  setEnhancement: v => set(state => ({ enhancement: v })),
-
+  setMouseInputMode: v =>
+    set({ mouseInputMode: v, preferredMouseInputMode: v }),
+  setTemporaryMouseInputMode: v => set({ mouseInputMode: v }),
+  setModifierReleaseMode: v => set({ modifierReleaseMode: v }),
+  setEnhancement: v => set({ enhancement: v }),
+  // Language action implementation.
   setLanguage: (lang: string) => {
+    // Skip when language is unchanged.
     if (get().currentLang === lang) {
-      return true
+      return true;
     }
 
-    const isValidLang = get().supportedLanguages.some(l => l.code === lang)
+    // Validate language support.
+    const isValidLang = get().supportedLanguages.some(l => l.code === lang);
 
     if (!isValidLang) {
-      return false
+      return false;
     }
 
     try {
-      set({ currentLang: lang })
-      i18n.changeLanguage(lang)
+      // Apply state and i18n update.
+      set({ currentLang: lang });
+      i18n.changeLanguage(lang);
 
-      return true
-    } catch (error) {
-      return false
+      return true;
+    } catch {
+      return false;
     }
   },
 
+  // Theme action implementation.
   setTheme: (theme: string) => {
+    // Skip when theme is unchanged.
     if (get().currentTheme === theme) {
-      return true
+      return true;
     }
 
-    const validThemes = ['dark', 'light']
+    // Validate supported themes.
+    const validThemes = ['dark', 'light'];
     if (!validThemes.includes(theme)) {
-      return false
+      return false;
     }
 
     try {
-      localStorage.setItem('ui-theme', theme)
+      // Persist theme to local storage.
+      localStorage.setItem('ui-theme', theme);
 
-      set({ currentTheme: theme })
+      // Update state.
+      set({ currentTheme: theme });
 
-      return true
-    } catch (error) {
-      return false
+      return true;
+    } catch {
+      return false;
     }
   },
-})
+});

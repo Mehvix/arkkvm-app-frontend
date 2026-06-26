@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react'
+import React, { useEffect, useId, useRef, useState } from 'react';
 
 export type GridBackgroundProps = {
   /** Size of each grid cell in px (both width and height). Default 200. */
@@ -47,65 +47,68 @@ export const GridBackground: React.FC<GridBackgroundProps> = ({
   watermarkScale = 0.3,
   watermarkSeed = 8192,
 }) => {
-  const patternIdRaw = useId()
-  const patternId = `grid-${patternIdRaw.replace(/[:]/g, '')}`
-  const containerClass = ['relative isolate overflow-hidden', className]
+  const patternIdRaw = useId();
+  const patternId = `grid-${patternIdRaw.replace(/[:]/g, '')}`;
+  const containerClass = [
+    // Ensure absolutely positioned SVG has positioning context and won't penetrate current stack
+    'relative isolate overflow-hidden',
+    className,
+  ]
     .filter(Boolean)
-    .join(' ')
+    .join(' ');
 
   // Measure container for watermark layout
-  const rootRef = useRef<HTMLDivElement>(null)
-  const [{ cols, rows, width, height }, setLayout] = useState({
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [{ cols, rows }, setLayout] = useState({
     cols: 0,
     rows: 0,
     width: 0,
     height: 0,
-  })
+  });
   useEffect(() => {
-    const el = rootRef.current
-    if (!el) return
+    const el = rootRef.current;
+    if (!el) return;
     const ro = new ResizeObserver(entries => {
-      const rect = entries[0]?.contentRect
-      if (!rect) return
-      const w = Math.floor(rect.width)
-      const h = Math.floor(rect.height)
-      const c = Math.max(1, Math.ceil(w / cellSize))
-      const r = Math.max(1, Math.ceil(h / cellSize))
-      setLayout({ cols: c, rows: r, width: w, height: h })
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [cellSize])
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      const w = Math.floor(rect.width);
+      const h = Math.floor(rect.height);
+      const c = Math.max(1, Math.ceil(w / cellSize));
+      const r = Math.max(1, Math.ceil(h / cellSize));
+      setLayout({ cols: c, rows: r, width: w, height: h });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [cellSize]);
 
   // Deterministic pseudo-random based on index + seed
   const rand = (i: number) => {
-    let x = (i + watermarkSeed) | 0
-    x ^= x << 13
-    x ^= x >> 17
-    x ^= x << 5
+    let x = (i + watermarkSeed) | 0;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
     // Normalize to 0..1
-    return ((x >>> 0) % 10000) / 10000
-  }
+    return ((x >>> 0) % 10000) / 10000;
+  };
 
   // Morton (Z-order) index to linearize 2D cells with spatial locality
   const morton = (x: number, y: number) => {
     const part1by1 = (n: number) => {
-      n &= 0xffff
-      n = (n | (n << 8)) & 0x00ff00ff
-      n = (n | (n << 4)) & 0x0f0f0f0f
-      n = (n | (n << 2)) & 0x33333333
-      n = (n | (n << 1)) & 0x55555555
-      return n
-    }
-    return (part1by1(y) << 1) | part1by1(x)
-  }
+      n &= 0xffff;
+      n = (n | (n << 8)) & 0x00ff00ff;
+      n = (n | (n << 4)) & 0x0f0f0f0f;
+      n = (n | (n << 2)) & 0x33333333;
+      n = (n | (n << 1)) & 0x55555555;
+      return n;
+    };
+    return (part1by1(y) << 1) | part1by1(x);
+  };
 
   return (
     <div className={containerClass} ref={rootRef}>
       <svg
-        className={strokeClassName}
+        className={cn(strokeClassName, opacity != null ? `opacity-[${opacity}]` : '')}
         aria-hidden="true"
-        style={opacity != null ? { opacity } : undefined}
       >
         <defs>
           <pattern
@@ -151,57 +154,57 @@ export const GridBackground: React.FC<GridBackgroundProps> = ({
             }}
           >
             {(() => {
-              const total = cols * rows
-              const size = Math.max(8, Math.floor(cellSize * watermarkScale))
+              const total = cols * rows;
+              const size = Math.max(8, Math.floor(cellSize * watermarkScale));
               const logos =
                 watermarkLogos && watermarkLogos.length
                   ? watermarkLogos
-                  : [watermarkLogo as React.ReactNode]
+                  : [watermarkLogo as React.ReactNode];
 
               // Build ordered cell list (Morton order)
               const cells = Array.from({ length: total }, (_, i) => ({
                 col: i % cols,
                 row: Math.floor(i / cols),
-              })).sort((a, b) => morton(a.col, a.row) - morton(b.col, b.row))
+              })).sort((a, b) => morton(a.col, a.row) - morton(b.col, b.row));
 
-              let indices: number[] = []
+              let indices: number[] = [];
               if (typeof watermarkCount === 'number' && watermarkCount > 0) {
-                const N = Math.min(watermarkCount, total)
-                const stride = Math.max(1, Math.floor(total / N))
-                const start = Math.floor(rand(123456) * stride)
+                const N = Math.min(watermarkCount, total);
+                const stride = Math.max(1, Math.floor(total / N));
+                const start = Math.floor(rand(123456) * stride);
                 for (let k = 0; k < N; k++) {
-                  indices.push((start + k * stride) % total)
+                  indices.push((start + k * stride) % total);
                 }
               } else {
                 // Density path
                 indices = cells
                   .map((_, idx) => idx)
-                  .filter(idx => rand(idx) < watermarkDensity)
+                  .filter(idx => rand(idx) < watermarkDensity);
               }
 
+              // Render grid cells; only chosen indices show a logo, others are empty node placeholders
               return cells.map((_, orderedIdx) => {
-                const chosen = indices.includes(orderedIdx)
-                if (!chosen) return <div key={orderedIdx} />
-                const logoIdx = orderedIdx % logos.length
-                const op = rand(orderedIdx * 97 + 7) < 0.5 ? 0 : 1
+                const chosen = indices.includes(orderedIdx);
+                if (!chosen) return <div key={orderedIdx} />;
+                const logoIdx = orderedIdx % logos.length;
+                const op = rand(orderedIdx * 97 + 7) < 0.5 ? 0 : 1; // 0 or 1
                 return (
                   <div
                     key={orderedIdx}
-                    className="flex items-center justify-center"
-                    style={{ opacity: op }}
+                    className={cn('flex items-center justify-center', `opacity-[${op}]`)}
                   >
-                    <div style={{ width: size, height: size }}>
+                    <div className={cn(`w-[${size}]`, `h-[${size}]`)}>
                       {logos[logoIdx]}
                     </div>
                   </div>
-                )
-              })
+                );
+              });
             })()}
           </div>
         )}
       {children}
     </div>
-  )
-}
+  );
+};
 
-export default GridBackground
+export default GridBackground;

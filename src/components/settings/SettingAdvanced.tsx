@@ -1,51 +1,52 @@
-import { type JsonRpcHandle } from '@/hooks/useJsonRpc'
-import { useLoadingMap } from '@/hooks/useLoading'
-import { useAppStore } from '@/stores'
+import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
+import { useLoadingMap } from '@/hooks/useLoading';
+import { useAppStore } from '@/stores';
 import {
   useActiveDeviceSettings,
   useSettingsActions,
   useSettingsStore,
-} from '@/stores/devicesStore'
-import { createLogger } from '@/utils/logger'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
-import { Button } from '../ui/button'
-import { useConfirmDialog } from '../ui/confirm-dialog'
-import { Switch } from '../ui/switch'
-import { Textarea } from '../ui/textarea'
-import SettingBlock from './SettingBlock'
-import SettingPageContainer from './SettingPageContainer'
+} from '@/stores/devicesStore';
+import { createLogger } from '@/utils/logger';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Button } from '../ui/button';
+import { useConfirmDialog } from '../ui/confirm-dialog';
+import { Switch } from '../ui/switch';
+import { Textarea } from '../ui/textarea';
+import SettingBlock from './SettingBlock';
+import SettingPageContainer from './SettingPageContainer';
+import { getErrorReasonKey } from '@/utils/parse';
 
-const logger = createLogger('SettingAdvanced')
+const logger = createLogger('SettingAdvanced');
 
 export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
-  const { t } = useTranslation(['settings'])
-  const [send, isChannelReady, sendAsync] = rpc
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { t } = useTranslation(['settings', 'errors']);
+  const [send, isChannelReady, sendAsync] = rpc;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   // State management
-  const [devChannel, setDevChannel] = useState(false)
-  const webTerminalEnabled = useActiveDeviceSettings(s => s.webTerminalEnabled)
-  const [developerMode, setDeveloperMode] = useState(false)
-  const [localLoopbackOnly, setLocalLoopbackOnly] = useState(false)
-  const [sshKey, setSshKey] = useState('')
-  const debugMode = useActiveDeviceSettings(s => s.debugMode)
-  const [usbEmulation, setUsbEmulation] = useState(false)
-  const setNestedDeviceSetting = useSettingsActions().setNestedDeviceSetting
-  const removeDevice = useSettingsActions().removeDevice
-  const resetSetup = useAppStore(state => state.resetSetup)
-  const activeDeviceId = useSettingsStore(s => s.activeDeviceId)
+  const [, setDevChannel] = useState(false);
+  const webTerminalEnabled = useActiveDeviceSettings(s => s.webTerminalEnabled);
+  const [developerMode, setDeveloperMode] = useState(false);
+  const [localLoopbackOnly, setLocalLoopbackOnly] = useState(false);
+  const [sshKey, setSshKey] = useState('');
+  useActiveDeviceSettings(s => s.debugMode);
+  const [, setUsbEmulation] = useState(false);
+  const setNestedDeviceSetting = useSettingsActions().setNestedDeviceSetting;
+  const removeDevice = useSettingsActions().removeDevice;
+  const resetSetup = useAppStore(state => state.resetSetup);
+  const activeDeviceId = useSettingsStore(s => s.activeDeviceId);
   const { isLoading, startLoading, stopLoading } = useLoadingMap([
     'resetConfig',
     'allLoading',
     'localLoopbackOnly',
-  ])
-  const { confirm } = useConfirmDialog()
+  ]);
+  const { confirm, info } = useConfirmDialog();
   useEffect(() => {
-    if (!isChannelReady) return
-    let isCancelled = false
+    if (!isChannelReady) return;
+    let isCancelled = false;
     void (async () => {
-      startLoading('allLoading')
+      startLoading('allLoading');
       const [
         devModeState,
         sshKeyState,
@@ -70,72 +71,72 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
           { method: 'getLocalLoopbackOnly' },
           { resultOnly: true }
         ).catch(e => e),
-      ])
+      ]);
       logger.info('Settings loaded', {
         localLoopbackOnly: localLoopbackOnlyState,
-      })
-      stopLoading('allLoading')
-      if (isCancelled) return
-      setDevChannel(!!devChannelState)
-      setDeveloperMode(!!devModeState?.enabled)
-      setLocalLoopbackOnly(!!localLoopbackOnlyState)
-      setSshKey(sshKeyState || '')
-      setUsbEmulation(!!usbEmulationState)
+      });
+      stopLoading('allLoading');
+      if (isCancelled) return;
+      setDevChannel(!!devChannelState);
+      setDeveloperMode(!!devModeState?.enabled);
+      setLocalLoopbackOnly(!!localLoopbackOnlyState);
+      setSshKey(sshKeyState || '');
+      setUsbEmulation(!!usbEmulationState);
       setNestedDeviceSetting(prev => ({
         ...prev,
         developerMode: !!devModeState?.enabled,
-      }))
-    })()
+      }));
+    })();
     return () => {
-      isCancelled = true
-    }
-  }, [isChannelReady, sendAsync])
+      isCancelled = true;
+    };
+  }, [isChannelReady, sendAsync]);
   // Event handler functions
-  const toggleDevChannelUpdates = useCallback(
+  const _toggleDevChannelUpdates = useCallback(
     (enabled: boolean) => {
-      setDevChannel(enabled)
+      setDevChannel(enabled);
       send({
         method: 'setDevChannelState',
         params: { enabled },
         onResponse(resp) {
-          logger.info('Dev channel state updated', { enabled, response: resp })
+          logger.info('Dev channel state updated', { enabled, response: resp });
         },
         onError(err) {
           toast.error(
             `Failed to set dev channel state: ${err.message || 'Unknown error'}`
-          )
+          );
           // Rollback state
-          setDevChannel(!enabled)
+          setDevChannel(!enabled);
         },
-      })
+      });
     },
     [send]
-  )
+  );
 
   const handleDeveloperModeChange = useCallback(
     async (checked: boolean) => {
-      startLoading('developerMode')
+      startLoading('developerMode');
       const { success } = await sendAsync({
         method: 'setDevModeState',
         params: { enabled: checked },
-      })
-      stopLoading('developerMode')
+      });
+      stopLoading('developerMode');
       if (success) {
         setNestedDeviceSetting(prev => ({
           ...prev,
           developerMode: checked,
-        }))
-        setDeveloperMode(checked)
+        }));
+        setDeveloperMode(checked);
       } else {
         toast.error(
           `Failed to ${checked ? 'enable' : 'disable'} Developer Mode`
-        )
+        );
         // Rollback state
-        setDeveloperMode(!checked)
+        setDeveloperMode(!checked);
       }
     },
     [sendAsync, setNestedDeviceSetting]
-  )
+  );
 
   const handleLoopbackOnlyChange = useCallback(
     (checked: boolean) => {
@@ -153,11 +154,11 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
                 <div className="text-sm">
                   Before enabling this feature, make sure you have either:
                 </div>
-                <ul className="text-xs space-y-1 ml-4">
-                  <li className="text-xs">
+                <ul className="text-sm space-y-1 ml-4">
+                  <li className="text-sm ">
                     • SSH access configured and tested
                   </li>
-                  <li className="text-xs">
+                  <li className="text-sm ">
                     • Cloud access enabled and working
                   </li>
                 </ul>
@@ -167,11 +168,10 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
         ),
         confirmText: 'I Understand, Enable Anyway',
         cancelText: 'Cancel',
-        type: 'confirm',
         onConfirm: async () => {
           // setLocalLoopbackOnly(checked);
           //startLoading
-          startLoading('localLoopbackOnly')
+          startLoading('localLoopbackOnly');
           const resChecked = await sendAsync(
             {
               method: 'setLocalLoopbackOnly',
@@ -180,38 +180,39 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
             {
               resultOnly: true,
               showUnhandledErrorToast: true,
-              successMessage: `Loopback-only mode enabled. Restart your device to apply.`,
+              successMessage:
+                'Loopback-only mode enabled. Restart your device to apply.',
             }
-          )
-          stopLoading('localLoopbackOnly')
-          setLocalLoopbackOnly(resChecked ?? false)
+          );
+          stopLoading('localLoopbackOnly');
+          setLocalLoopbackOnly(resChecked ?? false);
         },
-      })
+      });
     },
     [send, confirm]
-  )
+  );
 
   const handleWebTerminalChange = useCallback(
     (checked: boolean) => {
-      logger.info('Web Terminal changed', { enabled: checked })
+      logger.info('Web Terminal changed', { enabled: checked });
       setNestedDeviceSetting(prev => ({
         ...prev,
         webTerminalEnabled: checked,
-      }))
+      }));
     },
     [setNestedDeviceSetting]
-  )
+  );
 
-  const handleDebugModeChange = useCallback(
+  const _handleDebugModeChange = useCallback(
     (checked: boolean) => {
-      logger.info('Debug mode changed', { enabled: checked })
+      logger.info('Debug mode changed', { enabled: checked });
       setNestedDeviceSetting(prev => ({
         ...prev,
         debugMode: checked,
-      }))
+      }));
     },
     [setNestedDeviceSetting]
-  )
+  );
 
   const handleUpdateSshKey = useCallback(() => {
     send({
@@ -219,72 +220,86 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
       params: { sshKey },
       onResponse(resp) {
         if (!('error' in resp)) {
-          toast.success('SSH Key updated successfully')
+          toast.success('SSH Key updated successfully');
         } else {
-          toast.error(
-            `Failed to update SSH Key: ${resp.error.message || 'Unknown error'}`
-          )
+          // toast.error(
+          //   `Failed to update SSH Key: ${resp.error.message || 'Unknown error'}`
+          // );
         }
       },
-      onError(err) {
-        toast.error(
-          `Failed to update SSH Key: ${err.message || 'Network error'}`
-        )
+      onError(_err) {
+        // toast.error(
+        //   `Failed to update SSH Key: ${err.message || 'Network error'}`
+        // );
       },
-    })
-  }, [send, sshKey])
+    });
+  }, [send, sshKey]);
 
-  const handleDisableUsbEmulation = useCallback(
+  const _handleDisableUsbEmulation = useCallback(
     (enabled: boolean) => {
-      setUsbEmulation(enabled)
+      setUsbEmulation(enabled);
       send({
         method: 'setUsbEmulationState',
         params: { enabled },
         onResponse(resp) {
           if (!('error' in resp)) {
-            toast.success('USB Emulation disabled successfully')
+            toast.success('USB Emulation disabled successfully');
           } else {
             toast.error(
               `Failed to disable USB Emulation: ${resp.error.message || 'Unknown error'}`
-            )
-            setUsbEmulation(!enabled)
+            );
+            setUsbEmulation(!enabled);
           }
         },
         onError(err) {
           toast.error(
             `Failed to disable USB Emulation: ${err.message || 'Network error'}`
-          )
-          setUsbEmulation(!enabled)
+          );
+          setUsbEmulation(!enabled);
         },
-      })
+      });
     },
     [send]
-  )
+  );
 
   const handleResetConfig = useCallback(async () => {
-    startLoading('resetConfig')
+    startLoading('resetConfig');
     try {
-      const { success } = await sendAsync({
-        method: 'resetConfig',
-      })
-
+      const { success, error } = await sendAsync(
+        {
+          method: 'resetConfig',
+        }
+      );
+      stopLoading('resetConfig');
       if (success) {
-        resetSetup()
-        toast.success('Configuration reset to default successfully')
-        if (activeDeviceId) removeDevice(activeDeviceId)
+        resetSetup();
+        toast.success('Configuration reset to default successfully');
+        if (activeDeviceId) removeDevice(activeDeviceId);
         setTimeout(() => {
-          window.location.reload()
-        }, 500)
-      } else {
-        //  toast.error(
-        //             `Failed to reset configuration: ${resp.error.message || 'Unknown error'}`
-        //           )
+          window.location.reload();
+        }, 500);
+      } else if(error){
+           const title = getErrorReasonKey(error.data, {
+              segmentIndex: 0,
+            });
+            const reasonKey = getErrorReasonKey(error?.data, {
+              segmentIndex: 1,
+            });
+            if (title && reasonKey) {
+              const ns = `${title}.${reasonKey}` as const;
+              info({
+                title: t(`errors:${title}.title`),
+                content: t(`errors:${ns}`),
+                confirmText: t(`errors:${title}.confirm`),
+              });
+              return;
+            }
       }
     } catch (error) {
-      logger.error('Failed to clear localStorage:', error)
-      toast.error('Failed to clear local storage')
+      logger.error('Failed to clear localStorage:', error);
+      toast.error('Failed to clear local storage');
     }
-  }, [sendAsync])
+  }, [sendAsync]);
 
   return (
     <SettingPageContainer
@@ -354,11 +369,11 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
                   rows={3}
                   onChange={e => setSshKey(e.target.value)}
                   placeholder={t('settings:advanced.sshAccess.keyPlaceholder')}
-                  className="font-mono !text-xs"
-                  labelClassName="text-xs"
+                  className="font-mono !text-sm "
+                  labelClassName="text-sm "
                 />
                 <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-600  md:text-xs">
+                  <div className="text-sm text-gray-600  md:text-sm ">
                     {t('settings:advanced.sshAccess.defaultUserText')}{' '}
                     <span className="font-mono bg-gray-100 px-1 rounded">
                       root
@@ -384,8 +399,8 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
         >
           <SettingBlock.Right>
             <Button
-              size="xs"
               variant="default"
+              size="xs"
               status="danger"
               className="bg-[var(--btn-filled-bg-danger)]"
               onClick={handleResetConfig}
@@ -423,7 +438,7 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
               >
                 <SettingBlock.Right>
                   <Button
-                    size="xs"
+
                     onClick={() => handleDisableUsbEmulation(!usbEmulation)}
                   >
                     {usbEmulation
@@ -441,5 +456,5 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
         </SettingBlock> */}
       </div>
     </SettingPageContainer>
-  )
+  );
 }

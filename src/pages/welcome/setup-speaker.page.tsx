@@ -7,26 +7,26 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2025-11-01 20:41:31
  */
-import { WelcomeBackground } from '@/components'
-import WelcomeSetupBtn from '@/components/WelcomeSetupBtn'
-import { useAppStore } from '@/stores'
-import { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { WelcomeBackground } from '@/components';
+import WelcomeSetupBtn from '@/components/WelcomeSetupBtn';
+import { useAppStore } from '@/stores';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const SetupSpeakerPage: React.FC = () => {
-  const navigate = useNavigate()
-  const setAudioPlayback = useAppStore(state => state.setAudioPlayback)
-  const { t } = useTranslation('messages')
+  const navigate = useNavigate();
+  const setAudioPlayback = useAppStore(state => state.setAudioPlayback);
+  const { t } = useTranslation('messages');
   const handleAction = useCallback(() => {
-    setAudioPlayback(true)
-    navigate('/welcome/setup-microphone')
-  }, [setAudioPlayback, navigate])
+    setAudioPlayback(true);
+    navigate('/welcome/setup-microphone');
+  }, [setAudioPlayback, navigate]);
 
   const handleLater = useCallback(() => {
-    setAudioPlayback(false)
-    navigate('/welcome/setup-microphone')
-  }, [setAudioPlayback, navigate])
+    setAudioPlayback(false);
+    navigate('/welcome/setup-microphone');
+  }, [setAudioPlayback, navigate]);
   return (
     <WelcomeBackground
       title={t('welcome.speaker.title')}
@@ -38,7 +38,7 @@ const SetupSpeakerPage: React.FC = () => {
         onLater={handleLater}
       ></WelcomeSetupBtn>
     </WelcomeBackground>
-  )
-}
+  );
+};
 
-export default SetupSpeakerPage
+export default SetupSpeakerPage;

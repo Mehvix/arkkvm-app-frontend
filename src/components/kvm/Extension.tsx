@@ -1,25 +1,25 @@
-import { Button } from '@/components/ui/button'
-import { type JsonRpcHandle } from '@/hooks/useJsonRpc'
-import { useAppStore } from '@/stores'
-import type { ATXState } from '@/stores/slices/deviceStateSlice'
-import { createLogger } from '@/utils/logger'
-import { HardDrive, Power, PowerIcon, RotateCcw } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button';
+import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
+import { useAppStore } from '@/stores';
+import type { ATXState } from '@/stores/slices/deviceStateSlice';
+import { createLogger } from '@/utils/logger';
+import { HardDrive, Power, PowerIcon, RotateCcw } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const logger = createLogger('Extension')
+const logger = createLogger('Extension');
 
 interface ExtensionDef {
   id: string
   name: string
   description: string
 }
-const LONG_PRESS_DURATION = 3000
+const LONG_PRESS_DURATION = 3000;
 
 const DEFAULT_ATX_STATE: ATXState = {
   power: false,
   hdd: false,
-}
+};
 
 // Button component with progress indicator
 function ProgressButton({
@@ -42,23 +42,23 @@ function ProgressButton({
   className?: string
   disabled?: boolean
 } & React.ComponentProps<typeof Button>) {
-  const progressRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number>()
-  const startTimeRef = useRef<number>()
+  const progressRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>();
+  const startTimeRef = useRef<number>();
 
   useEffect(() => {
     if (isPressed) {
       // Start progress animation
-      startTimeRef.current = Date.now()
+      startTimeRef.current = Date.now();
 
       const animate = () => {
-        if (!progressRef.current || !startTimeRef.current) return
+        if (!progressRef.current || !startTimeRef.current) return;
 
-        const elapsed = Date.now() - startTimeRef.current
-        const progress = Math.min(elapsed / duration, 1)
+        const elapsed = Date.now() - startTimeRef.current;
+        const progress = Math.min(elapsed / duration, 1);
 
         // Calculate border progress (0-360 degrees)
-        const angle = progress * 360
+        const angle = progress * 360;
 
         // Use conic-gradient to create progress border effect
         progressRef.current.style.background = `conic-gradient(
@@ -67,30 +67,30 @@ function ProgressButton({
           #10b981 ${angle}deg,
           transparent ${angle}deg,
           transparent 360deg
-        )`
+        )`;
 
         if (progress < 1 && isPressed) {
-          animationRef.current = requestAnimationFrame(animate)
+          animationRef.current = requestAnimationFrame(animate);
         }
-      }
+      };
 
-      animate()
+      animate();
     } else {
       // Stop animation and reset progress
       if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+        cancelAnimationFrame(animationRef.current);
       }
       if (progressRef.current) {
-        progressRef.current.style.background = 'transparent'
+        progressRef.current.style.background = 'transparent';
       }
     }
 
     return () => {
       if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+        cancelAnimationFrame(animationRef.current);
       }
-    }
-  }, [isPressed, duration])
+    };
+  }, [isPressed, duration]);
 
   return (
     <div className="relative">
@@ -122,7 +122,7 @@ function ProgressButton({
         {children}
       </Button>
     </div>
-  )
+  );
 }
 
 const AVAILABLE_EXTENSIONS: ExtensionDef[] = [
@@ -141,21 +141,9 @@ const AVAILABLE_EXTENSIONS: ExtensionDef[] = [
   //   name: "Serial Console",
   //   description: "Access your serial console extension",
   // },
-]
-function SectionTitle({ title, desc }: { title: string; desc?: string }) {
-  const { t } = useTranslation('common')
-  return (
-    <div className="mb-4">
-      <div className="text-h1">{title}</div>
-      {desc ? (
-        <div className="text-sub text-[var(--text-secondary)]">{t(desc)}</div>
-      ) : null}
-    </div>
-  )
-}
-
+];
 function AtxDetail({
-  onBack,
+  onBack: _onBack,
   powerLed,
   hddLed,
   onTogglePower,
@@ -171,9 +159,9 @@ function AtxDetail({
   isPowerPressed: boolean
   loading: boolean
 }) {
-  const { t } = useTranslation('common')
-  const ledColor = useMemo(() => (powerLed ? 'text-green-400' : ''), [powerLed])
-  const hddColor = useMemo(() => (hddLed ? 'text-sky-400' : ''), [hddLed])
+  const { t } = useTranslation('common');
+  const ledColor = useMemo(() => (powerLed ? 'text-green-400' : ''), [powerLed]);
+  const hddColor = useMemo(() => (hddLed ? 'text-sky-400' : ''), [hddLed]);
 
   return (
     <div className="mt-[20px]">
@@ -199,7 +187,7 @@ function AtxDetail({
 
       <div className="my-4 h-px bg-[var(--border-color)]" />
 
-      <div className="flex items-center gap-6 text-xs">
+      <div className="flex items-center gap-6 text-sm ">
         <div className={`inline-flex items-center gap-2  ${ledColor}`}>
           <PowerIcon className="size-4" /> {t('atx.powerLed')}
         </div>
@@ -208,99 +196,79 @@ function AtxDetail({
         </div>
       </div>
     </div>
-  )
+  );
 }
 function ExtensionCard({
   item,
-  onLoad,
   rpc,
   atxState,
 }: {
   item: ExtensionDef
   rpc?: JsonRpcHandle
   atxState?: ATXState
-  onLoad: (id: string) => void
 }) {
-  const { t } = useTranslation('common')
-  const [isPowerPressed, setIsPowerPressed] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const { t } = useTranslation('common');
+  const [isPowerPressed, setIsPowerPressed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [powerPressTimer, setPowerPressTimer] = useState<ReturnType<
     typeof setTimeout
-  > | null>(null)
-  const [send, isChannelReady, sendAsync] = rpc
-  const asynGetActiveExtension = useCallback(
-    async (id: string) => {
-      if (!isChannelReady) return
-      const { result, sccess } = await sendAsync({
-        method: 'getActiveExtension',
-        params: { id },
-      })
-      debugger
-      if (sccess) setActiveId(resp.result)
-    },
-    [sendAsync, isChannelReady]
-  )
+  > | null>(null);
+  const [send, , sendAsync] = rpc;
   useEffect(() => {
     // asynGetActiveExtension(item.id);
-  }, [sendAsync, item.id])
+  }, [sendAsync, item.id]);
   const onTogglePower = useCallback(
     async (pressed: boolean) => {
-      if (!pressed && !isPowerPressed) return
-      if (loading) return // If loading, return directly
-      setIsPowerPressed(pressed)
+      if (!pressed && !isPowerPressed) return;
+      if (loading) return; // If loading, return directly
+      setIsPowerPressed(pressed);
 
       if (pressed) {
         // On press: start long press timer
         const timer = setTimeout(async () => {
-          setLoading(true)
+          setLoading(true);
           const setATXPowerActionResult = await sendAsync(
             {
               method: 'setATXPowerAction',
               params: { action: 'power-long' },
             },
             { resultOnly: true, showUnhandledErrorToast: true }
-          )
-          setLoading(false)
-          logger.info('ATX power action completed', {
-            action: 'power-long',
-            result: setATXPowerActionResult,
-          })
-          setPowerPressTimer(null) // Clear timer reference
-        }, LONG_PRESS_DURATION)
-        setPowerPressTimer(timer)
+          );
+          setLoading(false);
+          logger.info('ATX power action completed', { action: 'power-long', result: setATXPowerActionResult });
+          setPowerPressTimer(null); // Clear timer reference
+        }, LONG_PRESS_DURATION);
+        setPowerPressTimer(timer);
       } else {
         // On release: check if it's a short press
         if (powerPressTimer) {
           // If timer is still active, it's a short press
-          clearTimeout(powerPressTimer)
-          setPowerPressTimer(null)
-          setLoading(true)
+          clearTimeout(powerPressTimer);
+          setPowerPressTimer(null);
+          setLoading(true);
           const setATXPowerActionResult = await sendAsync(
             {
               method: 'setATXPowerAction',
               params: { action: 'power-short' },
             },
             { resultOnly: true, showUnhandledErrorToast: true }
-          )
-          setLoading(false)
-          logger.info('ATX power action completed', {
-            action: 'power-short',
-            result: setATXPowerActionResult,
-          })
+          );
+          setLoading(false);
+          logger.info('ATX power action completed', { action: 'power-short', result: setATXPowerActionResult });
         } else {
           // Timer already executed, it's a long press, no further action needed
         }
       }
     },
     [sendAsync, isPowerPressed, powerPressTimer, loading]
-  )
+  );
 
   const onReset = useCallback(() => {
     send({
       method: 'setATXPowerAction',
       params: { action: 'reset' },
-    })
-  }, [send])
+    });
+  }, [send]);
 
   return (
     <div className="  bg-[var(--bg-secondary)] rounded-md">
@@ -316,7 +284,7 @@ function ExtensionCard({
         </Button> */}
       </div>
       <AtxDetail
-        onBack={() => setActiveId(null)}
+        onBack={() => {}}
         powerLed={(atxState ?? DEFAULT_ATX_STATE).power}
         hddLed={(atxState ?? DEFAULT_ATX_STATE).hdd}
         onTogglePower={onTogglePower}
@@ -325,17 +293,15 @@ function ExtensionCard({
         loading={loading}
       />
     </div>
-  )
+  );
 }
 
-const Extension = ({ rpc }: { rpc: JsonRpcHandle }) => {
-  const atxState = useAppStore(s => s.atxState)
-  const [activeId, setActiveId] = useState<string | null>('atx-power')
-
-  const handleLoad = (id: string) => {
-    // Handle extension loading logic
-    logger.info('Loading extension', { id })
-  }
+const Extension = ({
+  rpc,
+}: {
+  rpc: JsonRpcHandle
+}) => {
+    const atxState = useAppStore(s => (s as unknown as Record<string, ATXState | undefined>).atxState);
 
   return (
     <div className="h-full  space-y-3">
@@ -345,14 +311,13 @@ const Extension = ({ rpc }: { rpc: JsonRpcHandle }) => {
           <ExtensionCard
             key={ext.id}
             item={ext}
-            onLoad={handleLoad}
             rpc={rpc}
             atxState={atxState ?? DEFAULT_ATX_STATE}
           />
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default memo(Extension)
+export default memo(Extension);

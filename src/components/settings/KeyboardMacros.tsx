@@ -1,25 +1,25 @@
-import { useJsonRpc } from '@/hooks/useJsonRpc'
-import { useSettingsActions } from '@/stores/devicesStore'
-import { createLogger } from '@/utils/logger'
+import { useJsonRpc } from '@/hooks/useJsonRpc';
+import { useSettingsActions } from '@/stores/devicesStore';
+import { createLogger } from '@/utils/logger';
 import {
-  ArrowDown,
-  ArrowUp,
-  Command,
-  Copy,
-  CornerDownRight,
-  MoveRight,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Dialog } from '../Dialog'
-import { Button } from '../ui/button'
-import { Card, CardContent } from '../ui/card'
-import { useConfirmDialog } from '../ui/confirm-dialog'
-import MacroForm, { type MacroFormHandle } from './KeyboardMacroAdd'
-import SettingBlock from './SettingBlock'
+    ArrowDown,
+    ArrowUp,
+    Command,
+    Copy,
+    CornerDownRight,
+    MoveRight,
+    Pencil,
+    Trash2,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dialog } from '../Dialog';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { useConfirmDialog } from '../ui/confirm-dialog';
+import MacroForm, { type MacroFormHandle } from './KeyboardMacroAdd';
+import SettingBlock from './SettingBlock';
 
-const logger = createLogger('KeyboardMacros')
+const logger = createLogger('KeyboardMacros');
 
 type Step = {
   modifiers?: string[]
@@ -34,15 +34,15 @@ type KeySequence = {
   sortOrder: number
 }
 
-const DEFAULT_DELAY = 50
-const COPY_SUFFIX = 'Copy'
+const DEFAULT_DELAY = 50;
+const COPY_SUFFIX = 'Copy';
 
 function genId() {
-  return Math.random().toString(36).slice(2, 10)
+  return Math.random().toString(36).slice(2, 10);
 }
 
 function normalizeSortOrders(macros: KeySequence[]): KeySequence[] {
-  return macros.map((m, idx) => ({ ...m, sortOrder: idx + 1 }))
+  return macros.map((m, idx) => ({ ...m, sortOrder: idx + 1 }));
 }
 
 type KeyboardMacrosProps = { initialMacros?: KeySequence[] }
@@ -50,25 +50,25 @@ type KeyboardMacrosProps = { initialMacros?: KeySequence[] }
 export default function KeyboardMacros({
   initialMacros = [],
 }: KeyboardMacrosProps) {
-  const [macros, setMacros] = useState<KeySequence[]>(initialMacros)
-  const { setDeviceSetting } = useSettingsActions()
-  const [, isChannelReady, sendAsync] = useJsonRpc()
-  const { confirm } = useConfirmDialog()
-  const [addOpen, setAddOpen] = useState(false)
-  const [addSubmitting, setAddSubmitting] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [editSubmitting, setEditSubmitting] = useState(false)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const addFormRef = useRef<MacroFormHandle>(null)
-  const editFormRef = useRef<MacroFormHandle>(null)
+  const [macros, setMacros] = useState<KeySequence[]>(initialMacros);
+  const { setDeviceSetting } = useSettingsActions();
+  const [, isChannelReady, sendAsync] = useJsonRpc();
+  const { confirm } = useConfirmDialog();
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const addFormRef = useRef<MacroFormHandle>(null);
+  const editFormRef = useRef<MacroFormHandle>(null);
 
-  const isEmpty = macros.length === 0
+  const isEmpty = macros.length === 0;
 
-  const handleAdd = () => setAddOpen(true)
+  const handleAdd = () => setAddOpen(true);
   const persistMacros = async (next: KeySequence[]) => {
     // Optimistic update to UI and local device store
-    setMacros(next)
-    setDeviceSetting('keyboardMacros', val => ({ ...val, macros: next }))
+    setMacros(next);
+    setDeviceSetting('keyboardMacros', val => ({ ...val, macros: next }));
     try {
       // Persist to device via RPC
       await sendAsync(
@@ -79,47 +79,47 @@ export default function KeyboardMacros({
           errorMessage: { prefix: 'Failed to save keyboard macros' },
         },
         { resultOnly: true }
-      )
+      );
     } catch (error) {
       // Optionally, we could reload from device on failure
       // For now, just log. The toast is handled in sendAsync options.
-      logger.error('Failed to persist macros', error)
+      logger.error('Failed to persist macros', error);
     }
-  }
+  };
   const handleSetMacros = (macros: KeySequence[]) => {
-    void persistMacros(macros)
-  }
+    void persistMacros(macros);
+  };
 
   // Load initial macros from device when channel is ready
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     if (!isChannelReady) return
     ;(async () => {
       try {
         const data = await sendAsync(
           { method: 'getKeyboardMacros' },
           { resultOnly: true }
-        )
-        if (cancelled) return
+        );
+        if (cancelled) return;
         // Expecting shape { macros: KeySequence[] } or []
         const next: KeySequence[] = Array.isArray(data?.macros)
           ? (data.macros as KeySequence[])
           : Array.isArray(data)
             ? (data as KeySequence[])
-            : []
-        setMacros(normalizeSortOrders(next))
+            : [];
+        setMacros(normalizeSortOrders(next));
       } catch (error) {
         if (!cancelled) {
-          logger.error('Failed to load keyboard macros', error)
+          logger.error('Failed to load keyboard macros', error);
         }
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [isChannelReady, sendAsync])
+      cancelled = true;
+    };
+  }, [isChannelReady, sendAsync]);
   const handleAddSubmit = async (draft: Partial<KeySequence>) => {
-    setAddSubmitting(true)
+    setAddSubmitting(true);
     try {
       const m: KeySequence = {
         id: genId(),
@@ -128,122 +128,119 @@ export default function KeyboardMacros({
           { keys: ['K'], modifiers: ['Ctrl'], delay: DEFAULT_DELAY },
         ],
         sortOrder: macros.length + 1,
-      }
-      const next = normalizeSortOrders([...macros, m])
-      logger.info('Macro added', { name: m.name, stepsCount: m.steps.length })
-      handleSetMacros(next)
-      setAddOpen(false)
+      };
+      const next = normalizeSortOrders([...macros, m]);
+      logger.info('Macro added', { name: m.name, stepsCount: m.steps.length });
+      handleSetMacros(next);
+      setAddOpen(false);
     } finally {
-      setAddSubmitting(false)
+      setAddSubmitting(false);
     }
-  }
+  };
 
   const handleDuplicate = (macro: KeySequence) => {
     // Generate unique name for duplicate
     const generateUniqueName = (baseName: string): string => {
-      const existingNames = macros.map(m => m.name)
+      const existingNames = macros.map(m => m.name);
 
       // If base name doesn't exist, use it directly
       if (!existingNames.includes(baseName)) {
-        return baseName
+        return baseName;
       }
 
       // Check if already has "Copy" suffix
-      const copyPattern = new RegExp(`^(.+)\\s+${COPY_SUFFIX}(?:\\s+(\\d+))?$`)
-      const match = baseName.match(copyPattern)
+      const copyPattern = new RegExp(`^(.+)\\s+${COPY_SUFFIX}(?:\\s+(\\d+))?$`);
+      const match = baseName.match(copyPattern);
 
-      let originalName: string
+      let originalName: string;
       if (match) {
         // If already in Copy format, extract original name
-        originalName = match[1]
+        originalName = match[1];
       } else {
         // Otherwise use full name as original
-        originalName = baseName
+        originalName = baseName;
       }
 
       // Find available numeric suffix
-      let counter = 0
-      let newName: string
+      let counter = 0;
+      let newName: string;
 
       do {
         if (counter === 0) {
-          newName = `${originalName} ${COPY_SUFFIX}`
+          newName = `${originalName} ${COPY_SUFFIX}`;
         } else {
-          newName = `${originalName} ${COPY_SUFFIX} ${counter}`
+          newName = `${originalName} ${COPY_SUFFIX} ${counter}`;
         }
-        counter++
-      } while (existingNames.includes(newName))
+        counter++;
+      } while (existingNames.includes(newName));
 
-      return newName
-    }
+      return newName;
+    };
 
-    const uniqueName = generateUniqueName(macro.name)
+    const uniqueName = generateUniqueName(macro.name);
 
     const copy: KeySequence = {
       ...macro,
       id: genId(),
       name: uniqueName,
       sortOrder: macros.length + 1,
-    }
-    const next = normalizeSortOrders([...macros, copy])
-    logger.info('Macro duplicated', {
-      original: macro.name,
-      duplicate: copy.name,
-    })
-    handleSetMacros(next)
-  }
+    };
+    const next = normalizeSortOrders([...macros, copy]);
+    logger.info('Macro duplicated', { original: macro.name, duplicate: copy.name });
+    handleSetMacros(next);
+  };
 
   const handleMove = (index: number, dir: 'up' | 'down') => {
-    const newIndex = dir === 'up' ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= macros.length) return
+    const newIndex = dir === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= macros.length) return;
     const next = [...macros]
-    ;[next[index], next[newIndex]] = [next[newIndex], next[index]]
-    const normalized = normalizeSortOrders(next)
-    logger.info('Macro moved', { from: index, to: newIndex, direction: dir })
-    handleSetMacros(normalized)
-  }
+    ;[next[index], next[newIndex]] = [next[newIndex], next[index]];
+    const normalized = normalizeSortOrders(next);
+    logger.info('Macro moved', { from: index, to: newIndex, direction: dir });
+    handleSetMacros(normalized);
+  };
 
   const handleDelete = async (macro: KeySequence, index: number) => {
-    const confirmed = await confirm({
+    await confirm({
       title: 'Delete Macro',
       content: `Are you sure you want to delete the macro "${macro.name}"? This action cannot be undone.`,
       type: 'error',
       confirmText: 'Delete',
       cancelText: 'Cancel',
       onConfirm: () => {
-        const next = normalizeSortOrders(macros.filter((_, i) => i !== index))
-        logger.info('Macro deleted', { name: macro.name })
-        handleSetMacros(next)
+        const next = normalizeSortOrders(macros.filter((_, i) => i !== index));
+        logger.info('Macro deleted', { name: macro.name });
+        handleSetMacros(next);
       },
-    })
-  }
+    });
+  };
 
   const handleEdit = (macro: KeySequence) => {
-    const idx = macros.findIndex(m => m.id === macro.id)
-    if (idx === -1) return
-    setEditingIndex(idx)
-    setEditOpen(true)
-  }
+    const idx = macros.findIndex(m => m.id === macro.id);
+    if (idx === -1) return;
+    setEditingIndex(idx);
+    setEditOpen(true);
+  };
 
   const handleEditSubmit = async (draft: Partial<KeySequence>) => {
-    if (editingIndex == null) return
-    setEditSubmitting(true)
+    if (editingIndex == null) return;
+    setEditSubmitting(true);
     try {
-      const next = [...macros]
-      const current = next[editingIndex]
+      const next = [...macros];
+      const current = next[editingIndex];
       next[editingIndex] = {
         ...current,
         name: draft.name?.trim() || current.name,
         steps: (draft.steps as Step[]) || current.steps,
-      }
-      const normalized = normalizeSortOrders(next)
-      logger.info('Macro updated', { name: next[editingIndex].name })
-      await persistMacros(normalized)
-      setEditOpen(false)
+      };
+      const normalized = normalizeSortOrders(next);
+      logger.info('Macro updated', { name: next[editingIndex].name });
+      await persistMacros(normalized);
+      setEditOpen(false);
     } finally {
-      setEditSubmitting(false)
+      setEditSubmitting(false);
     }
-  }
+  };
 
   const MacroList = useMemo(
     () => (
@@ -254,7 +251,7 @@ export default function KeyboardMacros({
               {/* Left side: sort controls */}
               <div className="flex flex-col gap-1 px-1">
                 <Button
-                  size="xs"
+
                   onClick={() => handleMove(index, 'up')}
                   disabled={index === 0}
                   aria-label={`Move ${macro.name} up`}
@@ -263,7 +260,7 @@ export default function KeyboardMacros({
                   <ArrowUp className="size-[12px]" />
                 </Button>
                 <Button
-                  size="xs"
+
                   onClick={() => handleMove(index, 'down')}
                   disabled={index === macros.length - 1}
                   aria-label={`Move ${macro.name} down`}
@@ -278,23 +275,23 @@ export default function KeyboardMacros({
                 <h3 className="truncate text-sm text-[var(--text-color)]">
                   {macro.name}
                 </h3>
-                <div className="mt-1 p-[6px] text-xs font-[400]  border border-[var(--border-color)] rounded-[4px]">
+                <div className="mt-1 p-[6px] text-sm font-[400]  border border-[var(--border-color)] rounded-[4px]">
                   <div className="flex flex-col items-start gap-1">
                     {macro.steps.map((step, stepIdx) => {
-                      const Icon = stepIdx === 0 ? MoveRight : CornerDownRight
+                      const Icon = stepIdx === 0 ? MoveRight : CornerDownRight;
                       const hasKeys =
                         (Array.isArray(step.modifiers) &&
                           step.modifiers.length > 0) ||
-                        (Array.isArray(step.keys) && step.keys.length > 0)
+                        (Array.isArray(step.keys) && step.keys.length > 0);
                       return (
                         <div key={stepIdx} className="inline-flex items-center">
                           <Icon className="mr-1 h-3 w-3 shrink-0 opacity-60" />
-                          <span className="rounded-[2px] text-xs  border border-[var(--border-color)] bg-[var(--theme-bg-color)] px-2 py-0.5">
+                          <span className="rounded-[2px] text-sm  border border-[var(--border-color)] bg-[var(--theme-bg-color)] px-2 py-0.5">
                             {hasKeys ? (
                               <>
                                 {step.modifiers?.map((m, i) => (
                                   <span key={`m-${i}`}>
-                                    <span className="text-xs font-normal">
+                                    <span className="text-sm font-normal">
                                       {m}
                                     </span>
                                     {i < (step.modifiers?.length ?? 0) - 1 && (
@@ -307,7 +304,7 @@ export default function KeyboardMacros({
                                 ) : null}
                                 {step.keys?.map((k, i) => (
                                   <span key={`k-${i}`}>
-                                    <span className="text-xs font-normal text-[var(--text-color)]">
+                                    <span className="text-sm font-normal text-[var(--text-color)]">
                                       {k}
                                     </span>
                                     {i < (step.keys?.length ?? 0) - 1 && (
@@ -326,7 +323,7 @@ export default function KeyboardMacros({
                             ) : null}
                           </span>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -335,7 +332,7 @@ export default function KeyboardMacros({
               {/* Right side: actions */}
               <div className="ml-2 flex items-center gap-1">
                 <Button
-                  size="xs"
+
                   onClick={() => handleEdit(macro)}
                   aria-label={`Edit macro ${macro.name}`}
                   title="Edit"
@@ -344,7 +341,7 @@ export default function KeyboardMacros({
                 </Button>
 
                 <Button
-                  size="xs"
+
                   onClick={() => handleDuplicate(macro)}
                   aria-label={`Duplicate macro ${macro.name}`}
                   title="Duplicate"
@@ -353,8 +350,8 @@ export default function KeyboardMacros({
                 </Button>
 
                 <Button
-                  size="xs"
-                  variant="outline"
+
+                  variant="outline" size="xs"
                   status={'danger'}
                   onClick={() => handleDelete(macro, index)}
                   aria-label={`Delete macro ${macro.name}`}
@@ -369,7 +366,7 @@ export default function KeyboardMacros({
       </div>
     ),
     [macros]
-  )
+  );
 
   return (
     <div className="space-y-4">
@@ -381,7 +378,7 @@ export default function KeyboardMacros({
         }
       >
         <SettingBlock.Right>
-          <Button size="xs" onClick={handleAdd}>
+          <Button  onClick={handleAdd}>
             + Add New Macro
           </Button>
         </SettingBlock.Right>
@@ -392,11 +389,11 @@ export default function KeyboardMacros({
         {isEmpty ? (
           <Card className="flex flex-col items-center gap-3 py-8 text-center">
             <Command className="size-7 opacity-70" />
-            <div className="text-xs font-medium">Create Your First Macro</div>
-            <div className="text-xs ">
+            <div className="text-sm font-medium">Create Your First Macro</div>
+            <div className="text-sm ">
               Combine keystrokes into a single action
             </div>
-            <Button size="xs" onClick={handleAdd}>
+            <Button  onClick={handleAdd}>
               Add New Macro
             </Button>
           </Card>
@@ -463,7 +460,7 @@ export default function KeyboardMacros({
         ) : null}
       </Dialog>
     </div>
-  )
+  );
 }
 
-export default KeyboardMacros
+export default KeyboardMacros;

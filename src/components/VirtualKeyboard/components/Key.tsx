@@ -1,11 +1,11 @@
-import { cn } from '@/lib/utils'
-import React from 'react'
+import { cn } from '@/lib/utils';
+import React from 'react';
 
 // Internal imports
-import { KeyLabel, LEDIndicator } from '.'
-import { useGlobalEventCleanup } from '../hooks'
-import type { KeyProps } from '../types'
-import { generateKeyStyles } from '../utils'
+import { KeyLabel, LEDIndicator } from '.';
+import { useGlobalEventCleanup } from '../hooks';
+import type { KeyProps } from '../types';
+import { generateKeyStyles } from '../utils';
 
 /**
  * Virtual keyboard key component
@@ -38,147 +38,155 @@ const Key: React.FC<KeyProps> = React.memo(
     isPressed = false,
     pressedColor = 'bg-blue-500',
   }) => {
+    // If keyDef and getDisplayLabel are passed, calculate label inside component
+    // Otherwise use passed label (backward compatible)
     const computedLabel = React.useMemo(() => {
       if (keyDef && getDisplayLabel) {
-        return getDisplayLabel(keyDef)
+        return getDisplayLabel(keyDef);
       }
-      return label
-    }, [keyDef, getDisplayLabel, label])
+      return label;
+    }, [keyDef, getDisplayLabel, label]);
 
     // Computed properties
-    const isFixedWidth = width !== 'auto' && Boolean(width)
-    const heightClass_ = heightClass || (compact ? 'h-5' : 'h-10')
-    const isStringLabel = typeof computedLabel === 'string'
-    const isArrayLabel = Array.isArray(computedLabel)
+    const isFixedWidth = width !== 'auto' && Boolean(width);
+    const heightClass_ = heightClass || (compact ? 'h-5' : 'h-10');
+    const isStringLabel = typeof computedLabel === 'string';
+    const isArrayLabel = Array.isArray(computedLabel);
 
     // Determine the value to send on key press
     const computedSendLabel = React.useMemo(() => {
-      if (typeof sendValue === 'string') return sendValue
-      if (isStringLabel) return computedLabel as string
-      if (isArrayLabel) return String((computedLabel as string[])[0] ?? '')
-      return ''
-    }, [sendValue, isStringLabel, isArrayLabel, computedLabel])
+      if (typeof sendValue === 'string') return sendValue;
+      if (isStringLabel) return computedLabel as string;
+      if (isArrayLabel) return String((computedLabel as string[])[0] ?? '');
+      return '';
+    }, [sendValue, isStringLabel, isArrayLabel, computedLabel]);
 
     // Generate tooltip text
     const tooltipText = React.useMemo(() => {
-      if (typeof title === 'string') return title
-      if (isStringLabel) return computedLabel as string
+      if (typeof title === 'string') return title;
+      if (isStringLabel) return computedLabel as string;
       if (isArrayLabel) {
-        const [primary, secondary] = computedLabel as string[]
-        return `${primary} / ${secondary ?? ''}`
+        const [primary, secondary] = computedLabel as string[];
+        return `${primary} / ${secondary ?? ''}`;
       }
-      return computedSendLabel || keyCode
-    }, [title, isStringLabel, isArrayLabel, label, computedSendLabel, keyCode])
+      return computedSendLabel || keyCode;
+    }, [title, isStringLabel, isArrayLabel, label, computedSendLabel, keyCode]);
 
     // State for tracking internal press state
-    const [internalPressed, setInternalPressed] = React.useState(false)
-    const pressedRef = React.useRef(false)
+    const [internalPressed, setInternalPressed] = React.useState(false);
+    const pressedRef = React.useRef(false);
 
     // Global event cleanup to handle releases outside component
     useGlobalEventCleanup(internalPressed, () => {
       if (pressedRef.current) {
-        pressedRef.current = false
-        setInternalPressed(false)
-        onKeyUp?.(keyCode, computedSendLabel)
+        pressedRef.current = false;
+        setInternalPressed(false);
+        onKeyUp?.(keyCode, computedSendLabel);
       }
-    })
+    });
 
     // Event handlers with mobile support
     const handleKeyDown = React.useCallback(() => {
-      if (disabled || pressedRef.current) return
+      if (disabled || pressedRef.current) return;
 
-      pressedRef.current = true
-      setInternalPressed(true)
-      onKeyDown?.(keyCode, computedSendLabel)
+      pressedRef.current = true;
+      setInternalPressed(true);
+      onKeyDown?.(keyCode, computedSendLabel);
 
       // Legacy support
-      onKeyPress?.(keyCode, computedSendLabel)
-    }, [disabled, onKeyDown, onKeyPress, keyCode, computedSendLabel])
+      onKeyPress?.(keyCode, computedSendLabel);
+    }, [
+      disabled,
+      onKeyDown,
+      onKeyPress,
+      keyCode,
+      computedSendLabel,
+    ]);
 
     const handleKeyUp = React.useCallback(() => {
-      if (disabled || !pressedRef.current) return
+      if (disabled || !pressedRef.current) return;
 
-      pressedRef.current = false
-      setInternalPressed(false)
-      onKeyUp?.(keyCode, computedSendLabel)
-    }, [disabled, onKeyUp, keyCode, computedSendLabel])
+      pressedRef.current = false;
+      setInternalPressed(false);
+      onKeyUp?.(keyCode, computedSendLabel);
+    }, [disabled, onKeyUp, keyCode, computedSendLabel]);
 
     // Mouse events
     const handleMouseDown = React.useCallback(
       (e: React.MouseEvent) => {
-        e.preventDefault()
-        handleKeyDown()
+        e.preventDefault();
+        handleKeyDown();
       },
       [handleKeyDown]
-    )
+    );
 
     const handleMouseUp = React.useCallback(
       (e: React.MouseEvent) => {
-        e.preventDefault()
-        handleKeyUp()
+        e.preventDefault();
+        handleKeyUp();
       },
       [handleKeyUp]
-    )
+    );
 
     const handleMouseLeave = React.useCallback(() => {
       // Release key when mouse leaves while pressed
       if (isPressed) {
-        handleKeyUp()
+        handleKeyUp();
       }
-    }, [isPressed, handleKeyUp])
+    }, [isPressed, handleKeyUp]);
 
     // Touch events for mobile
     const handleTouchStart = React.useCallback(
       (e: React.TouchEvent) => {
-        e.preventDefault()
-        handleKeyDown()
+        e.preventDefault();
+        handleKeyDown();
       },
       [handleKeyDown]
-    )
+    );
 
     const handleTouchEnd = React.useCallback(
       (e: React.TouchEvent) => {
-        e.preventDefault()
-        handleKeyUp()
+        e.preventDefault();
+        handleKeyUp();
       },
       [handleKeyUp]
-    )
+    );
 
     const handleTouchCancel = React.useCallback(() => {
       // Release key when touch is cancelled
       if (isPressed) {
-        handleKeyUp()
+        handleKeyUp();
       }
-    }, [isPressed, handleKeyUp])
+    }, [isPressed, handleKeyUp]);
 
     // Keyboard events for accessibility
     const handleKeyboardDown = React.useCallback(
       (e: React.KeyboardEvent) => {
         if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault()
-          handleKeyDown()
+          e.preventDefault();
+          handleKeyDown();
         }
       },
       [handleKeyDown]
-    )
+    );
 
     const handleKeyboardUp = React.useCallback(
       (e: React.KeyboardEvent) => {
         if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault()
-          handleKeyUp()
+          e.preventDefault();
+          handleKeyUp();
         }
       },
       [handleKeyUp]
-    )
+    );
 
     // Generate full tooltip with status info
     const fullTooltip = React.useMemo(() => {
-      const baseTooltip = `${tooltipText} (${keyCode})`
-      if (!showStatusIndicator) return baseTooltip
-      const statusText = isActive ? 'Active' : 'Inactive'
-      return `${baseTooltip} - Status: ${statusText}`
-    }, [tooltipText, keyCode, showStatusIndicator, isActive])
+      const baseTooltip = `${tooltipText} (${keyCode})`;
+      if (!showStatusIndicator) return baseTooltip;
+      const statusText = isActive ? 'Active' : 'Inactive';
+      return `${baseTooltip} - Status: ${statusText}`;
+    }, [tooltipText, keyCode, showStatusIndicator, isActive]);
 
     // Generate styles using utility function
     const keyStyles = React.useMemo(() => {
@@ -190,9 +198,9 @@ const Key: React.FC<KeyProps> = React.memo(
         compact,
         heightClass: heightClass_,
         isFixedWidth,
-      }
+      };
 
-      const baseStyles = generateKeyStyles(styleConfig)
+      const baseStyles = generateKeyStyles(styleConfig);
 
       // If key is pressed from external events, apply custom pressed color
       if (isPressed && !disabled) {
@@ -202,11 +210,11 @@ const Key: React.FC<KeyProps> = React.memo(
             !style.includes('bg-') ||
             style.includes('hover:') ||
             style.includes('active:')
-        )
-        return [...filteredStyles, pressedColor, 'text-white', 'shadow-inner']
+        );
+        return [...filteredStyles, pressedColor, 'text-white', 'shadow-inner'];
       }
 
-      return baseStyles
+      return baseStyles;
     }, [
       disabled,
       internalPressed,
@@ -216,7 +224,7 @@ const Key: React.FC<KeyProps> = React.memo(
       heightClass_,
       isFixedWidth,
       pressedColor,
-    ])
+    ]);
 
     return (
       <button
@@ -256,10 +264,11 @@ const Key: React.FC<KeyProps> = React.memo(
           showDualState={!internalPressed && !isActive}
         />
       </button>
-    )
+    );
   }
-)
+);
 
-Key.displayName = 'Key'
+// Set displayName for debugging
+Key.displayName = 'Key';
 
-export default Key
+export default Key;

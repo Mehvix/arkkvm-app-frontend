@@ -6,55 +6,60 @@ import {
   IconLessen,
   IconVertical,
   IconWarning,
-} from '@/assets/icons'
-import { getPeerStateLabel } from '@/i18n/rtc'
-import { getUsbStateColor, getUsbStateVisual } from '@/i18n/usb'
-import { RotateCcw } from 'lucide-react'
-import { Link } from 'react-router-dom'
+} from '@/assets/icons';
+import { getPeerStateLabel } from '@/i18n/rtc';
+import { getUsbStateColor, getUsbStateVisual } from '@/i18n/usb';
+import { RotateCcw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { StatusCard } from './StatusCard'
+} from '@/components/ui/dropdown-menu';
+import { StatusCard } from './StatusCard';
 
-import { useJsonRpc } from '@/hooks/useJsonRpc'
-import { useLoadingMap } from '@/hooks/useLoading'
-import { useAppStore } from '@/stores/'
-import { getStatusColor } from '@/ui/statusColors'
-import { env } from '@/utils/env'
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import BrandLogo from '../ui/brand-logo'
-import { Button } from '../ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+import { useJsonRpc } from '@/hooks/useJsonRpc';
+import { useLoadingMap } from '@/hooks/useLoading';
+import { useAppStore } from '@/stores/';
+import { getStatusColor } from '@/ui/statusColors';
+import { env } from '@/utils/env';
+import { useCallback, useEffect, useState, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import type { USBStates } from '@/i18n/usb';
+import type { PeerStates } from '@/i18n/rtc';
+import BrandLogo from '../ui/brand-logo';
+import { Button } from '../ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import type { FullScreenData } from '../ControlToolbar';
 
 interface link {
-  title: string
-  href: string
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  title: string;
+  href: string;
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 interface ITopNavbar {
-  links?: link[]
-  showDeviceStatus?: boolean
-  deviceName?: string
-  showLoggedIn?: boolean
-  usbState?: string
-  peerState?: string
-  brandLogoType?: 'icon' | 'full'
-  isFullScreen?: boolean
-  onFullScreenClick?: (event: MouseEvent<any>, data?: FullScreenData) => void
-  onMinimizeClick?: (event: MouseEvent<any>, data?: FullScreenData) => void
-  onReconnect?: (countdown?: number) => void
+  links?: link[];
+  showDeviceStatus?: boolean;
+  deviceName?: string;
+  hostname?: string;
+  showLoggedIn?: boolean;
+  usbState?: string;
+  peerState?: string;
+  brandLogoType?: 'icon' | 'full';
+  isFullScreen?: boolean;
+  onFullScreenClick?: (event: MouseEvent<HTMLElement>, data?: FullScreenData) => void;
+  onMinimizeClick?: (event: MouseEvent<HTMLElement>, data?: FullScreenData) => void;
+  onReconnect?: (countdown?: number) => void;
 }
 
 export default function TopNavbar({
   links = [],
   showDeviceStatus,
   deviceName = 'ArkKVM Device',
+  hostname,
   showLoggedIn,
   usbState = 'disconnected',
   peerState = 'disconnected',
@@ -64,75 +69,70 @@ export default function TopNavbar({
   onMinimizeClick,
   onReconnect,
 }: ITopNavbar) {
-  const appStore = useAppStore()
-  const navigate = useNavigate()
-  const controlLayoutMode = useAppStore(s => s.ui.controlLayoutMode)
-  const setControlLayoutMode = useAppStore(s => s.ui.setControlLayoutMode)
+  const navigate = useNavigate();
+  const controlLayoutMode = useAppStore(s => s.ui.controlLayoutMode);
+  const setControlLayoutMode = useAppStore(s => s.ui.setControlLayoutMode);
 
-  const { t, i18n } = useTranslation('common')
-  const currentLang = (i18n.resolvedLanguage ?? i18n.language) as 'en' | 'zh'
+  const { i18n } = useTranslation('common');
+  const currentLang = (i18n.resolvedLanguage ?? i18n.language) as 'en' | 'zh';
   // USB state
-  const { label: usbLabel } = getUsbStateVisual(usbState as any, currentLang)
-  const usbColor = getUsbStateColor(usbState as any)
+  const { label: usbLabel } = getUsbStateVisual(usbState as USBStates, currentLang);
+  const usbColor = getUsbStateColor(usbState as USBStates);
   // Device connection (Peer) state
-  const peerColor = getStatusColor('rtc.peer', peerState)
-  const [, isChannelReady, sendAsync] = useJsonRpc()
-  const peerLabel = getPeerStateLabel(peerState as any, currentLang)
-  const getUserInfo = useAppStore(s => s.getUserInfo)
-  const logout = useAppStore(s => s.logout)
-  const userData = useAppStore(s => s.userInfo)
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
-  const { isLoading, startLoading, stopLoading } = useLoadingMap(['reboot'])
-  async function logoutHandle() {
-    const res = await logout()
-    if (res) {
-      navigate('/')
-    }
-  }
-
+  const peerColor = getStatusColor('rtc.peer', peerState);
+  const [, isChannelReady, sendAsync] = useJsonRpc();
+  const peerLabel = getPeerStateLabel(peerState as PeerStates, currentLang);
+  const getUserInfo = useAppStore(s => s.getUserInfo);
+  const logout = useAppStore(s => s.logout);
+  const userData = useAppStore(s => s.userInfo);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const { isLoading, startLoading, stopLoading } = useLoadingMap(['reboot']);
   useEffect(() => {
-    if (!showLoggedIn) return
+    if (!showLoggedIn) return;
 
-    let isMounted = true
-    getUserInfo()
+    getUserInfo();
 
-    return () => {
-      isMounted = false
+    return () => {};
+  }, [showLoggedIn, getUserInfo]);
+  const logoutHandle = useCallback(async () => {
+    const res = await logout();
+    if (res) {
+      navigate('/');
     }
-  }, [showLoggedIn, getUserInfo])
+  }, [logout]);
   const rebootDevice = useCallback(async () => {
-    if (!isChannelReady) return
-    startLoading('reboot')
-    setIsPopoverOpen(false)
-
-    onReconnect?.(25)
+    if (!isChannelReady) return;
+    startLoading('reboot');
+    setIsPopoverOpen(false);
+    // Immediately notify parent component to start restart process
+    onReconnect?.(25);
     try {
       await sendAsync({
         method: 'reboot',
-        params: { force: false } as any,
-      })
+        params: { force: false },
+      });
     } catch {}
-
+    // Stop button loading after 25 seconds
     setTimeout(() => {
-      stopLoading('reboot')
-    }, 25000)
-  }, [isChannelReady, sendAsync, onReconnect])
+      stopLoading('reboot');
+    }, 25000);
+  }, [isChannelReady, sendAsync, onReconnect]);
   // Fullscreen event
-  const handleFullScreenClick = (event: MouseEvent<SVGSVGElement>) => {
+  const handleFullScreenClick = (event: MouseEvent<HTMLElement>) => {
     if (isChannelReady) {
-      onFullScreenClick?.(event)
+      onFullScreenClick?.(event);
     }
-  }
+  };
   // Exit fullscreen event
-  const handleMinimizeClick = (event: MouseEvent<SVGSVGElement>) => {
+  const handleMinimizeClick = (event: MouseEvent<HTMLElement>) => {
     if (isChannelReady) {
-      onMinimizeClick?.(event)
+      onMinimizeClick?.(event);
     }
-  }
+  };
   return (
-    <div className="flex flex-row h-[60px] bg-[var(--secondary-bg-color)] justify-between border-b border-[var(--border-color)]  py-[10px] px-[18px]">
+    <div className="flex flex-row h-[60px] bg-secondary-bg justify-between border-b border-(--border-color) py-[10px] px-[18px]">
       <div className="flex items-center">
-        <BrandLogo type={brandLogoType} size={24}></BrandLogo>
+        <BrandLogo type={brandLogoType} size={24} />
 
         {env.target === 'cloud' && (
           <div className="flex-1 flex flex-row items-center gap-[15px] ml-[24px]">
@@ -146,14 +146,17 @@ export default function TopNavbar({
                     <span>{title}</span>
                   </Button>
                 </Link>
-              )
+              );
             })}
           </div>
+        )}
+        {hostname && (
+          <span className="text-[18px]   truncate max-w-[120px] ml-[16px]">{hostname}</span>
         )}
       </div>
       <div className="flex items-center">
         {showDeviceStatus && (
-          <div className="flex flex-row items-center gap-[12px] w">
+          <div className="flex flex-row items-center gap-[6px] sm:gap-[12px]">
             <StatusCard
               title={deviceName || ''}
               statusLabel={peerLabel || ''}
@@ -161,23 +164,19 @@ export default function TopNavbar({
               StatusIcon={IconApi}
               className="w-auto"
               slot={
-                <Popover
-                  modal={true}
-                  open={isPopoverOpen}
-                  onOpenChange={setIsPopoverOpen}
-                >
+                <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       size="xs"
                       variant="default"
-                      className="w-[66px] text-[10px] font-[300] ml-[8px] rounded-[4px]"
+                      className="w-[66px] text-[10px] font-light ml-[8px] rounded-[4px]"
                       disabled={isLoading('reboot')}
                       loading={isLoading('reboot')}
                     >
                       {!isLoading('reboot') && (
                         <>
-                          <RotateCcw className="size-[12px] text-[var(--text-color)]" />
-                          Restart
+                          <RotateCcw className="size-[12px] text-text" />
+                          <span className="hidden sm:inline">Restart</span>
                         </>
                       )}
                     </Button>
@@ -238,26 +237,12 @@ export default function TopNavbar({
             )}
 
             {isFullScreen ? (
-              <Button
-                size="lg"
-                className="w-[36px]"
-                onClick={handleMinimizeClick as any}
-              >
-                <IconLessen
-                  title={t('button.exitFullscreen')}
-                  className="size-[12px]"
-                />
+              <Button size="lg" className="w-[36px]" onClick={handleMinimizeClick}>
+                <IconLessen className="size-[12px]" />
               </Button>
             ) : (
-              <Button
-                size="lg"
-                className="w-[36px]"
-                onClick={handleFullScreenClick as any}
-              >
-                <IconFullScreenFull
-                  title={t('button.fullscreen')}
-                  className="size-[12px]"
-                />
+              <Button size="lg" className="w-[36px]" onClick={handleFullScreenClick}>
+                <IconFullScreenFull className="size-[12px]" />
               </Button>
             )}
           </div>
@@ -271,7 +256,7 @@ export default function TopNavbar({
                 className="w-[32px] h-[32px] rounded-[50%] object-cover border border-[var(--border-color)]"
               /> */}
               {userData?.email ? (
-                <div className="font-[16px] min-w-[130px] pl-[10px] leading-[32px] max-w-[100px] overflow-hidden text-ellipsis">
+                <div className="text-[16px] min-w-[130px] pl-[10px] leading-[32px] max-w-[100px] overflow-hidden text-ellipsis">
                   {userData?.email}
                 </div>
               ) : (
@@ -284,9 +269,7 @@ export default function TopNavbar({
                     <IconDown></IconDown>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={logoutHandle}>
-                      Log out
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={logoutHandle}>Log out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -295,5 +278,5 @@ export default function TopNavbar({
         )}
       </div>
     </div>
-  )
+  );
 }

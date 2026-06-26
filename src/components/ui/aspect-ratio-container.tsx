@@ -1,39 +1,44 @@
-import { IconLogo } from '@/assets/icons'
-import { cn } from '@/lib/utils'
-import React, { useMemo } from 'react'
+/**
+ * @Purpose: 16:9 aspect ratio container component
+ * @Description: Provides responsive 16:9 aspect ratio container, as large as possible while maintaining ratio
+ * @version:
+ * @Author: zhanglei
+ * @Date: 2025-11-11 18:00:00
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-05-29 20:03:56
+ */
+import { IconLogo } from '@/assets/icons';
+import { cn } from '@/lib/utils';
+import React, { useMemo } from 'react';
 
-const CROSS_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath opacity='0.15' fill-rule='evenodd' clip-rule='evenodd' d='M7.2 4.8V0H4.8V4.8H0V7.2H4.8V12H7.2V7.2H12V4.8H7.2Z' fill='%23999999'/%3E%3Cpath opacity='0.08' fill-rule='evenodd' clip-rule='evenodd' d='M31.2 20.8V16H28.8V20.8H24V23.2H28.8V28H31.2V23.2H36V20.8H31.2Z' fill='%23999999'/%3E%3Cpath opacity='0.05' fill-rule='evenodd' clip-rule='evenodd' d='M43.2 36.8V32H40.8V36.8H36V39.2H40.8V44H43.2V39.2H48V36.8H43.2Z' fill='%23999999'/%3E%3C/svg%3E")`
+// Cross pattern background constant (defined outside component to avoid recreation on each render)
+// Uses 48x48 canvas with three crosses at different positions and opacities for irregular interleaving effect
+// Opacities: 0.15, 0.08, 0.05 create depth; positions staggered to avoid regular arrangement
+const CROSS_PATTERN = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'56\' viewBox=\'0 0 32 56\'%3E%3Cpath opacity=\'0.12\' fill-rule=\'evenodd\' clip-rule=\'evenodd\' d=\'M4.5 0H3.5V3.5H0V4.5H3.5V8H4.5V4.5H8V3.5H4.5Z\' fill=\'%23ffffff\'/%3E%3Cpath opacity=\'0.12\' fill-rule=\'evenodd\' clip-rule=\'evenodd\' d=\'M20.5 28H19.5V31.5H16V32.5H19.5V36H20.5V32.5H24V31.5H20.5Z\' fill=\'%23ffffff\'/%3E%3C/svg%3E")';
 
+// Background style constants
 const BACKGROUND_STYLES = {
   backgroundImage: CROSS_PATTERN,
   backgroundRepeat: 'repeat' as const,
-  backgroundSize: '48px 48px',
-} as const
+  backgroundSize: '32px 56px',
+} as const;
 
 interface AspectRatioContainerProps {
   children: React.ReactNode
   className?: string
-  aspectRatio?: string
+  aspectRatio?: string // e.g. '16/9', '4/3'. When undefined, fills parent without ratio constraint.
   style?: React.CSSProperties
-
+  /** Whether to fill parent container, default true. When false, component adapts to content */
   fillParent?: boolean
 }
 
 export const AspectRatioContainer = React.memo(function AspectRatioContainer({
   children,
   className = '',
-  aspectRatio = '16/9',
+  aspectRatio,
   style = {},
   fillParent = true,
 }: AspectRatioContainerProps) {
-  const { widthRatio, heightRatio } = useMemo(() => {
-    const [width, height] = aspectRatio.split('/').map(Number)
-    return {
-      widthRatio: width / height, // 16/9 = 1.777...
-      heightRatio: height / width, // 9/16 = 0.5625
-    }
-  }, [aspectRatio])
-
   const containerStyle = useMemo(
     () => ({
       width: '100%',
@@ -42,18 +47,16 @@ export const AspectRatioContainer = React.memo(function AspectRatioContainer({
       ...style,
     }),
     [style]
-  )
+  );
 
   const adaptiveStyle = useMemo(
     () => ({
-      aspectRatio,
-      maxWidth: '100%',
-      maxHeight: '100%',
+      ...(aspectRatio ? { aspectRatio, maxWidth: '100%', maxHeight: '100%' } : { width: '100%', height: '100%' }),
       ...BACKGROUND_STYLES,
       ...style,
     }),
     [aspectRatio, style]
-  )
+  );
 
   if (fillParent) {
     return (
@@ -72,9 +75,10 @@ export const AspectRatioContainer = React.memo(function AspectRatioContainer({
           {children}
         </div>
       </div>
-    )
+    );
   }
 
+  // Adaptive mode: suitable for child elements in flex layout
   return (
     <div
       className={cn(
@@ -85,5 +89,5 @@ export const AspectRatioContainer = React.memo(function AspectRatioContainer({
     >
       {children}
     </div>
-  )
-})
+  );
+});

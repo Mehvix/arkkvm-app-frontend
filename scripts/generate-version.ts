@@ -1,6 +1,6 @@
 /*
- * @Purpose: Generate version number and write it to .env file
- * @Description: Generate a version number based on the date and serial number, or use the passed in version number
+ * @Purpose: Generate app version and write it to .env file
+ * @Description: Generate version from date/sequence, or use provided version
  * @Author: zhanglei
  * @Date: 2026-01-27
  */
@@ -11,18 +11,18 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 
-// usage:
-//   tsx scripts/generate-version.ts pro -> automatically generate 0.0.YYMMDDXX
-//   tsx scripts/generate-version.ts pro 1.2.3 -> use the passed version number
-//   VERSION=1.2.3 tsx scripts/generate-version.ts pro -> Pass in through environment variables
+// Usage:
+//   tsx scripts/generate-version.ts pro           -> auto-generate 0.0.YYMMDDXX
+//   tsx scripts/generate-version.ts pro 1.2.3     -> use provided version
+//   VERSION=1.2.3 tsx scripts/generate-version.ts pro -> pass via env variable
 const args = process.argv.slice(2)
 const envName = (args[0] || 'pro').trim()
 const overrideVersion = (args[1] || process.env.VERSION || '').trim()
 
 const envFilePath = path.join(root, `.env.${envName}`)
 
-console.log('Write data', process.env.npm_lifecycle_script, overrideVersion)
-// Read the current version number prefix from the .env file
+console.log('build context', process.env.npm_lifecycle_script, overrideVersion)
+// Read current version prefix from .env file
 function getVersionPrefix(filePath: string): string {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
@@ -39,7 +39,7 @@ function getVersionPrefix(filePath: string): string {
   return '0.0'
 }
 
-// Generate version number based on date and historical serial number
+// Generate version by date + historical sequence
 function generateVersion(prefix: string): string {
   const now = new Date()
   const yy = String(now.getFullYear()).slice(-2)
@@ -49,7 +49,7 @@ function generateVersion(prefix: string): string {
 
   let seq = 1
 
-  // Try to extract the serial number from the existing version number
+  // Try to extract sequence from existing version
   try {
     const content = fs.readFileSync(envFilePath, 'utf-8')
     const match = content.match(/^RSB_APP_VERSION=(.*)$/m)
@@ -79,14 +79,14 @@ function generateVersion(prefix: string): string {
   return `${prefix}.${dateCode}${seqStr}`
 }
 
-// Determine final version number
+// Resolve final version
 const versionPrefix = overrideVersion
   ? overrideVersion.split('.').slice(0, 2).join('.')
   : getVersionPrefix(envFilePath)
 
 const finalVersion = overrideVersion || generateVersion(versionPrefix)
 
-// Write to .env file
+// Write version to .env file
 try {
   let envContent = ''
   try {
@@ -106,9 +106,9 @@ try {
   }
 
   fs.writeFileSync(envFilePath, envContent, 'utf-8')
-  console.log(`✅ Generated version number: ${finalVersion}`)
+  console.log(`✅ Version generated: ${finalVersion}`)
   console.log(`✅ Written to file: ${path.basename(envFilePath)}`)
 } catch (err) {
-  console.error(`❌ Failed to write:`, err)
+  console.error(`❌ Write failed:`, err)
   process.exit(1)
 }

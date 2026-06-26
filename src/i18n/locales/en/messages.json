@@ -1,4 +1,12 @@
 {
+  "errors": {
+    "rpcChannelClosed": "RPC channel closed",
+    "rpcDataChannelMissing": "RPC data channel does not exist",
+    "rpcChannelNotReady": "RPC channel is not ready: {{method}}",
+    "rpcRequestTimedOut": "RPC request timed out: {{method}} (#{{id}}) - {{timeout}}ms",
+    "rpcError": "RPC Error {{code}}",
+    "unknown": "Unknown error"
+  },
   "connectionTimeout": {
     "title": "Connection Timeout",
     "subtitle": "We couldn't get a response from the local ArkKVM service. Please make sure it's running and reachable.",

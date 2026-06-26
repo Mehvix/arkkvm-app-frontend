@@ -2,7 +2,9 @@
  * File transfer list state management.
  * Manages upload/download tasks with progress tracking and persistence.
  */
-import type { StateCreator } from 'zustand'
+import type { StateCreator } from 'zustand';
+import { humanSize } from '@/utils/format';
+import type { RootState } from '../types';
 
 /**
  * Transfer task state.
@@ -118,6 +120,7 @@ export type TransferRowPersist = TransferItem & TransferPersistMeta
  */
 export type TransferRow = TransferRowPersist & TransferRuntimeFields
 
+
 export interface TransferListState {
   byId: Record<string, TransferRow>
   order: string[]
@@ -161,24 +164,25 @@ export type UploadSource = TransferSource
 export type UploadRow = TransferRow
 export type UploadListSlice = TransferListSlice
 
-const STORAGE_KEY = 'transfer:list'
 
-const now = () => Date.now()
+const STORAGE_KEY = 'transfer:list';
+
+const now = () => Date.now();
 
 function loadPersist(): TransferRowPersist[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? (arr as TransferRowPersist[]) : []
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? (arr as TransferRowPersist[]) : [];
   } catch {
-    return []
+    return [];
   }
 }
 
 function savePersist(rows: TransferRowPersist[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
   } catch {}
 }
 
@@ -199,41 +203,45 @@ function toPersistables(
     totalBytes: r.totalBytes,
     transferredBytes: r.transferredBytes,
     progress: r.progress,
-  }))
+  }));
 }
 
-export const createFileTransferUploadListSlice: StateCreator<
-  any,
-  [],
-  [],
-  TransferListSlice
-> = (set, get) => ({
+
+export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], TransferListSlice> = (set, get) => ({
   byId: {},
   order: [],
 
   hydrate: () => {
-    const list = loadPersist()
+    const list = loadPersist();
     const currentById: Record<string, TransferRow> =
-      get().fileTransferList?.byId || {}
+      get().fileTransferList?.byId || {};
 
-    const byId: Record<string, TransferRow> = {}
-    const order: string[] = []
+    const byId: Record<string, TransferRow> = {};
+    const order: string[] = [];
 
+    // 1. Retain active or queued tasks (Running: has an active DataChannel; Pending: queued for execution).
     for (const [id, row] of Object.entries(currentById)) {
-      const s = (row as TransferRow).state
+      const s = (row as TransferRow).state;
       if (s === 'running' || s === 'pending') {
-        byId[id] = row as TransferRow
-        order.push(id)
+        byId[id] = row as TransferRow;
+        order.push(id);
       }
     }
 
+    // 2. Restore incomplete tasks from localStorage (skipping already retained running tasks)
     for (const r of list) {
-      if (byId[r.id]) continue
-      if (r.progress >= 100) continue
+      if (byId[r.id]) continue; // Already retained as running
+      if (r.progress >= 100) continue;
 
-      const raw = r as any
-      const totalBytes = r.totalBytes ?? raw.fileSize ?? 0
-      const transferredBytes = r.transferredBytes ?? raw.nextOffset ?? 0
+      const raw = r as TransferRowPersist & { fileSize?: number; nextOffset?: number };
+      const totalBytes = r.totalBytes ?? raw.fileSize ?? 0;
+      const transferredBytes = r.transferredBytes ?? raw.nextOffset ?? 0;
+      const progress =
+        typeof r.progress === 'number' && !Number.isNaN(r.progress)
+          ? r.progress
+          : totalBytes
+            ? Math.min(100, (transferredBytes / totalBytes) * 100)
+            : 0;
 
       byId[r.id] = {
         ...r,
@@ -242,23 +250,25 @@ export const createFileTransferUploadListSlice: StateCreator<
         speedBps: 0,
         errorMessage: undefined,
         state: 'paused',
-        progress:
-          typeof r.progress === 'number'
-            ? r.progress
-            : totalBytes
-              ? Math.min(100, (transferredBytes / totalBytes) * 100)
-              : 0,
-      }
-      order.push(r.id)
+        progress,
+        // Re-derive formatted strings from numeric values so restored
+        // rows have something to show in the UI (the persisted payload
+        // intentionally drops *Formatted fields).
+        totalFormatted: humanSize(totalBytes),
+        transferredFormatted: humanSize(transferredBytes),
+        progressFormatted: `${progress.toFixed(1)}%`,
+        speedFormatted: '0 B/s',
+      };
+      order.push(r.id);
     }
 
-    set((s: any) => ({
+    set((s: RootState) => ({
       fileTransferList: {
         ...s.fileTransferList,
         byId,
         order,
       },
-    }))
+    }));
   },
 
   createRow: ({
@@ -270,8 +280,8 @@ export const createFileTransferUploadListSlice: StateCreator<
     source,
     direction = 'upload',
   }) => {
-    const createdAt = now()
-    const finalId = id ?? name
+    const createdAt = now();
+    const finalId = id ?? name;
 
     const row: TransferRow = {
       id: finalId,
@@ -287,9 +297,9 @@ export const createFileTransferUploadListSlice: StateCreator<
       dataChannel,
       state: 'pending',
       speedBps: 0,
-    }
+    };
 
-    set((s: any) => ({
+    set((s: RootState) => ({
       fileTransferList: {
         ...s.fileTransferList,
         byId: { ...s.fileTransferList.byId, [finalId]: row },
@@ -297,15 +307,15 @@ export const createFileTransferUploadListSlice: StateCreator<
           ? s.fileTransferList.order
           : [finalId, ...(s.fileTransferList.order || [])],
       },
-    }))
+    }));
 
-    savePersist(toPersistables(get().fileTransferList.byId))
-    return finalId
+    savePersist(toPersistables(get().fileTransferList.byId));
+    return finalId;
   },
 
   removeRow: id => {
-    set((s: any) => {
-      const { [id]: _, ...rest } = s.fileTransferList?.byId || {}
+    set((s: RootState) => {
+      const { [id]: _, ...rest } = s.fileTransferList?.byId || {};
       return {
         fileTransferList: {
           ...s.fileTransferList,
@@ -314,15 +324,15 @@ export const createFileTransferUploadListSlice: StateCreator<
             (x: string) => x !== id
           ),
         },
-      }
-    })
-    savePersist(toPersistables(get().fileTransferList.byId))
+      };
+    });
+    savePersist(toPersistables(get().fileTransferList.byId));
   },
 
   setState: (id, state, errorMessage) => {
-    set((s: any) => {
-      const it = s.fileTransferList?.byId?.[id]
-      if (!it) return s
+    set((s: RootState) => {
+      const it = s.fileTransferList?.byId?.[id];
+      if (!it) return s;
       const next: TransferRow = {
         ...it,
         state,
@@ -332,55 +342,59 @@ export const createFileTransferUploadListSlice: StateCreator<
         transferredBytes:
           state === 'done' ? it.totalBytes : it.transferredBytes,
         speedBps: state === 'done' ? 0 : it.speedBps,
-      }
+      };
       return {
         ...s,
         fileTransferList: {
           ...s.fileTransferList,
           byId: { ...s.fileTransferList.byId, [id]: next },
         },
-      }
-    })
-    savePersist(toPersistables(get().fileTransferList.byId))
+      };
+    });
+    savePersist(toPersistables(get().fileTransferList.byId));
   },
 
   updateProgress: (id, stats) => {
-    set((s: any) => {
-      const it = s.fileTransferList?.byId?.[id]
-      if (!it) return s
+    set((s: RootState) => {
+
+      const it = s.fileTransferList?.byId?.[id];
+      if (!it) return s;
       const next: TransferRow = {
         ...it,
         ...stats,
         updatedAt: now(),
-        state: it.state === 'pending' ? 'running' : it.state,
-      }
+        state:
+          it.state === 'pending'
+            ? 'running'
+            : it.state,
+      };
       return {
         ...s,
         fileTransferList: {
           ...s.fileTransferList,
           byId: { ...s.fileTransferList.byId, [id]: next },
         },
-      }
-    })
-    savePersist(toPersistables(get().fileTransferList.byId))
+      };
+    });
+    savePersist(toPersistables(get().fileTransferList.byId));
   },
 
   setSpeed: (id, speedBps) => {
-    set((s: any) => {
-      const it = s.fileTransferList?.byId?.[id]
-      if (!it) return s
-      if (it.speedBps === speedBps) return s
+    set((s: RootState) => {
+      const it = s.fileTransferList?.byId?.[id];
+      if (!it) return s;
+      if (it.speedBps === speedBps) return s;
       return {
         ...s,
         fileTransferList: {
           ...s.fileTransferList,
           byId: { ...s.fileTransferList.byId, [id]: { ...it, speedBps } },
         },
-      }
-    })
+      };
+    });
   },
 
   persistAll: () => {
-    savePersist(toPersistables(get().fileTransferList.byId))
+    savePersist(toPersistables(get().fileTransferList.byId));
   },
-})
+});

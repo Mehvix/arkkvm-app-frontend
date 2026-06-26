@@ -1,105 +1,98 @@
 /**
- * @Purpose: PostCSS plug-in - Tailwind class names are automatically prefixed
- * @Description: This plugin automatically adds a prefix to all Tailwind-generated atomic classes during the PostCSS processing phase
+ * @Purpose: PostCSS plugin - auto-prefix Tailwind utility classes
+ * @Description: Adds a prefix to Tailwind-generated utility class selectors during PostCSS processing
  * @Author: zhanglei
  * @Date: 2025-07-18 18:15:00
  */
 
-// Using ES module format
-
-const DEFAULT_PREFIX = 'jg'
+const DEFAULT_PREFIX = 'jg';
 
 /**
- * Determine whether the selector is the Tailwind class name
+ * Determine whether a selector contains class selectors
  */
 function isTailwindClass(selector) {
-  // Simple implementation: match class selectors starting with dot
-  // More complex matching logic can be added based on project needs
-  return selector.includes('.')
+  // Basic implementation: check for dot-based class selectors
+  // Can be extended with stricter matching rules if needed
+  return selector.includes('.');
 }
 
 /**
- * Check if the selector already has a prefix
+ * Check whether a selector already contains the configured prefix
  */
 function hasPrefix(selector, prefix) {
-  // Check if selector already contains prefix
+  // Detect existing prefixed classes across common selector patterns
   return (
     selector.includes(`.${prefix}:`) ||
     selector.includes(`.${prefix}-`) ||
     selector.split(':').some(part => part.includes(`.${prefix}`))
-  )
+  );
 }
 
 /**
- * Add prefix to selector
+ * Add prefix to class selectors
  */
 function addPrefixToSelector(selector, prefix) {
-  // Split selector handles complex scenarios (such as containing multiple classes, states, etc.)
+  // Rewrite class selectors while preserving complex selector structure
   return selector.replace(/\.([-\w]+)/g, (match, className) => {
-    // Exclude class names that already have prefixes
+    // Skip class names that are already prefixed
     if (hasPrefix(match, prefix)) {
-      return match
+      return match;
     }
-    // add prefix
-    return `.${prefix}:${className}`
-  })
+    // Add prefix to current class
+    return `.${prefix}:${className}`;
+  });
 }
 
 /**
- * Custom PostCSS plugin: add prefixes to all Tailwind classes
- * This plugin will process the compiled CSS to ensure that all Tailwind class names have the correct prefix
- * Suitable for scenarios that support dynamic generation of class names
+ * Custom PostCSS plugin that prefixes Tailwind class selectors
+ * Processes compiled CSS and ensures generated utility classes carry the configured prefix
+ * Useful when class names are created dynamically and cannot be fully prefixed at source
  */
 const postcssPlugin = (opts = {}) => {
-  // Get configuration options
-  const prefix = opts.prefix || DEFAULT_PREFIX
-  const debug = opts.debug || false
+  // Resolve plugin options
+  const prefix = opts.prefix || DEFAULT_PREFIX;
+  const debug = opts.debug || false;
 
-  // Return PostCSS plugin function
+  // Return PostCSS plugin implementation
   return {
     postcssPlugin: 'postcss-tailwind-prefix',
 
-    // Process every CSS rule
+    // Process each CSS rule
     Rule(rule) {
-      // Only handle actual class name selectors, skip pseudo-elements, media queries, etc.
-      if (
-        !rule.selector ||
-        rule.selector.startsWith('@') ||
-        (rule.parent && rule.parent.name === 'keyframes')
-      ) {
-        return
+      // Process class-selector rules only; skip at-rules/keyframes contexts
+      if (!rule.selector || rule.selector.startsWith('@') || rule.parent && rule.parent.name === 'keyframes') {
+        return;
       }
 
-      // Handling class names in selectors
-      const modifiedSelectors = rule.selector
-        .split(',')
+      // Rewrite class selectors within the selector list
+      const modifiedSelectors = rule.selector.split(',')
         .map(selector => {
-          // Check whether it is a Tailwind class name (the judgment logic can be adjusted according to project requirements)
+          // Apply prefixing only when selector contains class selectors
           if (isTailwindClass(selector)) {
-            // If the selector already has a prefix, no processing will be done.
+            // Keep selector unchanged if already prefixed
             if (hasPrefix(selector, prefix)) {
-              return selector
+              return selector;
             }
 
-            // Add prefix to selector
-            const prefixed = addPrefixToSelector(selector, prefix)
+            // Prefix selector classes
+            const prefixed = addPrefixToSelector(selector, prefix);
             if (debug) {
               // console.log(`[PostCSS Tailwind Prefix] ${selector} -> ${prefixed}`);
             }
-            return prefixed
+            return prefixed;
           }
-          return selector
+          return selector;
         })
-        .join(',')
+        .join(',');
 
-      // Update selector for rules
+      // Update selector only when changed
       if (rule.selector !== modifiedSelectors) {
-        rule.selector = modifiedSelectors
+        rule.selector = modifiedSelectors;
       }
     },
-  }
-}
+  };
+};
 
-postcssPlugin.postcss = true // Define PostCSS plugin tags
+postcssPlugin.postcss = true; // Mark as a PostCSS plugin
 
-export default postcssPlugin
+export default postcssPlugin;

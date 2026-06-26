@@ -1,21 +1,21 @@
-import { IconRightSmall } from '@/assets/icons'
+import { IconRightSmall } from '@/assets/icons';
 import {
-  Button,
-  CardDescription,
-  CardFooter,
-  RadioIndicator,
-  WelcomeBackground,
-} from '@/components'
-import { cn } from '@/lib/utils'
-import { useAppStore } from '@/stores'
-import { useCallback, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+    Button,
+    CardDescription,
+    CardFooter,
+    RadioIndicator,
+    WelcomeBackground,
+} from '@/components';
+import { cn } from '@/lib/utils';
+import { useAppStore } from '@/stores';
+import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 const AuthMethod = () => {
-  const [selected, setSelected] = useState('')
-  const navigate = useNavigate()
-  const setLocalAuthMode = useAppStore(state => state.setLocalAuthMode)
-  const { t } = useTranslation('messages')
+  const [selected, setSelected] = useState('');
+  const navigate = useNavigate();
+  const setLocalAuthMode = useAppStore(state => state.setLocalAuthMode);
+  const { t } = useTranslation('messages');
   const selectOptions = useMemo(
     () => [
       {
@@ -34,17 +34,17 @@ const AuthMethod = () => {
       },
     ],
     [t]
-  )
+  );
   const handleContinue = useCallback(async () => {
     if (selected === 'password') {
-      setLocalAuthMode(selected)
-      navigate('/welcome/set-password', { replace: true })
-      return
+      setLocalAuthMode(selected);
+      navigate('/welcome/set-password', { replace: true });
+      return;
     } else if (selected === 'noPassword') {
-      setLocalAuthMode(selected)
-      navigate('/welcome/setup-speaker', { replace: true })
+      setLocalAuthMode(selected);
+      navigate('/welcome/setup-speaker', { replace: true });
     }
-  }, [selected, navigate])
+  }, [selected, navigate]);
   return (
     <WelcomeBackground
       title={t('welcome.authMethod.title')}
@@ -52,11 +52,10 @@ const AuthMethod = () => {
     >
       {/* <GridBackground cellSize={160} opacity={0.6} /> */}
       <div
-        className="flex flex-row py-[64px] gap-[12px]"
-        style={{ animationDelay: '200ms' }}
+        className="flex flex-row py-[64px] gap-[12px] animate__animated animate__fadeInDown animate-delay-200"
       >
-        {selectOptions.map((item, index) => {
-          const isActive = selected === item.value
+        {selectOptions.map((item) => {
+          const isActive = selected === item.value;
           return (
             <div key={item.value} className="h-[136px] ">
               <div
@@ -113,13 +112,12 @@ const AuthMethod = () => {
                 </div>
               </div>
             </div>
-          )
+          );
         })}
       </div>
       <CardFooter className="flex flex-col gap-[12px]">
         <div
-          className="animate__animated animate__fadeInDown"
-          style={{ animationDelay: '400ms' }}
+          className="animate__animated animate__fadeInDown animate-delay-400"
         >
           {selected === 'noPassword' ? (
             <Button
@@ -148,14 +146,13 @@ const AuthMethod = () => {
         </div>
 
         <CardDescription
-          className="animate__animated animate__fadeInDown"
-          style={{ animationDelay: '500ms' }}
+          className="animate__animated animate__fadeInDown animate-delay-500"
         >
           {t('welcome.authMethod.footerNote')}
         </CardDescription>
       </CardFooter>
     </WelcomeBackground>
-  )
-}
+  );
+};
 
-export default AuthMethod
+export default AuthMethod;

@@ -1,13 +1,22 @@
-import { createKeyDef } from '../../merge'
-import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows'
+import { createKeyDef } from '../../merge';
+import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
 
-const DEAD_KEY_ACUTE = { code: 'Equal' }
-const DEAD_KEY_GRAVE = { code: 'Equal', mod: ['ShiftLeft'] }
-const DEAD_KEY_CIRCUMFLEX = { code: 'Backquote' }
-const DEAD_KEY_TILDE = { code: 'BracketRight', mod: ['AltRight'] }
+/**
+ * German dead key definitions (for diacritic composition)
+ * Dead keys: do not emit characters immediately, and wait for the next key to compose accented characters
+ */
+const DEAD_KEY_ACUTE = { code: 'Equal' }; // ´ acute accent
+const DEAD_KEY_GRAVE = { code: 'Equal', mod: ['ShiftLeft'] }; // ` grave accent
+const DEAD_KEY_CIRCUMFLEX = { code: 'Backquote' }; // ^ circumflex accent
+const DEAD_KEY_TILDE = { code: 'BracketRight', mod: ['AltRight'] }; // ~ tilde accent
 
+/**
+ * German AltGr character mapping
+ * Refer to the AltGr mapping in keyboardLayouts/de_DE.ts
+ */
 const DE_DE_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
   {
+    // Top number row
     Digit2: { altGr: '²' },
     Digit3: { altGr: '³' },
     Digit7: { altGr: '{' },
@@ -16,14 +25,15 @@ const DE_DE_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
     Digit0: { altGr: '}' },
     Minus: { altGr: '\\' }, // AltGr+ß -> \
     BracketRight: { altGr: '~' },
-
+    // Letter section
     KeyQ: { altGr: '@' },
     KeyE: { altGr: '€' },
     KeyM: { altGr: 'µ' },
-
+    // Extra ISO key
     IntlBackslash: { altGr: '|' },
-  }
+  };
 
+// DE German (Windows) — Standard German QWERTZ keyboard layout
 export const DE_WIN_LAYOUT = {
   id: 'de-win',
   name: 'Deutsch (Deutschland)',
@@ -31,10 +41,11 @@ export const DE_WIN_LAYOUT = {
     FUNCTION_KEYS_ROW,
     [
       createKeyDef('Backquote', {
-        base: '§',
-        shift: '°',
-        caps: '§',
-      }),
+            base: '§',
+            shift: '°',
+            caps: '§',
+
+          }),
       createKeyDef('Digit1', { base: '1', shift: '+' }),
       createKeyDef('Digit2', {
         base: '2',
@@ -130,7 +141,7 @@ export const DE_WIN_LAYOUT = {
       ),
       createKeyDef('Enter', undefined, { width: 2.7 }),
     ],
-
+    // Row 4: Shift, <YXCVBNM,.-, Shift
     [
       createKeyDef('ShiftLeft', { base: 'Umsch' }, { width: 1.8 }),
       createKeyDef('IntlBackslash', {
@@ -138,7 +149,7 @@ export const DE_WIN_LAYOUT = {
         shift: '>',
         ...DE_DE_ALTGR.IntlBackslash,
       }),
-
+      // QWERTZ: this position is Y
       createKeyDef('KeyY', { base: 'z', shift: 'Z' }),
       createKeyDef('KeyX'),
       createKeyDef('KeyC'),
@@ -151,7 +162,7 @@ export const DE_WIN_LAYOUT = {
       createKeyDef('Slash', { base: '-', shift: '_' }),
       createKeyDef('ShiftRight', { base: 'Umsch' }, { width: 2 }),
     ],
-
+    // Row 5: Ctrl, Fn, Win, Alt, Space, AltGr, Ctrl, ←↓→, Menu
     [
       createKeyDef('ControlLeft', { base: 'Strg' }, { width: 1.2 }),
       createKeyDef('MetaLeft'),
@@ -164,8 +175,9 @@ export const DE_WIN_LAYOUT = {
     ],
   ],
   rightPanel: RIGHT_PANEL_ROWS,
-
+  // Extra character mapping: accented characters, etc. (not shown on keyboard UI, but needed for paste input)
   extraChars: {
+    // Vowels with acute accent - use dead key ´
     á: { code: 'KeyA', deadKey: DEAD_KEY_ACUTE },
     Á: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_ACUTE },
     é: { code: 'KeyE', deadKey: DEAD_KEY_ACUTE },
@@ -177,6 +189,7 @@ export const DE_WIN_LAYOUT = {
     ú: { code: 'KeyU', deadKey: DEAD_KEY_ACUTE },
     Ú: { code: 'KeyU', mod: ['ShiftLeft'], deadKey: DEAD_KEY_ACUTE },
 
+    // Vowels with grave accent - use dead key `
     à: { code: 'KeyA', deadKey: DEAD_KEY_GRAVE },
     À: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_GRAVE },
     è: { code: 'KeyE', deadKey: DEAD_KEY_GRAVE },
@@ -188,6 +201,7 @@ export const DE_WIN_LAYOUT = {
     ù: { code: 'KeyU', deadKey: DEAD_KEY_GRAVE },
     Ù: { code: 'KeyU', mod: ['ShiftLeft'], deadKey: DEAD_KEY_GRAVE },
 
+    // Vowels with circumflex accent - use dead key ^
     â: { code: 'KeyA', deadKey: DEAD_KEY_CIRCUMFLEX },
     Â: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_CIRCUMFLEX },
     ê: { code: 'KeyE', deadKey: DEAD_KEY_CIRCUMFLEX },
@@ -199,6 +213,7 @@ export const DE_WIN_LAYOUT = {
     û: { code: 'KeyU', deadKey: DEAD_KEY_CIRCUMFLEX },
     Û: { code: 'KeyU', mod: ['ShiftLeft'], deadKey: DEAD_KEY_CIRCUMFLEX },
 
+    // Characters with tilde - use dead key ~
     ã: { code: 'KeyA', deadKey: DEAD_KEY_TILDE },
     Ã: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_TILDE },
     õ: { code: 'KeyO', deadKey: DEAD_KEY_TILDE },
@@ -206,4 +221,4 @@ export const DE_WIN_LAYOUT = {
     ñ: { code: 'KeyN', deadKey: DEAD_KEY_TILDE },
     Ñ: { code: 'KeyN', mod: ['ShiftLeft'], deadKey: DEAD_KEY_TILDE },
   },
-}
+};

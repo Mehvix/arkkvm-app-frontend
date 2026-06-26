@@ -1,7 +1,16 @@
-import * as SwitchPrimitive from '@radix-ui/react-switch'
-import * as React from 'react'
+/**
+ * @Purpose:
+ * @Descripttion:
+ * @version:
+ * @Author: zhanglei
+ * @Date: 2025-10-27 16:25:25
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-05-19 16:13:54
+ */
+import * as SwitchPrimitive from '@radix-ui/react-switch';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 function Switch({
   className,
@@ -20,14 +29,12 @@ function Switch({
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          'pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0'
+          'pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0',
+          'bg-[var(--icon-color)]'
         )}
-        style={{
-          backgroundColor: 'var(--icon-color)',
-        }}
       />
     </SwitchPrimitive.Root>
-  )
+  );
 }
 
-export { Switch }
+export { Switch };

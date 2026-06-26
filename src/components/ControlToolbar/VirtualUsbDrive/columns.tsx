@@ -7,12 +7,12 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-28 16:57:25
  */
-import { IconRightSmall } from '@/assets/icons'
-import type { DownloadFileInfo } from '@/hooks/useWebRtcFile'
-import { humanSize } from '@/utils/format'
-import type { DataTableColumn } from '../../ui/data-table'
-import type { Row } from './types'
-import { formatTime, getFileIcon } from './utils'
+import { IconRightSmall } from '@/assets/icons';
+import type { DownloadFileInfo } from '@/hooks/useWebRtcFile';
+import { humanSize } from '@/utils/format';
+import type { DataTableColumn } from '../../ui/data-table';
+import type { Row } from './types';
+import { formatTime, getFileIcon } from './utils';
 
 export const completedColumns: DataTableColumn<Row>[] = [
   {
@@ -22,9 +22,9 @@ export const completedColumns: DataTableColumn<Row>[] = [
     width: '60%',
     className: 'max-w-0',
     render: (name, record) => {
-      const Icon = getFileIcon(String(name ?? ''), record.is_dir)
-      const label = String(name ?? '')
-      const isDir = !!record?.is_dir
+      const Icon = getFileIcon(String(name ?? ''), record.is_dir);
+      const label = String(name ?? '');
+      const isDir = !!record?.is_dir;
       return (
         <span className="group inline-flex items-center gap-2 max-w-full min-w-0">
           <Icon className="size-4 opacity-80 flex-shrink-0" />
@@ -44,7 +44,7 @@ export const completedColumns: DataTableColumn<Row>[] = [
             <IconRightSmall className="size-3 opacity-0 group-hover:opacity-80 transition-opacity flex-shrink-0" />
           ) : null}
         </span>
-      )
+      );
     },
   },
 
@@ -62,11 +62,11 @@ export const completedColumns: DataTableColumn<Row>[] = [
     align: 'left',
     sorter: true,
     width: '15%',
-    render: (v, record) => {
-      return record.is_dir ? '--' : humanSize(Number(v) || 0)
-    },
+    render: (v,record) => {
+      return record.is_dir ? '--' : humanSize(Number(v) || 0);
+    }
   },
-]
+];
 
 export const downloadsColumns: DataTableColumn<DownloadFileInfo[]> = [
   {
@@ -94,4 +94,4 @@ export const downloadsColumns: DataTableColumn<DownloadFileInfo[]> = [
     align: 'left',
     width: '15%',
   },
-]
+];

@@ -1,5 +1,6 @@
-import type { StateCreator } from 'zustand'
-
+import type { StateCreator } from 'zustand';
+import type { RootState } from '../types';
+// Panel enum aligned with UI panels.
 export type SettingsPanel =
   | 'regular'
   | 'mouse'
@@ -11,6 +12,7 @@ export type SettingsPanel =
   | 'network'
   | 'advanced'
 
+// Settings structure for a single device.
 export type DeviceSettings = {
   // Regular
   appVersion: string
@@ -48,7 +50,7 @@ export type DeviceSettings = {
   // Advanced
   webTerminalEnabled: boolean
   debugMode: boolean
-
+  // Network (example fields; can be aligned with backend schema later).
   network: {
     mac: string
     hostname: string
@@ -64,16 +66,21 @@ export type DeviceSettings = {
   }
 }
 
+// Settings data (data fields only).
 export interface SettingsStateData {
+  // Multi-device state.
   devices: Record<string, DeviceSettings>
   activeDeviceId: string | null
 }
 
+// Action methods.
 export interface SettingsStateActions {
+  // Create/remove/switch devices.
   createDevice: (id: string, initial?: Partial<DeviceSettings>) => void
   removeDevice: (id: string) => void
   setActiveDevice: (id: string | null) => void
 
+  // Set fields for the currently active device.
   setDeviceSetting: <K extends keyof DeviceSettings>(
     key: K,
     value: DeviceSettings[K]
@@ -82,6 +89,7 @@ export interface SettingsStateActions {
     updater: (prev: DeviceSettings) => DeviceSettings
   ) => void
 
+  // Set fields on any specified device.
   setDeviceSettingById: <K extends keyof DeviceSettings>(
     id: string,
     key: K,
@@ -92,7 +100,8 @@ export interface SettingsStateActions {
     updater: (prev: DeviceSettings) => DeviceSettings
   ) => void
 
-  resetSettings: (id?: string) => void
+  // Reset settings.
+  resetSettings: (id?: string) => void // Reset all devices when id is omitted.
 }
 
 export type SettingsSlice = {
@@ -112,13 +121,7 @@ const defaultDeviceSettings = (): DeviceSettings => ({
   ledSync: false,
   showPressedKeys: false,
   streamQualityAuto: true,
-  enhancement: {
-    preset: 'none',
-    saturation: 1,
-    brightness: 1,
-    contrast: 1,
-    hueRotate: 0,
-  },
+  enhancement: { preset: 'none', saturation: 1, brightness: 1, contrast: 1, hueRotate: 0 },
   edidOn: false,
   orientation: '270',
   displayBrightness: 100,
@@ -138,15 +141,15 @@ const defaultDeviceSettings = (): DeviceSettings => ({
     ipv4Mode: 'dhcp',
     ipv6Mode: 'slaac',
   },
-})
+});
 
-export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
+export const createSettingsSlice: StateCreator<RootState, [], [], SettingsSlice> = (set, get) => ({
   settings: {
     devices: {},
     activeDeviceId: null,
 
     createDevice: (id, initial) => {
-      set((state: any) => ({
+      set((state: RootState) => ({
         settings: {
           ...state.settings,
           devices: {
@@ -158,40 +161,40 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
           },
           activeDeviceId: state.settings.activeDeviceId ?? id,
         },
-      }))
+      }));
     },
 
     removeDevice: id => {
-      set((state: any) => {
+      set((state: SettingsSlice) => {
         const next = { ...state.settings.devices } as Record<
           string,
           DeviceSettings
-        >
-        delete next[id]
+        >;
+        delete next[id];
         const newActive =
           state.settings.activeDeviceId === id
             ? null
-            : state.settings.activeDeviceId
+            : state.settings.activeDeviceId;
         return {
           settings: {
             ...state.settings,
             devices: next,
             activeDeviceId: newActive,
           },
-        }
-      })
+        };
+      });
     },
 
     setActiveDevice: id => {
-      set((state: any) => ({
+      set((state: RootState) => ({
         settings: { ...state.settings, activeDeviceId: id },
-      }))
+      }));
     },
 
     setDeviceSetting: (key, value) => {
-      const id = (get() as any).settings.activeDeviceId as string | null
-      if (!id) return
-      set((state: any) => ({
+      const id = get().settings.activeDeviceId;
+      if (!id) return;
+      set((state: RootState) => ({
         settings: {
           ...state.settings,
           devices: {
@@ -199,13 +202,13 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
             [id]: { ...state.settings.devices[id], [key]: value },
           },
         },
-      }))
+      }));
     },
 
     setNestedDeviceSetting: updater => {
-      const id = (get() as any).settings.activeDeviceId as string | null
-      if (!id) return
-      set((state: any) => ({
+      const id = get().settings.activeDeviceId;
+      if (!id) return;
+      set((state: RootState) => ({
         settings: {
           ...state.settings,
           devices: {
@@ -213,11 +216,11 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
             [id]: updater(state.settings.devices[id]),
           },
         },
-      }))
+      }));
     },
 
     setDeviceSettingById: (id, key, value) => {
-      set((state: any) => ({
+      set((state: RootState) => ({
         settings: {
           ...state.settings,
           devices: {
@@ -225,11 +228,11 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
             [id]: { ...state.settings.devices[id], [key]: value },
           },
         },
-      }))
+      }));
     },
 
     setNestedDeviceSettingById: (id, updater) => {
-      set((state: any) => ({
+      set((state: RootState) => ({
         settings: {
           ...state.settings,
           devices: {
@@ -237,12 +240,12 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
             [id]: updater(state.settings.devices[id]),
           },
         },
-      }))
+      }));
     },
 
     resetSettings: id => {
       if (id) {
-        set((state: any) => ({
+        set((state: RootState) => ({
           settings: {
             ...state.settings,
             devices: {
@@ -250,23 +253,16 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set, get) => ({
               [id]: defaultDeviceSettings(),
             },
           },
-        }))
+        }));
       } else {
-        set(() => ({
+        set((state: RootState) => ({
           settings: {
+            ...state.settings,
             devices: {},
             activeDeviceId: null,
-            createDevice: {} as any,
-            removeDevice: {} as any,
-            setActiveDevice: {} as any,
-            setDeviceSetting: {} as any,
-            setNestedDeviceSetting: {} as any,
-            setDeviceSettingById: {} as any,
-            setNestedDeviceSettingById: {} as any,
-            resetSettings: {} as any,
           },
-        }))
+        }));
       }
     },
   },
-})
+});

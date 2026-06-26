@@ -1,114 +1,106 @@
-import fs from 'fs'
-import path from 'path'
-import type { RsbuildPlugin } from '@rsbuild/core'
+import type { RsbuildPlugin } from '@rsbuild/core';
+import fs from 'fs';
+import path from 'path';
 
-// Import the core logic of the original route generator
-import generate from './generateRoutesCore'
+// Import the core route generation logic
+import generate from './generateRoutesCore';
 
-// Add delay function
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+// Delay helper used by retry logic
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Add retry logic
+// Retry wrapper for route generation
 async function generateWithRetry(maxRetries = 3, delayMs = 1000) {
-  let lastError
+  let lastError;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Try to generate routes (try ${attempt}/${maxRetries})...`)
-      await generate()
-      console.log('✅ Routes generated successfully')
-      return true
+      console.log(`🔄 Attempting route generation (${attempt}/${maxRetries})...`);
+      await generate();
+      console.log('✅ Route generation succeeded');
+      return true;
     } catch (error) {
-      lastError = error
-      console.error(
-        `❌ Routes generation failed (try ${attempt}/${maxRetries}):`,
-        error.message
-      )
+      lastError = error;
+      console.error(`❌ Route generation failed (${attempt}/${maxRetries}):`, error.message);
 
       if (attempt < maxRetries) {
-        console.log(`⏳ ${delayMs}ms later retry...`)
-        await delay(delayMs)
+        console.log(`⏳ Retrying in ${delayMs}ms...`);
+        await delay(delayMs);
       }
     }
   }
 
-  console.error('❌ Reached maximum retry count, routes generation failed')
-  throw lastError
+  console.error('❌ Maximum retries reached, route generation failed');
+  throw lastError;
 }
 
 export const autoRoutesPlugin = (): RsbuildPlugin => ({
   name: 'auto-routes-plugin',
 
   setup(api) {
-    // Perform route generation before the development server starts
+    // Generate routes once before the dev server starts
     api.modifyBundlerChain(async () => {
-      console.log('🚀 Initialize routes configuration...')
+      console.log('🚀 Initializing route configuration...');
       try {
-        await generateWithRetry()
+        await generateWithRetry();
       } catch (error) {
-        console.error('❌ Initialize routes configuration failed:', error)
-        // Do not throw errors to avoid blocking the development server startup
+        console.error('❌ Failed to initialize route configuration:', error);
+        // Do not throw to avoid blocking dev server startup
       }
-      return
-    })
+      return;
+    });
 
-    // Monitor file changes and regenerate routing configuration
+    // Regenerate routes when relevant files change
     api.onDevCompileDone(async ({ changedFiles }) => {
-      if (!changedFiles) return
+      if (!changedFiles) return;
 
       const pageFiles = Array.from(changedFiles).filter(
         file => file.endsWith('.page.tsx') || file.endsWith('index.tsx')
-      )
+      );
 
       if (pageFiles.length > 0) {
-        console.log('📝 Detected page file changes:')
+        console.log('📝 Detected page file changes:');
         pageFiles.forEach(file => {
-          console.log(`- ${path.relative(process.cwd(), file)}`)
-        })
+          console.log(`- ${path.relative(process.cwd(), file)}`);
+        });
 
-        console.log('🔄 Regenerate routes configuration...')
+        console.log('🔄 Regenerating route configuration...');
         try {
-          await generateWithRetry(2, 500)
+          await generateWithRetry(2, 500);
         } catch (error) {
-          console.error('❌ Routes regeneration failed:', error)
-          return // Do not continue to execute subsequent logic
+          console.error('❌ Route regeneration failed:', error);
+          return; // Stop subsequent logic on regeneration failure
         }
 
-        // Force triggering routing file reloading
-        console.log('🔄 Trigger routes file reloading...')
+        // Force route file reload
+        console.log('🔄 Triggering route file reload...');
 
-        // Modify the routing file so that changes are detected by Rsbuild
+        // Update route file so Rsbuild can detect a file change
         try {
-          const routeConfigFile = path.resolve(
-            process.cwd(),
-            'src/router/routeConfig.ts'
-          )
+          const routeConfigFile = path.resolve(process.cwd(), 'src/router/routeConfig.ts');
           if (fs.existsSync(routeConfigFile)) {
-            // Read existing content
-            let content = fs.readFileSync(routeConfigFile, 'utf-8')
+            // Read current content
+            let content = fs.readFileSync(routeConfigFile, 'utf-8');
 
-            // Add or update timestamp comments to trigger hot updates
-            const timestamp = `// Last updated: ${new Date().toISOString()}`
+            // Add or update timestamp comment to trigger HMR
+            const timestamp = `// Last updated: ${new Date().toISOString()}`;
             if (content.includes('// Last updated:')) {
-              content = content.replace(/\/\/ Last updated: .*/, timestamp)
+              content = content.replace(/\/\/ Last updated: .*/, timestamp);
             } else {
-              content = `${timestamp}\n${content}`
+              content = `${timestamp}\n${content}`;
             }
 
-            // write back file
-            fs.writeFileSync(routeConfigFile, content, 'utf-8')
-            console.log(`Updated routes configuration file: ${routeConfigFile}`)
+            // Write content back to file
+            fs.writeFileSync(routeConfigFile, content, 'utf-8');
+            console.log(`Route config file updated: ${routeConfigFile}`);
           } else {
-            console.log(
-              'Routes configuration file not found, cannot trigger reloading'
-            )
+            console.log('Route config file not found, reload trigger skipped');
           }
         } catch (err) {
-          console.error('Failed to trigger routes reloading:', err)
+          console.error('Failed to trigger route reload:', err);
         }
       }
-    })
-  },
-})
+    });
+  }
+});
 
-export default autoRoutesPlugin
+export default autoRoutesPlugin;

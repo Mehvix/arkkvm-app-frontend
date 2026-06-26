@@ -7,8 +7,8 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-01-29 15:17:39
  */
-import React from 'react'
-import type { KeyLabelProps } from '../types'
+import React from 'react';
+import type { KeyLabelProps } from '../types';
 
 /**
  * Key label renderer component
@@ -26,13 +26,16 @@ import type { KeyLabelProps } from '../types'
 export const KeyLabel: React.FC<
   KeyLabelProps & { showDualState?: boolean }
 > = ({ label, isStringLabel, isArrayLabel, showDualState = true }) => {
-  if (isArrayLabel) {
-    const [primary, secondary] = label as string[]
 
+  if (isArrayLabel) {
+    const [primary, secondary] = label as string[];
+
+    // Error handling: if layout doesn't exist, return null state, only display secondary (shift state value)
     if (!showDualState) {
-      return <>{secondary}</>
+      return <>{secondary}</>;
     }
 
+    // Show dual state: shift character small on top, base character large on bottom (standard keyboard layout)
     return (
       <span className="flex flex-col leading-tight items-center">
         <span className="opacity-60 text-[10px]" aria-hidden="true">
@@ -40,12 +43,12 @@ export const KeyLabel: React.FC<
         </span>
         <span className="font-semibold">{primary}</span>
       </span>
-    )
+    );
   }
 
   if (isStringLabel) {
-    return <>{label as string}</>
+    return <>{label as string}</>;
   }
 
-  return <>{label as React.ReactNode}</>
-}
+  return <>{label as React.ReactNode}</>;
+};

@@ -1,5 +1,6 @@
-import React from 'react'
-import { createPortal } from 'react-dom'
+import { cn } from '@/lib/utils';
+import React from 'react';
+import { createPortal } from 'react-dom';
 
 export type LoadingOverlayProps = {
   visible: boolean
@@ -20,7 +21,7 @@ const backdropBase: React.CSSProperties = {
   justifyContent: 'center',
   backgroundColor: 'rgba(0,0,0,0.35)',
   color: 'var(--text-color, #fff)',
-}
+};
 
 const fullscreenBase: React.CSSProperties = {
   position: 'fixed',
@@ -28,7 +29,7 @@ const fullscreenBase: React.CSSProperties = {
   top: 0,
   right: 0,
   bottom: 0,
-}
+};
 
 export function Spinner({
   size = 32,
@@ -37,8 +38,8 @@ export function Spinner({
   size?: number
   color?: string
 }) {
-  const stroke = color
-  const r = size / 2 - 4
+  const stroke = color;
+  const r = size / 2 - 4;
   return (
     <svg
       width={size}
@@ -73,7 +74,7 @@ export function Spinner({
         />
       </path>
     </svg>
-  )
+  );
 }
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
@@ -86,43 +87,36 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   style,
   className,
 }) => {
-  if (!visible) return null
-  const base = fullscreen ? fullscreenBase : backdropBase
+  if (!visible) return null;
+  const base = fullscreen ? fullscreenBase : backdropBase;
   const styles: React.CSSProperties = {
     ...base,
-    ...(fullscreen ? {} : {}),
     backgroundColor: `rgba(0,0,0,${backdropOpacity})`,
     zIndex,
     ...style,
-  }
+  };
   const content = (
-    <div style={styles} onClick={onClickBackdrop} className={className}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
+    <div
+      className={cn(
+        'fixed inset-0 flex items-center justify-center bg-black/50',
+        className
+      )}
+      style={styles}
+      onClick={onClickBackdrop}
+    >
+      <div className="flex flex-col items-center gap-2">
         <Spinner />
         {text ? (
-          <div
-            style={{
-              fontSize: 12,
-              opacity: 0.9,
-              color: 'var(--text-color, #fff)',
-            }}
-          >
+          <div className="text-[12px] opacity-90 text-[var(--text-color,#fff)]">
             {text}
           </div>
         ) : null}
       </div>
     </div>
-  )
-  if (fullscreen) return createPortal(content, document.body)
-  return content
-}
+  );
+  if (fullscreen) return createPortal(content, document.body);
+  return content;
+};
 
 export type LoadingWrapperProps = Omit<LoadingOverlayProps, 'fullscreen'> & {
   children: React.ReactNode
@@ -140,11 +134,8 @@ export const LoadingWrapper: React.FC<LoadingWrapperProps> = ({
   className,
   forceRelative = true,
 }) => {
-  const containerStyle: React.CSSProperties = forceRelative
-    ? { position: 'relative' }
-    : undefined
   return (
-    <div style={containerStyle} className={className}>
+    <div className={cn(forceRelative ? 'relative' : '', className)}>
       {children}
       <LoadingOverlay
         visible={visible}
@@ -155,8 +146,8 @@ export const LoadingWrapper: React.FC<LoadingWrapperProps> = ({
         style={style}
       />
     </div>
-  )
-}
+  );
+};
 
 export type BoundLoadingProps = Omit<LoadingOverlayProps, 'fullscreen'> & {
   target: HTMLElement | null
@@ -167,6 +158,6 @@ export const BoundLoading: React.FC<BoundLoadingProps> = ({
   visible,
   ...rest
 }) => {
-  if (!visible || !target) return null
-  return createPortal(<LoadingOverlay visible {...rest} />, target)
-}
+  if (!visible || !target) return null;
+  return createPortal(<LoadingOverlay visible {...rest} />, target);
+};

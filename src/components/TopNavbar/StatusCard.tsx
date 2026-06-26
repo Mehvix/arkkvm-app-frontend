@@ -7,8 +7,8 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-10 16:01:24
  */
-import { cn } from '@/lib/utils'
-import React from 'react'
+import { cn } from '@/lib/utils';
+import React from 'react';
 
 interface StatusCardProps {
   title: string
@@ -16,7 +16,7 @@ interface StatusCardProps {
   statusColor?: string
   StatusIcon: React.ComponentType
   className?: string
-  slot?: React.ReactNode
+  slot?: React.ReactNode // Optional slot content
 }
 
 export function StatusCard({
@@ -35,22 +35,25 @@ export function StatusCard({
       )}
     >
       <span
-        className={cn(
-          'inline-block mr-[4px]',
-          statusColor?.includes('text-') ? statusColor : 'text-emerald-500'
-        )}
-      >
-        <StatusIcon />
-      </span>
-      <div>
-        <h6 className="font-[500] text-[14px]">{title}</h6>
-        <span className={cn('text-[12px] text-[var(--text-secondary)]')}>
-          {statusLabel}
-        </span>
-      </div>
+            className={cn(
+              'inline-block mr-[4px]',
+              statusColor?.includes('text-') ? statusColor : 'text-emerald-500'
+            )}
+          >
+            <StatusIcon />
+          </span>
+          <div className="hidden sm:block">
+              <h6 className="font-[500] text-[14px]">{title}</h6>
+          <span className={cn('text-[12px] text-[var(--text-secondary)]')}>{statusLabel}</span>
+          </div>
 
-      {}
-      {slot && <> {slot}</>}
+
+      {/* Slot area */}
+      {slot && (
+       <> {slot}</>
+
+
+      )}
     </div>
-  )
+  );
 }

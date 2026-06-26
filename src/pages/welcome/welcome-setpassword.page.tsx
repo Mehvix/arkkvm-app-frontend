@@ -5,7 +5,7 @@
  * @Author: zhanglei
  * @Date: 2025-07-21 16:53:33
  * @LastEditors: zhanglei
- * @LastEditTime: 2025-07-23 10:57:04
+ * @LastEditTime: 2026-03-26 17:15:45
  */
 export const meta = {
   auth: false,
@@ -13,43 +13,42 @@ export const meta = {
   isMenu: false,
   path: '/welcome/set-password',
   target: 'device',
-}
+};
 
-import React, { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { IconCloseEyes, IconOpenEyes, IconRightSmall } from '@/assets/icons'
-import { WelcomeBackground } from '@/components'
-import { Button } from '@/components/ui/button'
+import { IconCloseEyes, IconOpenEyes, IconRightSmall } from '@/assets/icons';
+import { WelcomeBackground } from '@/components';
+import { Button } from '@/components/ui/button';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { useAppStore } from '@/stores'
-import { passwordRegex } from '@/utils/regex'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
-import * as z from 'zod'
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useAppStore } from '@/stores';
+import { passwordRegex } from '@/utils/regex';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import * as z from 'zod';
 
 const WelcomeSetPasswordPage: React.FC = () => {
-  const { t } = useTranslation(['common'])
-  const [showPwd, setShowPwd] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const setPassword = useAppStore(state => state.setPassword)
+  const { t } = useTranslation(['common']);
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const navigate = useNavigate();
+  const [loading] = useState(false);
+  const setPassword = useAppStore(state => state.setPassword);
   const schema = z
     .object({
       password: z
         .string()
         .min(1, t('setPassword.error.length'))
-
         .refine(value => passwordRegex.allowedChars.test(value), {
           message: t('setPassword.error.invalidChars'),
         }),
@@ -58,18 +57,17 @@ const WelcomeSetPasswordPage: React.FC = () => {
     .refine(data => data.password === data.confirm, {
       message: t('setPassword.error.mismatch'),
       path: ['confirm'],
-    })
+    });
 
   type FormData = z.infer<typeof schema>
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { password: '', confirm: '' },
-  })
-
+  });
   const onSubmit = async (data: FormData) => {
-    setPassword(data.password)
-    navigate('/welcome/setup-speaker', { replace: true })
-  }
+    setPassword(data.password);
+    navigate('/welcome/setup-speaker', { replace: true });
+  };
   return (
     <WelcomeBackground
       title="Create a Password"
@@ -83,8 +81,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
               name="password"
               render={({ field }) => (
                 <FormItem
-                  className="animate__animated animate__fadeInDown"
-                  style={{ animationDelay: '300ms' }}
+                  className="animate__animated animate__fadeInDown animate-delay-300"
                 >
                   <FormLabel className="text-[#B5BAD6]">
                     {t('setPassword.password')}
@@ -122,8 +119,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
               name="confirm"
               render={({ field }) => (
                 <FormItem
-                  className="animate__animated animate__fadeInDown"
-                  style={{ animationDelay: '400ms' }}
+                  className="animate__animated animate__fadeInDown animate-delay-400"
                 >
                   <FormLabel className="text-[#B5BAD6]">
                     {t('setPassword.confirm')}
@@ -160,9 +156,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
               type="submit"
               disabled={loading}
               variant="primary"
-              className="w-full animate__animated animate__fadeInDown"
-              size="lg"
-              style={{ animationDelay: '500ms' }}
+              className="w-[204px] font-normal animate__animated animate__fadeInDown animate-delay-500"
             >
               {loading ? (
                 <span className="animate-pulse">
@@ -176,8 +170,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
           </form>
         </Form>
         <ul
-          className="text-xs text-[#B5BAD6] text-center mt-5 leading-relaxed  animate__animated animate__fadeInDown"
-          style={{ animationDelay: '600ms' }}
+          className="text-sm text-[#B5BAD6] text-center mt-5 leading-relaxed  animate__animated animate__fadeInDown animate-delay-600"
         >
           <li> This password protects your ArkKVM and its data. </li>
           <li>It is required to authenticate access over the local network.</li>
@@ -185,7 +178,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
         </ul>
       </div>
     </WelcomeBackground>
-  )
-}
+  );
+};
 
-export default WelcomeSetPasswordPage
+export default WelcomeSetPasswordPage;

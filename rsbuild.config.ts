@@ -1,133 +1,222 @@
 /**
- * @Purpose:
- * @Descripttion:
- * @version:
- * @Author: zhanglei
- * @Date: 2025-07-14 15:45:53
- * @LastEditors: zhanglei
- * @LastEditTime: 2026-02-15 03:28:41
+ * Rsbuild Configuration
+ *
+ * Environment variables can be provided by run.sh/build.sh, package scripts,
+ * CI, or .env defaults. Runtime values from process.env take priority over
+ * .env values.
  */
-// rsbuild.config.ts
-import {
-  defineConfig,
-  loadEnv, // Read .env
-} from '@rsbuild/core'
+import { defineConfig, loadEnv, rspack } from '@rsbuild/core'
+import type { BundlerPluginInstance, ProxyConfig } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
-import { pluginSvgr } from '@rsbuild/plugin-svgr' //
+import { pluginSvgr } from '@rsbuild/plugin-svgr'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import webpackBundleAnalyzer from 'webpack-bundle-analyzer'
 import autoComponentsPlugin from './plugins/auto-components'
 import autoRoutesPlugin from './plugins/auto-routes'
 import { svgIndexPlugin } from './plugins/svg-index-plugin'
 
-// Read package.json to get the default version number (as a back-up)
 const packageJson = JSON.parse(
   readFileSync(path.join(__dirname, 'package.json'), 'utf-8')
-)
+) as { version?: string }
 
-export default defineConfig(({ mode, meta, envMode }) => {
-  // Generate new timestamp on each build
+type BuildTarget = 'device' | 'cloud'
+type CloudBuildMode = 'versioned' | 'flat'
+
+type BundleAnalyzerPluginOptions = {
+  analyzerMode: 'static'
+  openAnalyzer: boolean
+  reportFilename: string
+}
+
+const { BundleAnalyzerPlugin } = webpackBundleAnalyzer as unknown as {
+  BundleAnalyzerPlugin: new (
+    options: BundleAnalyzerPluginOptions
+  ) => BundlerPluginInstance
+}
+
+function normalizeUrl(value?: string): string {
+  const trimmed = value?.trim() ?? ''
+  if (!trimmed) return ''
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `http://${trimmed}`
+
+  return withProtocol.replace(/\/+$/, '')
+}
+
+function resolveBuildTarget(value?: string): BuildTarget {
+  return value?.trim().toLowerCase() === 'cloud' ? 'cloud' : 'device'
+}
+
+function resolveCloudBuildMode(value?: string): CloudBuildMode {
+  return value?.trim().toLowerCase() === 'flat' ? 'flat' : 'versioned'
+}
+
+function resolveAppVersion(envVersion?: string): string {
+  return envVersion?.trim() || packageJson.version?.trim() || '0.0.0'
+}
+
+function resolveOutputOptions(params: {
+  buildTarget: BuildTarget
+  cloudBuildMode: CloudBuildMode
+  appVersion: string
+  isProdBuild: boolean
+}): { assetPrefix: string; distRoot: string } {
+  if (params.buildTarget !== 'cloud') {
+    return {
+      assetPrefix: '/',
+      distRoot: 'dist/device',
+    }
+  }
+
+  if (params.cloudBuildMode === 'flat') {
+    return {
+      assetPrefix: '/',
+      distRoot: 'dist/cloud',
+    }
+  }
+
+  return {
+    assetPrefix: params.isProdBuild ? `/${params.appVersion}/` : '/',
+    distRoot: `dist/${params.appVersion}`,
+  }
+}
+
+function createDefineEnv(params: {
+  publicVars: Record<string, string>
+  buildTarget: BuildTarget
+  cloudBuildMode: CloudBuildMode
+  appVersion: string
+  buildTime: string
+  buildTimestamp: number
+}): Record<string, string> {
+  return {
+    ...params.publicVars,
+    'process.env.NODE_ENV': JSON.stringify(
+      process.env.NODE_ENV || 'development'
+    ),
+    'process.env.BUILD_TARGET': JSON.stringify(params.buildTarget),
+    'process.env.CLOUD_BUILD_MODE': JSON.stringify(params.cloudBuildMode),
+    'process.env.APP_VERSION': JSON.stringify(params.appVersion),
+    'process.env.BUILD_TIME': JSON.stringify(params.buildTime),
+    'process.env.BUILD_TIMESTAMP': JSON.stringify(params.buildTimestamp),
+  }
+}
+
+function createProxyConfig(deviceApiUrl: string): ProxyConfig | undefined {
+  if (!deviceApiUrl) return undefined
+
+  const deviceHeaders = {
+    Origin: deviceApiUrl,
+    Referer: `${deviceApiUrl}/`,
+  }
+
+  return {
+    '/api': {
+      target: deviceApiUrl,
+      changeOrigin: true,
+      secure: false,
+      pathRewrite: { '^/api': '' },
+      headers: deviceHeaders,
+    },
+    '/cloud': {
+      target: deviceApiUrl,
+      changeOrigin: true,
+      secure: false,
+    },
+    '/webrtc': {
+      target: deviceApiUrl,
+      changeOrigin: true,
+      secure: false,
+      ws: true,
+      headers: deviceHeaders,
+    },
+  }
+}
+
+function createRspackPlugins(enableAnalyze: boolean): BundlerPluginInstance[] {
+  const plugins: BundlerPluginInstance[] = [
+    new rspack.ProvidePlugin({
+      process: 'process/browser',
+    }),
+  ]
+
+  if (enableAnalyze) {
+    plugins.push(
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'static',
+        openAnalyzer: true,
+        reportFilename: 'bundle-report.html',
+      })
+    )
+  }
+
+  return plugins
+}
+
+export default defineConfig(({ mode }) => {
   const BUILD_TIME = new Date().toISOString()
   const BUILD_TIMESTAMP = Date.now()
-  // Generate readable timestamp format YYYYMMDD-HHMMSS
   const BUILD_TIME_READABLE = new Date()
     .toISOString()
     .replace(/[-:]/g, '')
     .replace('T', '-')
-    .slice(0, 15) // 20231023-143000
-  /* ① Read environment variables */
-  const args = process.argv.slice(2)
-  const envName = (args[0] || 'pro').trim()
-  const overrideVersionArg = args[1] && args[1].trim() ? args[1].trim() : ''
-  const activeMode = process.env.NODE_ENV || envMode || mode || 'development'
-  const __isProdLog = String(envMode || mode || activeMode)
-    .toLowerCase()
-    .includes('pro')
-  if (!__isProdLog) {
-    console.log({
-      mode,
-      envMode,
-      activeMode,
-      processEnv: process.env.NODE_ENV,
-    })
-  }
-  // Load sub-environment configuration (such as device.pro, cloud.pro)
-  const { parsed: subEnvParsed, publicVars } = loadEnv({
+    .slice(0, 15)
+
+  const { parsed, publicVars } = loadEnv({
     cwd: __dirname,
-    mode: envMode || activeMode, // Give priority to the mode specified by --env-mode
     prefixes: ['RSB_'],
   })
 
-  // Manually load the main environment configuration (.env.pro or .env.test) as default
-  const mainEnvMode = (envMode || activeMode).split('.').pop() || 'pro' // Extract pro/test
-  const { parsed: mainEnvParsed } = loadEnv({
-    cwd: __dirname,
-    mode: mainEnvMode,
-    prefixes: ['RSB_'],
-  })
-
-  // Merge configuration: subenvironment takes precedence, main environment as default
-  const parsed = { ...mainEnvParsed, ...subEnvParsed }
-
-  if (!__isProdLog) console.log('publicVars', publicVars)
-  /* ② Process-side variables used in this file */
-  const PORT = Number(parsed.RSB_PORT) || 9000
-  const DEVICE_API_URL = parsed.RSB_API_BASE_URL || 'http://192.168.31.26'
-  const BUILD_TARGET = (
-    process.env.BUILD_TARGET ||
-    parsed.RSB_TARGET_MODE ||
-    'device'
-  ).toLowerCase()
-  if (!__isProdLog) console.log('DEVICE_API_URL', DEVICE_API_URL)
-
-  // Use RSB_APP_VERSION in the environment variable as the main version number, and fall back to the version in package.json if it cannot be found.
-  const APP_VERSION = parsed.RSB_APP_VERSION
-  console.log('📌 Read the version number:')
-  console.log('   parsed.RSB_APP_VERSION:', parsed.RSB_APP_VERSION)
-  console.log('   packageJson.version:', packageJson.version)
-  console.log('   Final Used APP_VERSION:', APP_VERSION)
-
-  /* ③ Return Rsbuild configuration and inject exposed variables into source.define */
-  const isDevRuntime =
-    (process.env.NODE_ENV || '').toLowerCase() !== 'production'
-  const defineEnv = {
-    ...publicVars,
-
-    'process.env.NODE_ENV': JSON.stringify(
-      process.env.NODE_ENV || 'development'
-    ),
-    'process.env.BUILD_TARGET': JSON.stringify(
-      process.env.BUILD_TARGET || 'device'
-    ),
-    // Add version information
-    'process.env.APP_VERSION': JSON.stringify(APP_VERSION),
-    'process.env.BUILD_TIME': JSON.stringify(BUILD_TIME),
-    'process.env.BUILD_TIMESTAMP': JSON.stringify(BUILD_TIMESTAMP),
-  } as Record<string, any>
-  const isProdBuild =
-    String(activeMode) === 'production' || /pro/i.test(String(envMode))
-
-  // Determine whether sourceMap should be generated (generated only in development mode)
-  const shouldGenerateSourceMap = String(activeMode) === 'development'
+  const PORT = Number(process.env.RSB_PORT || parsed.RSB_PORT) || 9000
+  const rawApiUrl =
+    process.env.RSB_API_BASE_URL || parsed.RSB_API_BASE_URL || ''
+  const DEVICE_API_URL = normalizeUrl(rawApiUrl)
+  const BUILD_TARGET = resolveBuildTarget(
+    process.env.BUILD_TARGET || parsed.RSB_TARGET_MODE
+  )
+  const CLOUD_BUILD_MODE = resolveCloudBuildMode(process.env.CLOUD_BUILD_MODE)
+  const APP_VERSION = resolveAppVersion(
+    process.env.RSB_APP_VERSION || parsed.RSB_APP_VERSION
+  )
+  const isProdBuild = (process.env.NODE_ENV || mode) === 'production'
   const enableAnalyze = process.env.ANALYZE === '1'
-  console.log('isProdBuild', isProdBuild)
 
-  // Generate version number path prefix (the cloud uses the version number generated by write-version.ts, and the device does not use the prefix)
-  const versionPrefix =
-    BUILD_TARGET === 'cloud' && isProdBuild ? `/${APP_VERSION}/` : '/'
+  if (process.env.DEBUG_BUILD === '1') {
+    console.log('[rsbuild] build target:', BUILD_TARGET)
+    console.log('[rsbuild] cloud build mode:', CLOUD_BUILD_MODE)
+    console.log('[rsbuild] device api url:', DEVICE_API_URL || '<empty>')
+    console.log('[rsbuild] app version:', APP_VERSION)
+  }
 
-  if (!__isProdLog) console.log('isProdBuild', isProdBuild)
+  const defineEnv = createDefineEnv({
+    publicVars,
+    buildTarget: BUILD_TARGET,
+    cloudBuildMode: CLOUD_BUILD_MODE,
+    appVersion: APP_VERSION,
+    buildTime: BUILD_TIME,
+    buildTimestamp: BUILD_TIMESTAMP,
+  })
+
+  const { assetPrefix, distRoot } = resolveOutputOptions({
+    buildTarget: BUILD_TARGET,
+    cloudBuildMode: CLOUD_BUILD_MODE,
+    appVersion: APP_VERSION,
+    isProdBuild,
+  })
 
   return {
     output: {
       distPath: {
-        root: BUILD_TARGET === 'cloud' ? 'dist/cloud' : 'dist/device',
+        root: distRoot,
       },
-      // Add version number prefix to cloud environment
-      assetPrefix: versionPrefix,
+      assetPrefix,
     },
     source: {
-      define: defineEnv, // ← Accessible in browser through import.meta.env.*
+      define: defineEnv,
     },
     html: {
       favicon: path.resolve(__dirname, 'src/assets/icons/logo.svg'),
@@ -141,8 +230,8 @@ export default defineConfig(({ mode, meta, envMode }) => {
         },
         mixedImport: true,
       }),
-      autoRoutesPlugin(), // Add auto route generation plugin
-      autoComponentsPlugin(), // Add auto component export plugin
+      autoRoutesPlugin(),
+      autoComponentsPlugin(),
       svgIndexPlugin({
         inputDir: path.resolve(__dirname, 'src/assets/icons'),
       }),
@@ -154,59 +243,22 @@ export default defineConfig(({ mode, meta, envMode }) => {
       port: PORT,
       open: true,
       host: '0.0.0.0',
-      proxy: {
-        '/api': {
-          target:
-            parsed.RSB_TARGET_MODE === 'cloud'
-              ? 'https://ark-kvm-api-tst.jianguodata.com'
-              : DEVICE_API_URL,
-          changeOrigin: true,
-          secure: false,
-          pathRewrite: { '^/api': '' },
-        },
-        '/cloud': {
-          target: DEVICE_API_URL,
-          changeOrigin: true,
-          secure: false,
-        },
-        '/webrtc': {
-          target: DEVICE_API_URL,
-          changeOrigin: true,
-          secure: false,
-          ws: true,
-        },
-      },
+      proxy: createProxyConfig(DEVICE_API_URL),
     },
     tools: {
       rspack: {
         resolve: {
           fallback: {
-            process: require.resolve('process/browser'),
+            process: fileURLToPath(import.meta.resolve('process/browser')),
           },
         },
-        plugins: [
-          new (require('@rspack/core').ProvidePlugin)({
-            process: 'process/browser',
-          }),
-          ...(enableAnalyze
-            ? [
-                new (require('webpack-bundle-analyzer').BundleAnalyzerPlugin)({
-                  analyzerMode: 'static',
-                  openAnalyzer: true,
-                  reportFilename: 'bundle-report.html',
-                }),
-              ]
-            : []),
-        ],
+        plugins: createRspackPlugins(enableAnalyze),
         performance: {
-          removeConsole: isProdBuild
-            ? ['log', 'warn', 'error', 'info', 'debug']
-            : false,
+          removeConsole: isProdBuild ? ['log', 'info', 'debug'] : false,
           removeDebugger: isProdBuild,
         },
         output: {
-          sourceMap: shouldGenerateSourceMap,
-          // Add version number to output file name
+          sourceMap: !isProdBuild,
           filename: isProdBuild
             ? `js/[name].[contenthash:8].v${APP_VERSION}.${BUILD_TIME_READABLE}.js`
             : `js/[name].js`,
@@ -218,35 +270,6 @@ export default defineConfig(({ mode, meta, envMode }) => {
             : `assets/[name][ext]`,
         },
       },
-      // =========== Key: Insert a new rule into Rspack loader chain ===========
-      // bundlerChain(chain, { CHAIN_ID }) {
-      //   const JS_RULES = [CHAIN_ID.RULE.JS, CHAIN_ID.RULE.TS, CHAIN_ID.RULE.TSX];
-
-      //   // 1. First add jg-prefix-loader to process JS/TSX
-      //   chain.module
-      //     .rule('jg-prefix')
-      //     .test(/\.[jt]sx?$/)
-      //     .include.add(path.resolve(__dirname, 'src')).end()
-      //     .exclude.add(/node_modules/).end()
-      //     // 👇 Reuse Rsbuild built-in swc use. It already exists, just before it
-      //     .use('jg-prefix-loader')
-      //     .before(CHAIN_ID.USE.SWC) // <-- before chaining to swc
-      //     .loader(path.resolve(__dirname, 'build/loaders/jg-prefix-loader.cjs'))
-      //     .options({ prefix: 'jg', debug: true }); // Turn on debug to view the conversion results
-
-      //   // 2. Make sure Tailwind processing runs after jg-prefix-loader
-      //   // Get CSS rule chain
-      //   const cssRule = chain.module.rule('css');
-      //   if (cssRule) {
-      //     // Make sure postcss-loader is processed last
-      //     const uses = cssRule.uses.entries();
-      //     // If postcss-loader is found, adjust its order
-      //     if (uses['postcss-loader']) {
-      //       cssRule.uses.delete('postcss-loader');
-      //       cssRule.use('postcss-loader').loader('postcss-loader').end();
-      //     }
-      //   }
-      // },
     },
     module: {
       rules: [

@@ -1,11 +1,62 @@
-export const DEFAULT_LOW_WATER_MARK = 256 * 1024
+/**
+ * ============================================================
+ *  WebRTC File Upload — Backpressure Architecture Notes
+ * ============================================================
+ *
+ * Problem: sending a large file via DataChannel.send() in one burst may cause OOM or UI freeze.
+ * Solution: two-layer "brake" strategy + a global queue to keep browser memory stable,
+ * UI responsive, and ensure only one file uploads at a time.
+ *
+ *  JS send loop ──chunk──▶ DataChannel buffer ──SCTP──▶ device side
+ *       ▲                      │
+ *       │ ② setTimeout         │ ① bufferedAmount
+ *       │  yield main thread    │  control browser memory
+ *
+ * ① Browser memory protection (bufferedAmount)
+ *    DataChannel maintains an internal send queue; pending bytes accumulate in bufferedAmount.
+ *    · Above 1MB -> pause send()
+ *    · Back to 256KB -> onbufferedamountlow resumes sending automatically
+ *    Analogy: close the tap when the pipe is full, reopen when water level drops.
+ *
+ * ② Main-thread responsiveness (setTimeout scheduling)
+ *    JS is single-threaded. If a while-loop sends hundreds of chunks continuously,
+ *    UI rendering and input events can be blocked.
+ *    · After every 8 chunks, call setTimeout(fn, 0) to yield control to the browser
+ *    · Browser handles rendering/events first, then resumes sending
+ *    Analogy: take a short break every few steps to avoid locking up the page.
+ *
+ * ③ Global serial queue
+ *    Module-level _globalUploading works as a lock so only one file uploads at a time.
+ *    Later files are queued in _globalUploadQueue and start automatically when previous upload finishes.
+ *    Users can see queued files in "pending" state in task list.
+ *
+ * Note: device side does not currently support ACK receipts,
+ * so ACK sliding-window backpressure is not enabled.
+ * If device side later provides an { AlreadyUploadedBytes } receipt protocol,
+ * ACK-window logic can be reintroduced in onmessage as a third protection layer.
+ *
+ * Key parameters (tunable by network conditions):
+ *   · CHUNK_SIZE       = 4KB    — bytes per send() call
+ *   · HIGH_WATER_MARK  = 1MB    — pause threshold for buffer
+ *   · LOW_WATER_MARK   = 256KB  — resume threshold for buffer
+ *   · CHUNKS_PER_TICK  = 8      — chunks sent in each macrotask batch
+ * ============================================================
+ */
 
-export const DEFAULT_HIGH_WATER_MARK = 1 * 1024 * 1024
+/** DataChannel bufferedAmount resume threshold (256KB) */
+export const DEFAULT_LOW_WATER_MARK = 256 * 1024;
 
-export const CHUNK_SIZE = 4 * 1024
+/** DataChannel bufferedAmount pause threshold (1MB) */
+export const DEFAULT_HIGH_WATER_MARK = 1 * 1024 * 1024;
 
-export const CHUNKS_PER_TICK = 8
+/** Per-chunk data size (4KB) */
+export const CHUNK_SIZE = 4 * 1024;
 
-export const UPLOAD_LOCK_TIMEOUT = 60_000
+/** Maximum chunks sent per macrotask */
+export const CHUNKS_PER_TICK = 8;
 
-export const FINALIZE_TIMEOUT = 30_000
+/** Upload lock timeout (60s) to avoid deadlocks */
+export const UPLOAD_LOCK_TIMEOUT = 60_000;
+
+/** Timeout waiting for device confirmation after final send (30s) */
+export const FINALIZE_TIMEOUT = 30_000;

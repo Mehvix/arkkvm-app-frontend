@@ -7,7 +7,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from 'recharts';
 
 interface MultiLineChartProps {
   data: {
@@ -65,7 +65,7 @@ export default function MultiLineChart({
               hourCycle: 'h23',
               hour: '2-digit',
               minute: '2-digit',
-            })
+            });
           }}
         />
         <YAxis
@@ -113,12 +113,12 @@ export default function MultiLineChart({
               hour: '2-digit',
               minute: '2-digit',
               second: '2-digit',
-            })
+            });
           }}
-          formatter={(value: any) => {
+          formatter={(value: number | string) => {
             const formattedValue =
-              typeof value === 'number' ? value.toFixed(2) : value
-            return `${formattedValue}${unit || ''}`
+              typeof value === 'number' ? value.toFixed(2) : value;
+            return `${formattedValue}${unit || ''}`;
           }}
         />
         <Legend
@@ -145,5 +145,5 @@ export default function MultiLineChart({
         ))}
       </LineChart>
     </ResponsiveContainer>
-  )
+  );
 }

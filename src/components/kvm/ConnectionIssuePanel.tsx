@@ -7,9 +7,9 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-28 20:45:02
  */
-import { IconWarning } from '@/assets/icons'
-import { memo, type ReactNode } from 'react'
-import { Button } from '../ui/button'
+import { IconWarning } from '@/assets/icons';
+import { memo, type ReactNode } from 'react';
+import { Button } from '../ui/button';
 
 interface ConnectionIssuePanelProps {
   title?: string
@@ -21,8 +21,8 @@ interface ConnectionIssuePanelProps {
 const defaultItems = [
   'Ensure the HDMI cable securely connected at both ends',
   'Ensure source device is powered on and outputting a signal',
-  "If using an adapter, it\'s compatible and functioning correctly",
-]
+  'If using an adapter, it\'s compatible and functioning correctly',
+];
 
 const ConnectionIssuePanel = ({
   title = 'No HDMI signal detected',
@@ -48,14 +48,11 @@ const ConnectionIssuePanel = ({
         ))}
       </ul>
       {actionSlot ?? (
-        <a
-          href="https://arkkvm.com/docs/getting-started/troubleshooting"
-          target="_blank"
-        >
+        <a href="https://arkkvm.com/docs/getting-started/troubleshooting" target="_blank">
           <Button className="mt-4">Learn more →</Button>
         </a>
       )}
     </div>
-  )
-}
-export default memo(ConnectionIssuePanel)
+  );
+};
+export default memo(ConnectionIssuePanel);

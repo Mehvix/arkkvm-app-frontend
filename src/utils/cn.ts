@@ -4,8 +4,8 @@
  * @Author: zhanglei
  */
 
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 /**
  * Combines multiple class names with conditional logic and merges Tailwind classes
@@ -13,5 +13,5 @@ import { twMerge } from 'tailwind-merge'
  * @returns Combined class string
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }

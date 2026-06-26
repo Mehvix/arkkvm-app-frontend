@@ -7,11 +7,19 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-01-26 23:12:50
  */
+/**
+ * VirtualKeyboard data exports
+ * Unified export of all keyboard layout data
+ */
 
-export * from './keyboard-types'
+// Export type definitions
+export * from './keyboard-types';
 
-export * from './rows'
+// Export keyboard row data
+export * from './rows';
 
-export * from './layouts'
+// Export layout config (legacy)
+export * from './layouts';
 
-export * from './language-layouts'
+// Export language layout config (new)
+export * from './language-layouts';

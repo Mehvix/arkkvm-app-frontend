@@ -3,35 +3,35 @@
  * @Author: zhanglei
  * @Date: 2025-10-07 21:49:39
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-02-15 04:14:40
+ * @LastEditTime: 2026-05-11 17:35:04
  */
 
 import {
-  IconCamOff,
-  IconCamOn,
-  IconMicOff,
-  IconMicOn,
-  IconVolOff,
-  IconVolOn,
-} from '@/assets/icons'
-import { Button } from '@/components/ui/button'
+    IconCamOff,
+    IconCamOn,
+    IconMicOff,
+    IconMicOn,
+    IconVolOff,
+    IconVolOn,
+} from '@/assets/icons';
+import { Button } from '@/components/ui/button';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { useJsonRpc } from '@/hooks/useJsonRpc'
-import { cn } from '@/lib/utils'
-import { useRTCStore } from '@/stores'
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useJsonRpc } from '@/hooks/useJsonRpc';
+import { cn } from '@/lib/utils';
+import { useRTCStore } from '@/stores';
 import {
-  useActiveDeviceSettings,
-  useSettingsActions,
-} from '@/stores/devicesStore'
-import { env } from '@/utils/env'
-import { createLogger } from '@/utils/logger'
-import { memo, useCallback, useEffect, useState } from 'react'
+    useActiveDeviceSettings,
+    useSettingsActions,
+} from '@/stores/devicesStore';
+import { env } from '@/utils/env';
+import { createLogger } from '@/utils/logger';
+import { memo, useCallback, useEffect, useState } from 'react';
 
-const logger = createLogger('MediaDeviceControl')
+const logger = createLogger('MediaDeviceControl');
 
 interface MediaDeviceControlProps {
   className?: string
@@ -42,124 +42,131 @@ interface MediaDeviceControlProps {
 
 const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
   className,
-  buttonClassName,
   variant = 'button',
   isCollapsed = false,
 }) => {
-  const peerConnection = useRTCStore(s => s.peerConnection)
+  const peerConnection = useRTCStore(s => s.peerConnection);
 
   // Media device state management
   const [audioTransceiver, setAudioTransceiver] =
-    useState<RTCRtpTransceiver | null>(null)
+    useState<RTCRtpTransceiver | null>(null);
   const [videoTransceiver, setVideoTransceiver] =
-    useState<RTCRtpTransceiver | null>(null)
-  const [audioTrack, setAudioTrack] = useState<MediaStreamTrack | null>(null)
-  const [videoTrack, setVideoTrack] = useState<MediaStreamTrack | null>(null)
-  const [isProcessingAudio, setIsProcessingAudio] = useState(false)
-  const [isProcessingVideo, setIsProcessingVideo] = useState(false)
+    useState<RTCRtpTransceiver | null>(null);
+  const [audioTrack, setAudioTrack] = useState<MediaStreamTrack | null>(null);
+  const [videoTrack, setVideoTrack] = useState<MediaStreamTrack | null>(null);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [isProcessingVideo, setIsProcessingVideo] = useState(false);
   const microphoneEmulation = useActiveDeviceSettings(
     state => state.microphoneEmulation
-  )
-  const isMicrophoneStreamActive = useActiveDeviceSettings(
-    state => state.isMicrophoneStreamActive
-  )
-  const audioPlayback = useActiveDeviceSettings(v => v.audioPlayback)
-  const cameraEmulation = useActiveDeviceSettings(v => v.cameraEmulation)
-  const [send, isChannelReady, sendAsync] = useJsonRpc()
-  const { setDeviceSetting } = useSettingsActions()
+  );
+  const audioPlayback = useActiveDeviceSettings(v => v.audioPlayback);
+  const cameraEmulation = useActiveDeviceSettings(v => v.cameraEmulation);
+  const usbDeviceConfig = useActiveDeviceSettings(
+      state => state.usbDeviceConfig
+    );
+  const [, isChannelReady, sendAsync] = useJsonRpc();
+  const { setDeviceSetting } = useSettingsActions();
 
+  // TODO: once backend exposes audioPlaybackEnabled,
+  // read it from useActiveDeviceSettings.
+  // It controls whether the playback button should be shown (device capability).
+  // audioPlayback controls current stream state (user action), while showAudioPlaybackUI controls UI visibility.
   const audioPlaybackEnabled = useActiveDeviceSettings(
     v => v.showAudioPlaybackUI
-  )
+  );
 
   // Auto-stop audio stream when microphone permission is disabled
   useEffect(() => {
     if (!microphoneEmulation && audioTrack && audioTransceiver) {
-      logger.info('Microphone permission disabled, stopping audio stream')
+      logger.info('Microphone permission disabled, stopping audio stream');
       try {
-        audioTrack.stop()
+        audioTrack.stop();
         audioTransceiver.sender.replaceTrack(null).catch(e => {
-          logger.warn('Failed to replace audio track:', e)
-        })
-        setAudioTrack(null)
+          logger.warn('Failed to replace audio track:', e);
+        });
+        setAudioTrack(null);
       } catch (error) {
-        logger.error('Error stopping audio stream:', error)
+        logger.error('Error stopping audio stream:', error);
       }
     }
-  }, [microphoneEmulation, audioTrack, audioTransceiver])
+  }, [microphoneEmulation, audioTrack, audioTransceiver]);
 
   // Get reserved audio and video send transceivers
   useEffect(() => {
-    if (peerConnection) {
-      const transceivers = peerConnection.getTransceivers()
+    if (!peerConnection || !isChannelReady) return;
+    // Guard: only run on a live connection, never on a closed/failed PC
+    const state = peerConnection.signalingState;
+    if (state === 'closed') return;
 
-      // Find audio send channel
-      const sendOnlyTransceivers = transceivers.filter(
-        t => t.direction === 'sendonly'
-      )
-      let audioSendTransceiver = sendOnlyTransceivers.find(
-        t => t.receiver?.track?.kind === 'audio'
-      )
+    const transceivers = peerConnection.getTransceivers();
+    const sendOnlyTransceivers = transceivers.filter(
+      t => t.direction === 'sendonly'
+    );
 
-      // If no reserved audio send channel found, create one dynamically
-      if (!audioSendTransceiver) {
-        logger.warn(
-          'No reserved audio send transceiver found, creating dynamically'
-        )
-        try {
-          audioSendTransceiver = peerConnection.addTransceiver('audio', {
-            direction: 'sendonly',
-          })
-          logger.info('Audio send transceiver created successfully')
-        } catch (error) {
-          logger.error('Failed to create audio send transceiver', error)
-        }
-      }
+    // mid may be null before SDP negotiation completes.
+    // Prefer matching by sender.track.kind; fall back to receiver.track.kind.
+    const findSendTransceiver = (kind: 'audio' | 'video') =>
+      sendOnlyTransceivers.find(
+        t =>
+          t.sender?.track?.kind === kind ||
+          t.receiver?.track?.kind === kind
+      );
 
-      if (audioSendTransceiver) {
-        setAudioTransceiver(audioSendTransceiver)
+    // Find audio send channel
+    let audioSendTransceiver = findSendTransceiver('audio');
 
-        // Check if there's already an active audio track in the sender
-        const existingTrack = audioSendTransceiver.sender?.track
-        if (existingTrack && existingTrack.readyState === 'live') {
-          logger.info('Found existing active audio track, restoring state')
-          setAudioTrack(existingTrack)
-        }
-      }
-
-      // Find video send channel
-      let videoSendTransceiver = transceivers.find(
-        t => t.direction === 'sendonly' && t.receiver?.track?.kind === 'video'
-      )
-
-      // If no reserved video send channel found, create one dynamically
-      if (!videoSendTransceiver) {
-        logger.warn(
-          'No reserved video send transceiver found, creating dynamically'
-        )
-        try {
-          videoSendTransceiver = peerConnection.addTransceiver('video', {
-            direction: 'sendonly',
-          })
-          logger.info('Video send transceiver created successfully')
-        } catch (error) {
-          logger.error('Failed to create video send transceiver', error)
-        }
-      }
-
-      if (videoSendTransceiver) {
-        setVideoTransceiver(videoSendTransceiver)
+    // If no reserved audio send channel found, create one dynamically
+    if (!audioSendTransceiver) {
+      logger.warn('No reserved audio send transceiver found, creating dynamically');
+      try {
+        audioSendTransceiver = peerConnection.addTransceiver('audio', {
+          direction: 'sendonly',
+        });
+        logger.info('Audio send transceiver created successfully');
+      } catch (error) {
+        logger.error('Failed to create audio send transceiver', error);
       }
     }
-  }, [peerConnection])
+
+    if (audioSendTransceiver) {
+      setAudioTransceiver(audioSendTransceiver);
+
+      // Check if there's already an active audio track in the sender
+      const existingTrack = audioSendTransceiver.sender?.track;
+      if (existingTrack && existingTrack.readyState === 'live') {
+        logger.info('Found existing active audio track, restoring state');
+        setAudioTrack(existingTrack);
+      }
+    }
+
+    // Find video send channel
+    let videoSendTransceiver = findSendTransceiver('video');
+
+    // If no reserved video send channel found, create one dynamically
+    if (!videoSendTransceiver) {
+      logger.warn('No reserved video send transceiver found, creating dynamically');
+      try {
+        videoSendTransceiver = peerConnection.addTransceiver('video', {
+          direction: 'sendonly',
+        });
+        logger.info('Video send transceiver created successfully');
+      } catch (error) {
+        logger.error('Failed to create video send transceiver', error);
+      }
+    }
+
+    if (videoSendTransceiver) {
+      setVideoTransceiver(videoSendTransceiver);
+    }
+  }, [peerConnection, isChannelReady]);
   useEffect(() => {
     if (isChannelReady) {
-      handleValClick(false)
+      // handleValClick(false)
     }
-  }, [isChannelReady, sendAsync])
+  }, [isChannelReady, sendAsync]);
   // Microphone control function
   const handleMicClick = useCallback(async () => {
-    if (isProcessingAudio || !audioTransceiver) return
+    if (isProcessingAudio || !audioTransceiver) return;
 
     // Environment check
     if (
@@ -169,23 +176,23 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
       peerConnection.connectionState === 'closed' ||
       peerConnection.connectionState === 'failed'
     ) {
-      return
+      return;
     }
 
-    setIsProcessingAudio(true)
+    setIsProcessingAudio(true);
 
     try {
       if (audioTrack) {
         // Stop audio streaming
         try {
-          audioTrack.stop()
-        } catch (e) {
+          audioTrack.stop();
+        } catch {
           // Ignore stop errors
         }
-        await audioTransceiver.sender.replaceTrack(null)
-        setAudioTrack(null)
+        await audioTransceiver.sender.replaceTrack(null);
+        setAudioTrack(null);
         // Update global state: user manually stopped microphone
-        setDeviceSetting('isMicrophoneStreamActive', false)
+        setDeviceSetting('isMicrophoneStreamActive', false);
       } else {
         // Start audio streaming
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -198,9 +205,9 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
             volume: 1.0,
           },
           video: false,
-        })
+        });
 
-        const track = stream.getAudioTracks()[0]
+        const track = stream.getAudioTracks()[0];
         if (track) {
           // Fix transceiver direction
           if (
@@ -208,34 +215,34 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
             audioTransceiver.direction !== 'sendrecv'
           ) {
             try {
-              audioTransceiver.direction = 'sendonly'
-            } catch (e) {
+              audioTransceiver.direction = 'sendonly';
+            } catch {
               // Ignore fix errors
             }
           }
 
-          await audioTransceiver.sender.replaceTrack(track)
-          setAudioTrack(track)
+          await audioTransceiver.sender.replaceTrack(track);
+          setAudioTrack(track);
           // Update global state: user manually started microphone
-          setDeviceSetting('isMicrophoneStreamActive', true)
+          setDeviceSetting('isMicrophoneStreamActive', true);
         } else {
-          stream.getTracks().forEach(t => t.stop())
+          stream.getTracks().forEach(t => t.stop());
         }
       }
     } catch (error) {
-      logger.error('Error toggling microphone', error)
+      logger.error('Error toggling microphone', error);
       // Cleanup state
       if (audioTrack) {
         try {
-          audioTrack.stop()
-        } catch (e) {
+          audioTrack.stop();
+        } catch {
           // Ignore cleanup errors
         }
       }
-      setAudioTrack(null)
-      setDeviceSetting('isMicrophoneStreamActive', false)
+      setAudioTrack(null);
+      setDeviceSetting('isMicrophoneStreamActive', false);
     } finally {
-      setIsProcessingAudio(false)
+      setIsProcessingAudio(false);
     }
   }, [
     peerConnection,
@@ -243,11 +250,11 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
     audioTransceiver,
     isProcessingAudio,
     setDeviceSetting,
-  ])
+  ]);
 
   // Camera control function
   const handleCameraClick = useCallback(async () => {
-    if (isProcessingVideo || !videoTransceiver) return
+    if (isProcessingVideo || !videoTransceiver) return;
 
     // Environment check
     if (
@@ -257,29 +264,29 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
       peerConnection.connectionState === 'closed' ||
       peerConnection.connectionState === 'failed'
     ) {
-      return
+      return;
     }
 
-    setIsProcessingVideo(true)
+    setIsProcessingVideo(true);
 
     try {
       if (videoTrack) {
         // Stop video streaming
         try {
-          videoTrack.stop()
-        } catch (e) {
+          videoTrack.stop();
+        } catch {
           // Ignore stop errors
         }
-        await videoTransceiver.sender.replaceTrack(null)
-        setVideoTrack(null)
+        await videoTransceiver.sender.replaceTrack(null);
+        setVideoTrack(null);
       } else {
         // Start video streaming
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
-        })
+        });
 
-        const track = stream.getVideoTracks()[0]
+        const track = stream.getVideoTracks()[0];
         if (track) {
           // Fix transceiver direction
           if (
@@ -287,66 +294,69 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
             videoTransceiver.direction !== 'sendrecv'
           ) {
             try {
-              videoTransceiver.direction = 'sendonly'
-            } catch (e) {
+              videoTransceiver.direction = 'sendonly';
+            } catch {
               // Ignore fix errors
             }
           }
 
-          await videoTransceiver.sender.replaceTrack(track)
-          setVideoTrack(track)
+          await videoTransceiver.sender.replaceTrack(track);
+          setVideoTrack(track);
         } else {
-          stream.getTracks().forEach(t => t.stop())
+          stream.getTracks().forEach(t => t.stop());
         }
       }
     } catch (error) {
-      logger.error('Error toggling camera', error)
+      logger.error('Error toggling camera', error);
       // Cleanup state
       if (videoTrack) {
         try {
-          videoTrack.stop()
-        } catch (e) {
+          videoTrack.stop();
+        } catch {
           // Ignore cleanup errors
         }
       }
-      setVideoTrack(null)
+      setVideoTrack(null);
     } finally {
-      setIsProcessingVideo(false)
+      setIsProcessingVideo(false);
     }
-  }, [peerConnection, videoTrack, videoTransceiver, isProcessingVideo])
+  }, [peerConnection, videoTrack, videoTransceiver, isProcessingVideo]);
   const handleValClick = useCallback(async () => {
     if (!isChannelReady) {
-      logger.warn('RPC channel not ready')
-      return
+      logger.warn('RPC channel not ready');
+      return;
     }
 
     try {
-      const newState = !audioPlayback
+      const newState = !audioPlayback;
 
+      // 1) Notify backend to stop/start audio playback stream
       const resp = await sendAsync({
         method: 'setAudioPlayback',
         params: { enabled: newState },
-      })
-
+      });
       if (resp?.success) {
-        logger.info('Audio playback toggled via RPC:', newState)
+        logger.info('Audio playback toggled via RPC:', newState);
 
-        setDeviceSetting('audioPlayback', newState)
+        // 2) Update local state immediately (do not wait for backend push)
+        setDeviceSetting('audioPlayback', newState);
 
+        // 3) Also control audio track on frontend side (double-safety)
+        // If peerConnection exists, directly toggle received audio track
         if (peerConnection) {
-          const receivers = peerConnection.getReceivers()
+          const receivers = peerConnection.getReceivers();
           receivers.forEach(receiver => {
             if (receiver.track && receiver.track.kind === 'audio') {
-              receiver.track.enabled = newState
-              logger.info('Audio track enabled state:', newState)
+              receiver.track.enabled = newState;
+              logger.info('Audio track enabled state:', newState);
             }
-          })
+          });
         }
       } else {
-        logger.error('Failed to toggle audio playback:', resp)
+        logger.error('Failed to toggle audio playback:', resp);
       }
     } catch (error) {
-      logger.error('Error toggling audio playback:', error)
+      logger.error('Error toggling audio playback:', error);
     }
   }, [
     isChannelReady,
@@ -354,7 +364,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
     audioPlayback,
     peerConnection,
     setDeviceSetting,
-  ])
+  ]);
 
   // Sidebar mode: show icon + text, style consistent with other menu items
   if (variant === 'sidebar') {
@@ -366,18 +376,18 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="w-[40px] p-[0] border-none bg-transparent align-center"
+                    className="w-10 p-0 border-none bg-transparent align-center"
                     onClick={handleValClick}
                     disabled={!isChannelReady}
                   >
                     {audioPlayback ? (
-                      <IconVolOn className="size-4  text-[var(--text-color)] align-center" />
+                      <IconVolOn className="size-4 text-text align-center" />
                     ) : (
-                      <IconVolOff className="size-4 text-[var(--text-secondary)] align-center" />
+                      <IconVolOff className="size-4 text-(--text-secondary) align-center" />
                     )}
                     {/* <span
                       className={cn(
-                        'text-xs ml-[var(--spacing-xs)] whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-150 ease-out',
+                        'text-sm ml-[var(--spacing-xs)] whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-150 ease-out',
                         isCollapsed
                           ? 'opacity-0 max-w-0'
                           : 'opacity-100 max-w-[160px]'
@@ -398,22 +408,22 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
                 <TooltipTrigger asChild>
                   <span className="inline-flex">
                     <Button
-                      className="w-[40px] p-[0] border-none bg-transparent"
+                      className="w-10 p-0 border-none bg-transparent"
                       onClick={handleMicClick}
                       disabled={
                         !isChannelReady ||
                         isProcessingAudio ||
-                        !env.isSecureContext
+                        !env.isSecureContext||!usbDeviceConfig?.microphone
                       }
                     >
                       {audioTrack ? (
-                        <IconMicOn className="size-4  text-[var(--text-color)]" />
+                        <IconMicOn className="size-4 text-text" />
                       ) : (
-                        <IconMicOff className="size-4 text-[var(--text-secondary)]" />
+                        <IconMicOff className="size-4 text-(--text-secondary)" />
                       )}
                       {/* <span
                       className={cn(
-                        'text-xs ml-[var(--spacing-xs)] whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-150 ease-out',
+                        'text-sm ml-[var(--spacing-xs)] whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-150 ease-out',
                         isCollapsed
                           ? 'opacity-0 max-w-0'
                           : 'opacity-100 max-w-[160px]'
@@ -449,13 +459,13 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
                     }
                   >
                     {videoTrack ? (
-                      <IconCamOn className="size-4 text-[var(--text-color)]" />
+                      <IconCamOn className="size-4 text-text" />
                     ) : (
-                      <IconCamOff className="size-4 text-[var(--text-secondary)]" />
+                      <IconCamOff className="size-4 text-(--text-secondary)" />
                     )}
                     <span
                       className={cn(
-                        'text-xs ml-[var(--spacing-xs)] whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-150 ease-out',
+                        'text-sm ml-[var(--spacing-xs)] whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-150 ease-out',
                         isCollapsed
                           ? 'opacity-0 max-w-0'
                           : 'opacity-100 max-w-[160px]'
@@ -477,7 +487,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
           <></>
         )}
       </>
-    )
+    );
   }
 
   // Button mode: show button style
@@ -495,9 +505,9 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
               >
                 <span className="inline-flex items-center justify-center">
                   {audioPlayback ? (
-                    <IconVolOn className="size-4  text-[var(--text-color)] align-center" />
+                    <IconVolOn className="size-4 text-text align-center" />
                   ) : (
-                    <IconVolOff className="size-4 text-[var(--text-secondary)] align-center" />
+                    <IconVolOff className="size-4 text-(--text-secondary) align-center" />
                   )}
                 </span>
 
@@ -518,7 +528,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
                   className="px-[6px]"
                   onClick={handleMicClick}
                   disabled={
-                    !isChannelReady || isProcessingAudio || !env.isSecureContext
+                    !isChannelReady || isProcessingAudio || !env.isSecureContext||!usbDeviceConfig?.microphone
                   }
                 >
                   <span className="inline-flex items-center justify-center">
@@ -566,7 +576,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
         )} */}
       </div>
     </>
-  )
-}
+  );
+};
 
-export default memo(MediaDeviceControl)
+export default memo(MediaDeviceControl);

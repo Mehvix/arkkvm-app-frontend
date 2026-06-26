@@ -5,7 +5,7 @@
  * @Author: zhanglei
  * @Date: 2026-02-09 20:52:14
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-02-11 03:38:52
+ * @LastEditTime: 2026-04-09 17:24:35
  */
 /**
  * UploadDropZone — main upload component.
@@ -13,14 +13,18 @@
  * Orchestrates the upload hook with progress display and drop zone UI.
  * Supports both WebRTC DataChannel and HTTP upload transports.
  */
-import { memo } from 'react'
+import { forwardRef, memo, useImperativeHandle } from 'react';
 
-import type { UploadDropZoneProps } from './types'
-import UploadProgress from './UploadProgress'
-import UploadZone from './UploadZone'
-import { useUpload } from './useUpload'
+import type { UploadDropZoneProps } from './types';
+import UploadProgress from './UploadProgress';
+import UploadZone from './UploadZone';
+import { useUpload } from './useUpload';
 
-function UploadDropZoneBase(props: UploadDropZoneProps) {
+export interface UploadDropZoneRef {
+  cancelUpload: (fileName?: string) => void;
+}
+
+function UploadDropZoneBase(props: UploadDropZoneProps, ref: React.Ref<UploadDropZoneRef>) {
   const {
     label = '',
     formatsText = 'Supported formats: ISO, IMG',
@@ -39,7 +43,8 @@ function UploadDropZoneBase(props: UploadDropZoneProps) {
     step,
     customUploadTrigger,
     uploaderContainerClassName = '',
-  } = props
+    beforeUpload,
+  } = props;
 
   const {
     uploadState,
@@ -48,12 +53,17 @@ function UploadDropZoneBase(props: UploadDropZoneProps) {
     dragging,
     inputRef,
     pickingRef,
+    cancelUpload,
     handleDragOver,
     handleDragEnter,
     handleDragLeave,
     handleDrop,
     handleFileSelected,
-  } = useUpload({ ...props, accept })
+  } = useUpload({ ...props, accept, beforeUpload });
+
+  useImperativeHandle(ref, () => ({
+    cancelUpload: () => cancelUpload(),
+  }));
 
   return (
     <>
@@ -93,8 +103,8 @@ function UploadDropZoneBase(props: UploadDropZoneProps) {
         />
       ) : null}
     </>
-  )
+  );
 }
 
-const UploadDropZone = memo(UploadDropZoneBase)
-export default UploadDropZone
+const UploadDropZone = memo(forwardRef(UploadDropZoneBase));
+export default UploadDropZone;

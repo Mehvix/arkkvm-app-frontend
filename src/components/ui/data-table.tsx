@@ -1,21 +1,21 @@
-import { IconCheckbox, IconUnchecked } from '@/assets/icons'
-import { cn } from '@/lib/utils'
-import React from 'react'
+import { IconCheckbox, IconUnchecked } from '@/assets/icons';
+import { cn } from '@/lib/utils';
+import React from 'react';
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './table'
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from './table';
 
-export type DataTableColumn<T extends object = any> = {
+export type DataTableColumn<T extends object = Record<string, unknown>> = {
   key?: React.Key
   title: React.ReactNode
   dataIndex?: keyof T & string
-  render?: (value: any, record: T, index: number) => React.ReactNode
+  render?: (value: unknown, record: T, index: number) => React.ReactNode
   className?: string
   headerClassName?: string
   width?: number | string
@@ -32,7 +32,7 @@ export type DataTableColumn<T extends object = any> = {
   onCellClick?: (payload: {
     event: React.MouseEvent<HTMLTableCellElement>
     record: T
-    value: any
+    value: unknown
     rowIndex: number
     dataIndex?: keyof T & string
     column: DataTableColumn<T>
@@ -44,13 +44,13 @@ export type RowKey<T> =
   | ((record: T, index: number) => React.Key)
 
 export type SortOrder = 'ascend' | 'descend'
-export type DataTableSort<T extends object = any> = {
+export type DataTableSort<T extends object = Record<string, unknown>> = {
   dataIndex: keyof T & string
   order: SortOrder
 }
 
 export interface DataTableProps<
-  T extends object = any,
+  T extends object = Record<string, unknown>,
 > extends React.HTMLAttributes<HTMLTableElement> {
   columns: DataTableColumn<T>[]
   list: T[]
@@ -95,14 +95,14 @@ export interface DataTableProps<
   onCellClick?: (payload: {
     event: React.MouseEvent<HTMLTableCellElement>
     record: T
-    value: any
+    value: unknown
     rowIndex: number
     dataIndex?: keyof T & string
     column: DataTableColumn<T>
   }) => void
 }
 
-export function DataTable<T extends object = any>(props: DataTableProps<T>) {
+export function DataTable<T extends object = Record<string, unknown>>(props: DataTableProps<T>) {
   const {
     columns,
     list,
@@ -120,148 +120,144 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
     onCellClick,
     scroll,
     ...rest
-  } = props
+  } = props;
 
   const getRowKey = (record: T, index: number): React.Key => {
-    if (typeof rowKey === 'function') return rowKey(record, index)
-    if (typeof rowKey === 'string') return (record as any)?.[rowKey] ?? index
+    if (typeof rowKey === 'function') return rowKey(record, index);
+    if (typeof rowKey === 'string') return (record as Record<string, unknown>)?.[rowKey] as React.Key ?? index;
     // fallback: use first column dataIndex or index
-    const firstKey = columns.find(c => c.dataIndex)?.dataIndex
-    return (firstKey ? (record as any)?.[firstKey] : undefined) ?? index
-  }
+    const firstKey = columns.find(c => c.dataIndex)?.dataIndex;
+    return (firstKey ? (record as Record<string, unknown>)?.[firstKey] as React.Key : undefined) ?? index;
+  };
 
   const [sort, setSort] = React.useState<DataTableSort<T> | null>(
     defaultSort ?? null
-  )
+  );
 
   const sortedList = React.useMemo(() => {
-    if (!sort) return list
-    const col = columns.find(c => c.dataIndex === sort.dataIndex)
-    if (!col) return list
-    const base = [...list]
+    if (!sort) return list;
+    const col = columns.find(c => c.dataIndex === sort.dataIndex);
+    if (!col) return list;
+    const base = [...list];
     const cmp: (a: T, b: T) => number =
       typeof col.sorter === 'function'
         ? col.sorter
         : (a: T, b: T) => {
-            const va = (a as any)?.[sort.dataIndex]
-            const vb = (b as any)?.[sort.dataIndex]
-            if (va == null && vb == null) return 0
-            if (va == null) return -1
-            if (vb == null) return 1
-            if (typeof va === 'number' && typeof vb === 'number') return va - vb
-            return String(va).localeCompare(String(vb))
-          }
-    base.sort((a, b) => (sort.order === 'ascend' ? cmp(a, b) : -cmp(a, b)))
-    return base
-  }, [list, columns, sort])
+            const va = (a as Record<string, unknown>)?.[sort.dataIndex];
+            const vb = (b as Record<string, unknown>)?.[sort.dataIndex];
+            if (va == null && vb == null) return 0;
+            if (va == null) return -1;
+            if (vb == null) return 1;
+            if (typeof va === 'number' && typeof vb === 'number') return va - vb;
+            return String(va).localeCompare(String(vb));
+          };
+    base.sort((a, b) => (sort.order === 'ascend' ? cmp(a, b) : -cmp(a, b)));
+    return base;
+  }, [list, columns, sort]);
 
   // -------- selection helpers (controlled) --------
   const selectedSet = React.useMemo(
     () => new Set(rowSelection?.selectedRowKeys ?? []),
     [rowSelection?.selectedRowKeys]
-  )
-  const visibleKeys: React.Key[] = React.useMemo(
-    () => sortedList.map((r, i) => getRowKey(r, i)),
-    [sortedList]
-  )
+  );
   const allEnabledVisibleKeys: React.Key[] = React.useMemo(() => {
-    if (!rowSelection) return []
+    if (!rowSelection) return [];
     return sortedList
       .map((r, i) => ({ key: getRowKey(r, i), rec: r }))
       .filter(({ rec }) => !rowSelection.getCheckboxProps?.(rec)?.disabled)
-      .map(({ key }) => key)
-  }, [sortedList, rowSelection])
+      .map(({ key }) => key);
+  }, [sortedList, rowSelection]);
   const allSelected = rowSelection
     ? allEnabledVisibleKeys.length > 0 &&
       allEnabledVisibleKeys.every(k => selectedSet.has(k))
-    : false
+    : false;
   const partiallySelected = rowSelection
     ? !allSelected && allEnabledVisibleKeys.some(k => selectedSet.has(k))
-    : false
+    : false;
 
   const emitSelection = (keys: React.Key[]) => {
-    if (!rowSelection) return
-    const rows: T[] = []
-    const keyToRow = new Map<React.Key, T>()
-    sortedList.forEach((r, i) => keyToRow.set(getRowKey(r, i), r))
+    if (!rowSelection) return;
+    const rows: T[] = [];
+    const keyToRow = new Map<React.Key, T>();
+    sortedList.forEach((r, i) => keyToRow.set(getRowKey(r, i), r));
     keys.forEach(k => {
-      const rec = keyToRow.get(k)
-      if (rec) rows.push(rec)
-    })
-    rowSelection.onChange(keys, rows)
-  }
+      const rec = keyToRow.get(k);
+      if (rec) rows.push(rec);
+    });
+    rowSelection.onChange(keys, rows);
+  };
 
   const toggleRow = (record: T, index: number) => {
-    if (!rowSelection) return
-    const key = getRowKey(record, index)
-    const disabled = rowSelection.getCheckboxProps?.(record)?.disabled
-    if (disabled) return
-    const next = new Set(selectedSet)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    emitSelection(Array.from(next))
-  }
+    if (!rowSelection) return;
+    const key = getRowKey(record, index);
+    const disabled = rowSelection.getCheckboxProps?.(record)?.disabled;
+    if (disabled) return;
+    const next = new Set(selectedSet);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    emitSelection(Array.from(next));
+  };
 
   const toggleAll = () => {
-    if (!rowSelection) return
+    if (!rowSelection) return;
     if (allSelected) {
       // unselect all visible enabled keys
       const next = rowSelection.selectedRowKeys.filter(
         k => !allEnabledVisibleKeys.includes(k)
-      )
-      emitSelection(next)
-      return
+      );
+      emitSelection(next);
+      return;
     }
     // select all visible enabled keys + keep previously selected others
     const merged = new Set([
       ...rowSelection.selectedRowKeys,
       ...allEnabledVisibleKeys,
-    ])
-    emitSelection(Array.from(merged))
-  }
+    ]);
+    emitSelection(Array.from(merged));
+  };
 
   const toggleSort = (
     dataIndex?: keyof T & string,
     enabled?: DataTableColumn<T>['sorter']
   ) => {
-    if (!dataIndex || !enabled) return
+    if (!dataIndex || !enabled) return;
     setSort(prev => {
       if (!prev || prev.dataIndex !== dataIndex) {
-        const next = { dataIndex, order: 'ascend' as SortOrder }
-        onSortChange?.(next)
-        return next
+        const next = { dataIndex, order: 'ascend' as SortOrder };
+        onSortChange?.(next);
+        return next;
       }
       if (prev.order === 'ascend') {
-        const next = { dataIndex, order: 'descend' as SortOrder }
-        onSortChange?.(next)
-        return next
+        const next = { dataIndex, order: 'descend' as SortOrder };
+        onSortChange?.(next);
+        return next;
       }
-      onSortChange?.(null)
-      return null // clear sort on third click
-    })
-  }
+      onSortChange?.(null);
+      return null; // clear sort on third click
+    });
+  };
 
   const setSortOrder = (
     dataIndex?: keyof T & string,
     enabled?: DataTableColumn<T>['sorter'],
     order?: SortOrder
   ) => {
-    if (!dataIndex || !enabled || !order) return
+    if (!dataIndex || !enabled || !order) return;
     setSort(prev => {
       if (prev && prev.dataIndex === dataIndex && prev.order === order) {
-        onSortChange?.(null)
-        return null // clicking same order again -> clear
+        onSortChange?.(null);
+        return null; // clicking same order again -> clear
       }
-      const next = { dataIndex, order } as DataTableSort<T>
-      onSortChange?.(next)
-      return next
-    })
-  }
+      const next = { dataIndex, order } as DataTableSort<T>;
+      onSortChange?.(next);
+      return next;
+    });
+  };
 
-  const hasData = Boolean(sortedList?.length)
+  const hasData = Boolean(sortedList?.length);
   const hoverEnabled =
-    rowHover === true ? true : rowHover === false ? false : hasData // 'auto'
-  const maxHeight = typeof scroll?.y === 'number' ? `${scroll.y}px` : scroll?.y
+    rowHover === true ? true : rowHover === false ? false : hasData; // 'auto'
+  const maxHeight = typeof scroll?.y === 'number' ? `${scroll.y}px` : scroll?.y;
   return (
     <div style={{ maxHeight, overflowY: 'auto' }}>
       <Table
@@ -285,8 +281,8 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                     partiallySelected && 'opacity-90'
                   )}
                   onClick={e => {
-                    e.stopPropagation()
-                    toggleAll()
+                    e.stopPropagation();
+                    toggleAll();
                   }}
                   aria-label="Select all"
                 >
@@ -329,8 +325,8 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                             : 'opacity-50'
                         )}
                         onClick={e => {
-                          e.stopPropagation()
-                          setSortOrder(col.dataIndex, col.sorter, 'ascend')
+                          e.stopPropagation();
+                          setSortOrder(col.dataIndex, col.sorter, 'ascend');
                         }}
                         title="Ascending"
                         aria-label="Sort ascending"
@@ -359,8 +355,8 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                             : 'opacity-50'
                         )}
                         onClick={e => {
-                          e.stopPropagation()
-                          setSortOrder(col.dataIndex, col.sorter, 'descend')
+                          e.stopPropagation();
+                          setSortOrder(col.dataIndex, col.sorter, 'descend');
                         }}
                         title="Descending"
                         aria-label="Sort descending"
@@ -419,8 +415,8 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                           'opacity-50 cursor-not-allowed'
                       )}
                       onClick={e => {
-                        e.stopPropagation()
-                        toggleRow(record, rowIndex)
+                        e.stopPropagation();
+                        toggleRow(record, rowIndex);
                       }}
                       disabled={
                         rowSelection.getCheckboxProps?.(record)?.disabled
@@ -437,24 +433,24 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                 ) : null}
                 {columns.map((col, colIndex) => {
                   const value = col.dataIndex
-                    ? (record as any)[col.dataIndex]
-                    : undefined
-                  const content = col.render
+                    ? (record as Record<string, unknown>)[col.dataIndex]
+                    : undefined;
+                  const content: React.ReactNode = col.render
                     ? col.render(value, record, rowIndex)
-                    : value
+                    : (value as React.ReactNode);
                   const alignClass =
                     col.align === 'center'
                       ? 'text-center'
                       : col.align === 'right'
                         ? 'text-right'
-                        : undefined
+                        : undefined;
                   return (
                     <TableCell
                       key={(col.key ?? col.dataIndex ?? colIndex) as React.Key}
                       className={cn(
                         col.className,
                         alignClass,
-                        'text-xs font-[400]',
+                        'text-sm font-[400]',
                         (col.onCellClick || onCellClick) && 'cursor-pointer'
                       )}
                       onClick={event => {
@@ -464,14 +460,14 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                           record,
                           value,
                           rowIndex,
-                          dataIndex: col.dataIndex as any,
+                          dataIndex: col.dataIndex,
                           column: col,
-                        })
+                        });
                       }}
                     >
                       {content}
                     </TableCell>
-                  )
+                  );
                 })}
               </TableRow>
             ))
@@ -498,7 +494,7 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
                         {emptyProps.title}
                       </div>
                     ) : null}
-                    <div className="text-xs  max-w-[520px] px-4">
+                    <div className="text-sm  max-w-[520px] px-4">
                       {emptyProps?.description ?? emptyText}
                     </div>
                   </div>
@@ -509,7 +505,7 @@ export function DataTable<T extends object = any>(props: DataTableProps<T>) {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
 
-export default DataTable
+export default DataTable;

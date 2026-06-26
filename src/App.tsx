@@ -1,36 +1,47 @@
-import { Suspense, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+/**
+ * @Purpose: Application entry component
+ * @Descripttion: Integrates i18n, theme settings and routing system
+ * @version: 1.0.0
+ * @Author: zhanglei
+ * @Date: 2025-07-14 15:45:53
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-02-07 02:51:01
+ */
 
-import { useAppStore } from '@/stores'
+import { Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { ConfirmDialogProvider } from '@/components/ui/confirm-dialog'
-import { Toaster } from '@/components/ui/sonner'
-import RouterProvider from './router'
+import { useAppStore } from '@/stores';
 
-import './App.css'
+import { ConfirmDialogProvider } from '@/components/ui/confirm-dialog';
+import { Toaster } from '@/components/ui/sonner';
+import RouterProvider from './router';
+
+import '@/styles/components.css';
+import './App.css';
 
 const GlobalLoadingFallback = () => (
   <div className="loading-box">Loading...</div>
-)
+);
 const App = () => {
-  const { i18n } = useTranslation()
-  const currentLang = useAppStore(s => s.currentLang)
-  const currentTheme = useAppStore(s => s.currentTheme)
-  const setTheme = useAppStore(s => s.setTheme)
+  const { i18n } = useTranslation();
+  const currentLang = useAppStore(s => s.currentLang);
+  const currentTheme = useAppStore(s => s.currentTheme);
+  const setTheme = useAppStore(s => s.setTheme);
   useEffect(() => {
-    i18n.changeLanguage(currentLang || 'en')
-  }, [currentLang, i18n])
+    i18n.changeLanguage(currentLang || 'en');
+  }, [currentLang, i18n]);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('ui-theme')
+    const storedTheme = localStorage.getItem('ui-theme');
     if (storedTheme && storedTheme !== currentTheme) {
-      setTheme(storedTheme)
+      setTheme(storedTheme);
     }
-  }, [])
+  }, []);
   useEffect(() => {
-    document.documentElement.classList.remove('dark', 'light')
-    document.documentElement.classList.add(currentTheme)
-  }, [currentTheme])
+    document.documentElement.classList.remove('dark', 'light');
+    document.documentElement.classList.add(currentTheme);
+  }, [currentTheme]);
 
   return (
     <Suspense fallback={<GlobalLoadingFallback />}>
@@ -48,7 +59,7 @@ const App = () => {
         </div>
       </ConfirmDialogProvider>
     </Suspense>
-  )
-}
+  );
+};
 
-export default App
+export default App;

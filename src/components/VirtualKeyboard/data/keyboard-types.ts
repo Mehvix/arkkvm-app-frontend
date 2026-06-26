@@ -34,7 +34,11 @@ export type KeyRole =
   | 'space'
 
 /** Keycap text display method */
-export type LegendLayout = 'single' | 'dual' | 'quad' | 'auto'
+export type LegendLayout =
+  | 'single'
+  | 'dual'
+  | 'quad'
+  | 'auto'
 
 /** Visual style */
 export type KeyVariant = 'default' | 'muted' | 'primary' | 'danger'
@@ -65,19 +69,26 @@ export interface KeyDefinition {
   appleLegends?: KeyLegends
   width?: number
 
+  /** New: Used for row-spanning/irregular shapes when necessary */
   grid?: KeyGrid
 
+  /** UI semantics */
   role?: KeyRole
 
+  /** Modifier key identifier (for highlighting/state machine) */
   isModifier?: boolean
 
+  /** Whether to show multiple states (e.g. to display all inputs) */
   showLegends?: boolean
 
+  /** Style information */
   style?: KeyStyle
 }
 
+/** A row of keys */
 export type KeyRow = KeyDefinition[]
 
+/** Complete layout */
 export interface KeyboardLayout {
   id: string
   name: string

@@ -7,27 +7,27 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-03 15:46:24
  */
-import { WelcomeBackground } from '@/components'
-import WelcomeSetupBtn from '@/components/WelcomeSetupBtn'
-import { useAppStore } from '@/stores'
-import { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { WelcomeBackground } from '@/components';
+import WelcomeSetupBtn from '@/components/WelcomeSetupBtn';
+import { useAppStore } from '@/stores';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const SetupMicrophonePage: React.FC = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const setMicrophoneEmulation = useAppStore(
     state => state.setMicrophoneEmulation
-  )
-  const { t } = useTranslation('messages')
+  );
+  const { t } = useTranslation('messages');
   const handleAction = useCallback(() => {
-    setMicrophoneEmulation(true)
-    navigate('/welcome/setup-file-transfer')
-  }, [setMicrophoneEmulation, navigate])
+    setMicrophoneEmulation(true);
+    navigate('/welcome/setup-file-transfer');
+  }, [setMicrophoneEmulation, navigate]);
   const handleLater = useCallback(() => {
-    setMicrophoneEmulation(false)
-    navigate('/welcome/setup-file-transfer')
-  }, [setMicrophoneEmulation, navigate])
+    setMicrophoneEmulation(false);
+    navigate('/welcome/setup-file-transfer');
+  }, [setMicrophoneEmulation, navigate]);
   return (
     <WelcomeBackground
       title={t('welcome.microphone.title')}
@@ -39,7 +39,7 @@ const SetupMicrophonePage: React.FC = () => {
         onLater={handleLater}
       ></WelcomeSetupBtn>
     </WelcomeBackground>
-  )
-}
+  );
+};
 
-export default SetupMicrophonePage
+export default SetupMicrophonePage;

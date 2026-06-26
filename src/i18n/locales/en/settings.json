@@ -143,7 +143,9 @@
     "apply": "Apply",
     "enable": "Enable",
     "disable": "Disable",
-    "retry": "Retry"
+    "retry": "Retry",
+    "update": "Apply Changes",
+    "refresh": "Restore Defaults"
   },
   "panels": {
     "accessibility": "Access",
@@ -183,7 +185,11 @@
         "title": "Relative",
         "desc": "Traditional mouse behavior",
         "tip": "Relative mode behaves like a traditional PC mouse and is useful for specific applications."
-
+      },
+      "toast": {
+        "noMouseDevice": "Mouse control is no longer available because no mouse device is enabled.",
+        "changedToRelative": "Mouse Mode was automatically changed to Relative Mouse.",
+        "changedToAbsolute": "Mouse Mode was automatically changed to Absolute Mouse."
       }
     }
   },
@@ -229,7 +235,7 @@
     "enhancement": {
       "title": "Video Color",
       "desc": "Adjust color settings to make the video output more vibrant and colorful",
-       "restoreButton": "Restore to default",
+      "restoreButton": "Restore to default",
       "saturation": {
         "title": "Saturation",
         "desc": "Color saturation"
@@ -254,7 +260,7 @@
       "custom": {
         "title": "Custom EDID",
         "desc": "EDID determines video mode compatibility.  Default settings work in most cases, but some UEFI/BIOS configurations may require adjustments.",
-        "placeholder":"Paste an EDID hex string (even length, 0–9 and A–F). Spaces are allowed and will be removed automatically.",
+        "placeholder": "Paste an EDID hex string (even length, 0–9 and A–F). Spaces are allowed and will be removed automatically.",
         "fileLabel": "EDID Data",
         "setButton": "Apply Custom EDID",
         "restoreButton": "Restore to default"
@@ -302,8 +308,30 @@
       "title": "USB Devices",
       "desc": "Configure USB device emulation for the remote computer",
       "classes": {
-        "title": "Classes",
-        "desc": "USB device classes in the composite device"
+        "title": "Devices",
+        "desc": "Choose which USB devices to emulate on the target computer"
+      },
+      "devices": {
+        "presets": {
+          "fullFeatureSet": "Full feature set",
+          "keyboardMouse": "Keyboard & Mouse"
+        },
+        "keyboardRelativeMouse": {
+          "title": "Keyboard & Relative Mouse",
+          "desc": "Emulates a USB keyboard and relative mouse. Recommended for BIOS, GRUB, KVM switches, games, and legacy systems."
+        },
+        "absoluteMouse": {
+          "title": "Absolute Mouse (Pointer)",
+          "desc": "Emulates an absolute-position USB pointer for direct cursor alignment with the target screen."
+        },
+        "virtualStorage": {
+          "title": "Virtual Storage",
+          "desc": "Enables virtual storage devices such as Virtual Media and Virtual USB Drive."
+        },
+        "usbMicrophone": {
+          "title": "USB Microphone",
+          "desc": "Emulates a USB microphone input device on the target computer."
+        }
       },
       "virtualUsbDrive": {
         "title": "Virtual USB Drive",
@@ -311,8 +339,14 @@
         "warning": "This drive uses FAT32. Reformatting it may prevent ArkKVM from mounting it again."
       },
       "identifiers": {
-        "title": "Identifiers",
-        "desc": "USB device identifiers exposed to the target computer"
+        "title": "Device Identifiers",
+        "desc": "Configure the USB device information shown to the target computer",
+        "presets": {
+          "arkkvmDefault": "ArkKVM Default",
+          "logitechUniversalAdapter": "Logitech",
+          "microsoftWirelessKeyboard": "Microsoft",
+          "dellMultimediaKeyboard": "Dell"
+        }
       }
     }
   },
@@ -327,7 +361,7 @@
     },
     "httpProxy": {
       "title": "HTTP Proxy",
-      "desc": "roxy server for outgoing HTTP and HTTPS requests. Leave blank to connect directly."
+      "desc": "Proxy server for outgoing HTTP and HTTPS requests. Leave blank to connect directly."
     },
     "domain": {
       "title": "Domain",
@@ -341,6 +375,29 @@
     "timeSynchronization": {
       "title": "Time synchronization",
       "desc": "Configure how the device synchronizes system time"
+    },
+    "vlan": {
+      "title": "VLAN (802.1Q)",
+      "desc": "Connect ArkKVM to tagged VLAN networks using IEEE 802.1Q.",
+      "enableWarning": {
+        "title": "Enable VLAN?",
+        "line1": "Enabling VLAN mode replaces the untagged network interface with tagged VLAN interfaces.",
+        "line2": "Incorrect settings may make the device unreachable."
+      },
+      "primaryVlan": {
+        "title": "Primary VLAN",
+        "desc": "Used for outbound system traffic and internet-connected services."
+      },
+      "vlanId": {
+        "title": "VLAN ID",
+        "desc": "Enter a VLAN ID between 1 and 4094. The connected switch port must allow this tagged VLAN."
+      },
+      "secondaryVlan": {
+        "title": "Secondary VLAN",
+        "desc": "Provides additional local access to ArkKVM, but does not carry outbound system traffic.",
+        "idDesc": "Secondary VLAN must use a different VLAN ID from the Primary VLAN."
+      },
+      "addSecondary": "Add Secondary VLAN"
     },
     "saveButton": "Save Settings",
     "savingButton": "Saving...",
@@ -358,6 +415,7 @@
       "gateway": "Gateway",
       "subnetMask": "Subnet Mask",
       "dhcpServer": "DHCP Server",
+      "dnsServers": "DNS Servers",
       "broadcast": "Broadcast",
       "bootNextServer": "Boot Next Server",
       "hostname": "Hostname",
@@ -372,6 +430,28 @@
       "ipv6Address": "IPv6 Address",
       "validLifetime": "Valid Lifetime",
       "preferredLifetime": "Preferred Lifetime"
+    },
+    "emptyState": {
+      "switchToDhcp": {
+        "title": "Switch to DHCP?",
+        "desc": "Click \"Save Settings\" to apply this change and automatically get network information."
+      },
+      "ipv4Info": {
+        "title": "IPv4 Information",
+        "desc": "No IPv4 addresses configured"
+      },
+      "ipv4Pending": {
+        "title": "IPv4 Information",
+        "desc": "Save settings to apply this configuration and obtain IPv4 network information."
+      },
+      "ipv6Pending": {
+        "title": "IPv6 Information",
+        "desc": "Save settings to apply this configuration and obtain IPv6 network information."
+      },
+      "ipv6Info": {
+        "title": "IPv6 Information",
+        "desc": "No IPv6 addresses configured"
+      }
     }
   },
   "advanced": {
@@ -447,6 +527,9 @@
       "button": "Change Password",
       "formTitle": "Change Local Password",
       "formDesc": "Enter your current password and choose a new password.",
+      "oldPasswordLabel": "Current Password",
+      "newPasswordLabel": "New Password",
+      "confirmPasswordLabel": "Confirm New Password",
       "oldPasswordPlaceholder": "Enter your current password",
       "newPasswordPlaceholder": "Enter a strong password",
       "confirmPasswordPlaceholder": "Re-enter a strong password",
@@ -484,7 +567,9 @@
       "apiLabel": "Cloud API URL",
       "apiPlaceholder": "https://cloud.arkkvm.com/api",
       "appLabel": "Cloud App URL",
-      "appPlaceholder": "https://cloud.arkkvm.com/app"
+      "appPlaceholder": "https://cloud.arkkvm.com/app",
+      "invalidApiUrl": "Invalid API URL format",
+      "invalidAppUrl": "Invalid App URL format"
     },
     "cloudButtons": {
       "adopt": "Connect to Cloud",
@@ -520,6 +605,34 @@
       "close": "Done",
       "errorEmpty": "Please enter your current password",
       "errorGeneral": "An error occurred while removing the password"
+    },
+    "privateNetwork": {
+      "title": "Private Network",
+      "desc": "Choose and enable private network services for remote access"
+    },
+    "tailscale": {
+      "title": "Tailscale",
+      "desc": "Connect ArkKVM to your Tailscale network",
+      "status": {
+        "connecting": "Connecting...",
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "offline": "Offline",
+        "logged_out": "Needs Login",
+        "error": "Error"
+      },
+      "fields": {
+        "status": "Status",
+        "tailscaleIp": "Tailscale IP",
+        "hostname": "Hostname"
+      },
+      "actions": {
+        "openLogin": "Open Login page",
+        "generateNewLink": "Generate New Login Link",
+        "authHint": "Open the login page below to authenticate this ArkKVM device.",
+        "authExpiredBefore": "If the login link expires or authentication does not complete, click \"",
+        "authExpiredAfter": "\" and try again."
+      }
     }
   }
 }

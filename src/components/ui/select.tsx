@@ -1,9 +1,10 @@
-import * as SelectPrimitive from '@radix-ui/react-select'
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
-import * as React from 'react'
+import * as SelectPrimitive from '@radix-ui/react-select';
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
-import { sizeVariants } from './variants'
+import { useFullscreenPortalContainer } from '@/contexts/FullscreenPortalContext';
+import { cn } from '@/lib/utils';
+import { sizeVariants } from './variants';
 
 type BaseSelectProps = React.ComponentProps<typeof SelectPrimitive.Root>
 
@@ -39,16 +40,16 @@ function Select({
       >
         {children}
       </SelectPrimitive.Root>
-    )
+    );
   }
 
   // If options provided and no children, render a complete Select
   if (options && options.length) {
     const handleChange = (v: string) => {
-      const opt = options.find(o => String(o.value) === String(v))
-      onChange?.(v, opt)
-      onValueChange?.(v)
-    }
+      const opt = options.find(o => String(o.value) === String(v));
+      onChange?.(v, opt);
+      onValueChange?.(v);
+    };
     return (
       <SelectPrimitive.Root
         data-slot="select"
@@ -72,7 +73,7 @@ function Select({
           ))}
         </SelectContent>
       </SelectPrimitive.Root>
-    )
+    );
   }
 
   // Fallback to primitive wrapper
@@ -82,19 +83,19 @@ function Select({
       onValueChange={onValueChange}
       {...props}
     />
-  )
+  );
 }
 
 function SelectGroup({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Group>) {
-  return <SelectPrimitive.Group data-slot="select-group" {...props} />
+  return <SelectPrimitive.Group data-slot="select-group" {...props} />;
 }
 
 function SelectValue({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />
+  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
 function SelectTrigger({
@@ -110,7 +111,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        'border-input data-[placeholder]: [&_svg:not([class*=text-])]: focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border border-[var(--border-color)] bg-transparent text-xs text-[var(--text-color)] whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+        'border-input data-[placeholder]: [&_svg:not([class*=text-])]: focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border border-[var(--border-color)] bg-transparent text-sm text-[var(--text-color)] whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
         sizeVariants[size] ?? sizeVariants.default,
         className
       )}
@@ -121,7 +122,7 @@ function SelectTrigger({
         <ChevronDownIcon className="size-4 opacity-50" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
-  )
+  );
 }
 
 function SelectContent({
@@ -130,8 +131,9 @@ function SelectContent({
   position = 'popper',
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const portalContainer = useFullscreenPortalContainer();
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={portalContainer ?? undefined}>
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(
@@ -156,7 +158,7 @@ function SelectContent({
         <SelectScrollDownButton className="text-[var(--text-color)]" />
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
-  )
+  );
 }
 
 function SelectLabel({
@@ -166,10 +168,10 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn(' px-2 py-1.5 text-xs', className)}
+      className={cn(' px-2 py-1.5 text-sm ', className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectItem({
@@ -181,7 +183,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'focus:bg-accent focus:text-accent-foreground [&_svg:not([class*=text-])]: relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-xs text-[var(--text-color)] outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2',
+        'focus:bg-accent focus:text-accent-foreground [&_svg:not([class*=text-])]: relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm text-[var(--text-color)] outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2',
         className
       )}
       {...props}
@@ -193,7 +195,7 @@ function SelectItem({
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
-  )
+  );
 }
 
 function SelectSeparator({
@@ -206,7 +208,7 @@ function SelectSeparator({
       className={cn('bg-border pointer-events-none -mx-1 my-1 h-px', className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectScrollUpButton({
@@ -224,7 +226,7 @@ function SelectScrollUpButton({
     >
       <ChevronUpIcon className="size-4  text-[var(--text-color)]" />
     </SelectPrimitive.ScrollUpButton>
-  )
+  );
 }
 
 function SelectScrollDownButton({
@@ -242,7 +244,7 @@ function SelectScrollDownButton({
     >
       <ChevronDownIcon className="size-4  text-[var(--text-color)]" />
     </SelectPrimitive.ScrollDownButton>
-  )
+  );
 }
 
 // High-level wrapper with options prop and two-way binding
@@ -252,8 +254,8 @@ export type AppSelectOption = {
   label?: React.ReactNode
   disabled?: boolean
   // maps to item-level extra attributes
-  tagProps?: Record<string, any>
-  extra?: any
+  tagProps?: Record<string, unknown>
+  extra?: unknown
   index?: number
 }
 
@@ -287,8 +289,8 @@ function AppSelect({
       value={value}
       defaultValue={defaultValue}
       onValueChange={v => {
-        const opt = options.find(o => String(o.value) === String(v))
-        onChange?.(v, opt)
+        const opt = options.find(o => String(o.value) === String(v));
+        onChange?.(v, opt);
       }}
       {...rootProps}
     >
@@ -309,19 +311,19 @@ function AppSelect({
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }
 
 export {
-  AppSelect,
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectScrollDownButton,
-  SelectScrollUpButton,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-}
+    AppSelect,
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectScrollDownButton,
+    SelectScrollUpButton,
+    SelectSeparator,
+    SelectTrigger,
+    SelectValue
+};

@@ -1,5 +1,10 @@
-import { createKeyDef } from '../../merge'
-import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows'
+/**
+ * @Purpose: UK English Windows keyboard layout
+ * @Author: zhanglei
+ * @Date: 2026-01-28
+ */
+import { createKeyDef } from '../../merge';
+import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
 
 const EN_GB_ALTGR: Record<string, { altGr?: string }> = {
   Backquote: { altGr: '¦' },
@@ -10,7 +15,7 @@ const EN_GB_ALTGR: Record<string, { altGr?: string }> = {
   KeyO: { altGr: 'ó' },
   KeyU: { altGr: 'ú' },
   Backslash: { altGr: '|' },
-}
+};
 
 export const UK_WIN_LAYOUT = {
   id: 'uk-win',
@@ -18,11 +23,7 @@ export const UK_WIN_LAYOUT = {
   rows: [
     FUNCTION_KEYS_ROW,
     [
-      createKeyDef('Backquote', {
-        base: '`',
-        shift: '¬',
-        ...EN_GB_ALTGR.Backquote,
-      }),
+      createKeyDef('Backquote', { base: '`', shift: '¬' , ...EN_GB_ALTGR.Backquote}),
       createKeyDef('Digit1', { base: '1', shift: '!', caps: '1' }),
       createKeyDef('Digit2', { base: '2', shift: '"', caps: '2' }),
       createKeyDef('Digit3', { base: '3', shift: '£', caps: '3' }),
@@ -39,7 +40,7 @@ export const UK_WIN_LAYOUT = {
       createKeyDef('Digit9', { base: '9', shift: '(', caps: '9' }),
       createKeyDef('Digit0', { base: '0', shift: ')', caps: '0' }),
       createKeyDef('Minus', { base: '-', shift: '_' }),
-      createKeyDef('Equal', { base: '=', shift: '+' }),
+      createKeyDef('Equal', { base: '=', shift: '+',  }),
       createKeyDef('Backspace', undefined, { width: 1.5 }),
     ],
     [
@@ -69,12 +70,8 @@ export const UK_WIN_LAYOUT = {
       createKeyDef('KeyK'),
       createKeyDef('KeyL'),
       createKeyDef('Semicolon', { base: ';', shift: ':' }),
-      createKeyDef('Quote', { base: "'", shift: '@' }),
-      createKeyDef('Backslash', {
-        base: '#',
-        shift: '~',
-        ...EN_GB_ALTGR.Backslash,
-      }),
+      createKeyDef('Quote', { base: '\'', shift: '@' }),
+      createKeyDef('Backslash', { base: '#', shift: '~', ...EN_GB_ALTGR.Backslash }),
       createKeyDef('Enter', undefined, { width: 2.7 }),
     ],
     [
@@ -104,4 +101,4 @@ export const UK_WIN_LAYOUT = {
     ],
   ],
   rightPanel: RIGHT_PANEL_ROWS,
-}
+};

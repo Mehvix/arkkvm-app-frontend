@@ -1,37 +1,31 @@
-import type { WebRTCState } from './slices/rtcSlice'
-import type { UIStateActions, UIStateData } from './slices/uiSlice'
-import type { UpdateStateActions, UpdateStateData } from './slices/updateSlice'
+import type { DeviceState } from './slices/deviceStateSlice';
+import type { DownloadListSlice } from './slices/fileTransferDownloadSlice';
+import type { TransferListSlice } from './slices/fileTransferListSlice';
+import type { GlobalSettingsSlice } from './slices/globalSettingsSlice';
+import type { HidSlice } from './slices/hidSlice';
+import type { MouseSlice } from './slices/mouseSlice';
+import type { WebRTCState } from './slices/rtcSlice';
+import type { SettingsSlice } from './slices/settingsSlice';
+import type { SetupSlice } from './slices/setupSlice';
+import type { UISlice } from './slices/uiSlice';
+import type { UpdateSlice } from './slices/updateSlice';
+import type { UploadSlice } from './slices/uploadSlice';
+import type { UserSlice } from './slices/userSlice';
 
-export interface RootState {
-  rtc: WebRTCState
-  ui: UIStateData & UIStateActions
-  update: UpdateStateData & UpdateStateActions
-
-  uploads: Record<string, UploadTask>
-  registerUpload: (
-    key: string,
-    task: Omit<UploadTask, 'id'> & { id?: string }
-  ) => void
-  unregisterUpload: (key: string) => void
-  getUpload: (key: string) => UploadTask | undefined
-  clearUploads: () => void
-
-  hideCursor: boolean
-  cursorStyle: 'dot' | 'arrow'
-  scrollThrottling: boolean | number
-  keyboardLanguage: string
-  showPressedKeys: boolean
-
-  currentLang: string
-  supportedLanguages: { code: string; name: string }[]
-
-  currentTheme: string
-
-  setHideCursor: (v: boolean) => void
-  setCursorStyle: (v: 'dot' | 'arrow') => void
-  setScrollThrottling: (v: boolean | number) => void
-  setKeyboardLanguage: (v: string) => void
-  setShowPressedKeys: (v: boolean) => void
-  setLanguage: (lang: string) => void
-  setTheme: (theme: string) => void
-}
+// Root state type (composed from all slices).
+export type RootState =
+  MouseSlice &
+  HidSlice &
+  GlobalSettingsSlice &
+  UserSlice &
+  UploadSlice &
+  DeviceState &
+  SetupSlice &
+  UpdateSlice &
+  SettingsSlice &
+  {
+    fileTransferList: TransferListSlice
+    fileDownloadList: DownloadListSlice
+    rtc: WebRTCState
+    ui: UISlice
+  }

@@ -1,6 +1,6 @@
-import * as React from 'react'
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
@@ -12,15 +12,10 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     >
-      <div
-        className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-5"
-        style={{
-          backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`,
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-5 card-texture" />
       {props.children}
     </div>
-  )
+  );
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
@@ -33,7 +28,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
@@ -43,7 +38,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
       className={cn('leading-none font-semibold text-sm', className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
@@ -51,12 +46,12 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="card-description"
       className={cn(
-        'font-normal text-xs text-[var(--text-secondary)]',
+        'font-normal text-sm text-[var(--text-secondary)]',
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
@@ -69,7 +64,7 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
@@ -79,7 +74,7 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
       className={cn('px-6', className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
@@ -89,15 +84,15 @@ function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
       className={cn('flex items-center px-6 [.border-t]:pt-6', className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-}
+    Card,
+    CardAction,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle
+};

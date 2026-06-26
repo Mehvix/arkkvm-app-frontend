@@ -1,0 +1,3 @@
+{
+  "usbDevicesRuntimeApplyRejected": "无法禁用虚拟存储，因为虚拟 USB 驱动器已挂载到远程主机。请先将其卸载回 ArkKVM，然后重试。"
+}

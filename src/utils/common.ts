@@ -5,42 +5,42 @@
  * @Author: zhanglei
  * @Date: 2026-01-10 11:14:20
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-01-24 11:42:38
+ * @LastEditTime: 2026-04-20 15:45:21
  */
 
 export const toNumber = (v: unknown, fallback = 0): number =>
-  typeof v === 'number' && Number.isFinite(v) ? v : fallback
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 
 export const toPositiveInt = (v: unknown, fallback = 0): number => {
-  const n = toNumber(v, fallback)
-  return n > 0 ? Math.floor(n) : fallback
-}
+  const n = toNumber(v, fallback);
+  return n > 0 ? Math.floor(n) : fallback;
+};
 
 export const toString = (v: unknown, fallback = ''): string =>
-  typeof v === 'string' ? v : fallback
+  typeof v === 'string' ? v : fallback;
 
 export const toBoolean = (v: unknown, fallback = false): boolean => {
-  if (typeof v === 'boolean') return v
+  if (typeof v === 'boolean') return v;
   if (typeof v === 'string') {
-    if (v.toLowerCase() === 'true') return true
-    if (v.toLowerCase() === 'false') return false
+    if (v.toLowerCase() === 'true') return true;
+    if (v.toLowerCase() === 'false') return false;
   }
-  if (typeof v === 'number') return v !== 0
-  return fallback
-}
+  if (typeof v === 'number') return v !== 0;
+  return fallback;
+};
 export const toFixedNumber = (v: unknown, digits = 2, fallback = 0): number => {
-  let n: number
+  let n: number;
   if (typeof v === 'number') {
-    n = v
+    n = v;
   } else if (typeof v === 'string') {
-    const parsed = Number(v.trim())
-    n = Number.isFinite(parsed) ? parsed : fallback
+    const parsed = Number(v.trim());
+    n = Number.isFinite(parsed) ? parsed : fallback;
   } else {
-    n = fallback
+    n = fallback;
   }
-  const d = Math.min(20, Math.max(0, Math.trunc(digits)))
-  return Number(n.toFixed(d))
-}
+  const d = Math.min(20, Math.max(0, Math.trunc(digits)));
+  return Number(n.toFixed(d));
+};
 
 /**
  * Normalize URL by removing duplicate slashes
@@ -48,5 +48,6 @@ export const toFixedNumber = (v: unknown, digits = 2, fallback = 0): number => {
  * @example normalizeUrl('//url/de/ddd') => '/url/de/ddd'
  */
 export const normalizeUrl = (url: string): string => {
-  return url.replace(/([^:]\/)\/+/g, '$1').replace(/^\/+/, '/')
-}
+  return url.replace(/(^|[^:])\/{2,}/g, '$1/');
+
+};

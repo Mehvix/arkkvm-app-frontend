@@ -1,33 +1,62 @@
-import React from 'react'
-import { Input } from '@/components/ui/input'
-import SettingBlock, { type SettingBlockProps } from './SettingBlock'
+import { Input } from '@/components/ui/input';
+import React from 'react';
+import SettingBlock, { type SettingBlockProps } from './SettingBlock';
 
 export interface SettingInputProps extends Omit<SettingBlockProps, 'children'> {
+  /**
+   * Current input value
+   */
   value: string
-
+  /**
+   * Callback triggered when input value changes
+   */
   onChange: (value: string) => void
-
+  /**
+   * Input placeholder text
+   */
   placeholder?: string
-
+  /**
+   * Whether input is disabled
+   */
   disabled?: boolean
-
+  /**
+   * Input type
+   */
   type?: 'text' | 'password' | 'email' | 'number' | 'url' | 'tel'
-
+  /**
+   * Maximum input length
+   */
   maxLength?: number
-
+  /**
+   * Whether input is read-only
+   */
   readOnly?: boolean
-
+  /**
+   * Callback triggered on blur
+   */
   onBlur?: () => void
-
+  /**
+   * Callback triggered when Enter is pressed
+   */
   onEnter?: () => void
-
+  /**
+   * Input size
+   */
   inputSize?: 'sm' | 'default'
-
+  /**
+   * Custom input className
+   */
   inputClassName?: string
-
+  /**
+   * Extra bottom content (e.g. hint text)
+   */
   children?: React.ReactNode
 }
 
+/**
+ * Reusable settings input component.
+ * Combines SettingBlock layout and Input control.
+ */
 export default function SettingInput({
   value,
   onChange,
@@ -36,7 +65,6 @@ export default function SettingInput({
   type = 'text',
   maxLength,
   readOnly = false,
-  children,
   onBlur,
   onEnter,
   inputSize = 'sm',
@@ -45,9 +73,9 @@ export default function SettingInput({
 }: SettingInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && onEnter) {
-      onEnter()
+      onEnter();
     }
-  }
+  };
 
   return (
     <SettingBlock {...settingBlockProps}>
@@ -67,5 +95,5 @@ export default function SettingInput({
         />
       </SettingBlock.Bottom>
     </SettingBlock>
-  )
+  );
 }

@@ -2,7 +2,7 @@
  * Base keyboard key definitions.
  * Defines all standard keyboard keys with their legends and metadata.
  */
-import { ModChord } from './keyboard-types'
+import { ModChord } from './keyboard-types';
 
 export type BaseKeyTemplate = {
   [keyCode: string]: Partial<Record<ModChord, string>>
@@ -49,7 +49,7 @@ export const LETTER_BASE_KEYS: BaseKeyTemplate = {
   KeyB: { base: 'b', shift: 'B' },
   KeyN: { base: 'n', shift: 'N' },
   KeyM: { base: 'm', shift: 'M' },
-}
+};
 
 export const COMMON_KEYS: Record<string, BaseKeyDefinition> = {
   Escape: { legends: { base: 'Esc' }, ignoreAltGr: true },
@@ -73,10 +73,10 @@ export const COMMON_KEYS: Record<string, BaseKeyDefinition> = {
   PrintScreen: { legends: { base: 'PrtSc' }, ignoreAltGr: true },
   ScrollLock: { legends: { base: 'ScrLk' }, ignoreAltGr: true },
   Pause: { legends: { base: 'Pause' }, ignoreAltGr: true },
-}
+};
 
 export const MODIFIER_KEYS: Record<string, BaseKeyDefinition> = {
-  ShiftLeft: { legends: { base: 'Shift' }, isModifier: true },
+  ShiftLeft: { legends: { base: 'Shift' }, isModifier: true ,width:1.5},
   ShiftRight: { legends: { base: 'Shift' }, isModifier: true },
 
   ControlLeft: { legends: { base: 'Ctrl' }, isModifier: true },
@@ -90,7 +90,7 @@ export const MODIFIER_KEYS: Record<string, BaseKeyDefinition> = {
   MetaRight: { legends: { base: '⊞' }, isModifier: true, ignoreAltGr: true },
 
   CapsLock: { legends: { base: 'Caps' }, ignoreAltGr: true },
-}
+};
 
 /**
  * US keyboard symbol keys with dual-state display.
@@ -116,7 +116,7 @@ export const US_SYMBOL_KEYS: Record<string, BaseKeyDefinition> = {
   Backslash: { legends: { base: '\\', shift: '|' }, showDualState: true },
 
   Semicolon: { legends: { base: ';', shift: ':' }, showDualState: true },
-  Quote: { legends: { base: "'", shift: '"' }, showDualState: true },
+  Quote: { legends: { base: '\'', shift: '"' }, showDualState: true },
 
   Comma: { legends: { base: ',', shift: '<' }, showDualState: true },
   Period: { legends: { base: '.', shift: '>' }, showDualState: true },
@@ -124,7 +124,7 @@ export const US_SYMBOL_KEYS: Record<string, BaseKeyDefinition> = {
 
   IntlBackslash: { legends: { base: '\\', shift: '|' }, showDualState: true },
   HashTilde: { legends: { base: '#', shift: '~' }, showDualState: true },
-}
+};
 
 export const FUNCTION_KEYS: Record<string, BaseKeyDefinition> = {
   F1: { legends: { base: 'F1' } },
@@ -151,7 +151,7 @@ export const FUNCTION_KEYS: Record<string, BaseKeyDefinition> = {
   F22: { legends: { base: 'F22' } },
   F23: { legends: { base: 'F23' } },
   F24: { legends: { base: 'F24' } },
-}
+};
 
 export const NAVIGATION_KEYS: Record<string, BaseKeyDefinition> = {
   ArrowUp: { legends: { base: '↑' }, ignoreAltGr: true },
@@ -165,7 +165,7 @@ export const NAVIGATION_KEYS: Record<string, BaseKeyDefinition> = {
   PageDown: { legends: { base: 'PgDn' }, ignoreAltGr: true },
   Insert: { legends: { base: 'Ins' }, ignoreAltGr: true },
   Delete: { legends: { base: 'Del' }, ignoreAltGr: true },
-}
+};
 
 export const SYSTEM_KEYS: Record<string, BaseKeyDefinition> = {
   Escape: { legends: { base: 'Esc' }, ignoreAltGr: true },
@@ -206,7 +206,7 @@ export const SYSTEM_KEYS: Record<string, BaseKeyDefinition> = {
   Mute: { legends: { base: '🔇' } },
   VolumeUp: { legends: { base: '🔊' } },
   VolumeDown: { legends: { base: '🔉' } },
-}
+};
 
 export const NUMPAD_KEYS: Record<string, BaseKeyDefinition> = {
   Numpad0: { legends: { base: '0' } },
@@ -284,7 +284,7 @@ export const NUMPAD_KEYS: Record<string, BaseKeyDefinition> = {
   NumpadKeyD: { legends: { base: 'D' } },
   NumpadKeyE: { legends: { base: 'E' } },
   NumpadKeyF: { legends: { base: 'F' } },
-}
+};
 
 export const INTERNATIONAL_KEYS: Record<string, BaseKeyDefinition> = {
   International1: { legends: { base: 'Int1' } },
@@ -296,26 +296,23 @@ export const INTERNATIONAL_KEYS: Record<string, BaseKeyDefinition> = {
   International7: { legends: { base: 'Int7' } },
   International8: { legends: { base: 'Int8' } },
   International9: { legends: { base: 'Int9' } },
-
   Lang1: { legends: { base: '한/영' } },
   Lang2: { legends: { base: '한자' } },
   Lang3: { legends: { base: 'カタカナ' } },
   Lang4: { legends: { base: 'ひらがな' } },
-  Lang5: { legends: { base: '全/半' } },
+  Lang5: { legends: { base: 'Full/Half' } },
   Lang6: { legends: { base: 'Lang6' } },
   Lang7: { legends: { base: 'Lang7' } },
   Lang8: { legends: { base: 'Lang8' } },
   Lang9: { legends: { base: 'Lang9' } },
-
   LockingCapsLock: { legends: { base: 'Caps' }, isModifier: true },
   LockingNumLock: { legends: { base: 'NumLk' }, isModifier: true },
   LockingScrollLock: { legends: { base: 'ScrLk' }, isModifier: true },
-
   Compose: { legends: { base: 'Compose' }, isModifier: true },
-}
+};
 export const CURRENCY_KEYS: Record<string, BaseKeyDefinition> = {
   CurrencyUnit: { legends: { base: '¤' } },
   CurrencySubunit: { legends: { base: '¢' } },
   ThousandsSeparator: { legends: { base: ',' } },
   DecimalSeparator: { legends: { base: '.' } },
-}
+};

@@ -1,34 +1,36 @@
 import {
-  IconFolder,
-  IconMountBack,
-  IconNoFile,
-  IconNoFile1,
-  IconUSB,
-  IconUnion,
-} from '@/assets/icons'
-import { cn } from '@/lib/utils'
-import React from 'react'
-import StorageUsage from '../../StorageUsage'
+    IconFolder,
+    IconMountBack,
+    IconNoFile,
+    IconNoFile1,
+    IconUSB,
+    IconUnion,
+} from '@/assets/icons';
+import { cn } from '@/lib/utils';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import StorageUsage from '../../StorageUsage';
 import {
-  Breadcrumb,
-  BreadcrumbEllipsis,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '../../ui/breadcrumb'
-import { Button } from '../../ui/button'
-import DataTable from '../../ui/data-table'
-import UploadDropZone from '../../Upload'
-import ActionPanel from '../ActionPanel'
-import { completedColumns } from './columns'
-import type { UseVirtualUsbDriveReturn } from './useVirtualUsbDrive'
-import { commandClass } from './utils'
+    Breadcrumb,
+    BreadcrumbEllipsis,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '../../ui/breadcrumb';
+import { Button } from '../../ui/button';
+import DataTable from '../../ui/data-table';
+import UploadDropZone from '../../Upload';
+import ActionPanel from '../ActionPanel';
+import { completedColumns } from './columns';
+import type { UseVirtualUsbDriveReturn } from './useVirtualUsbDrive';
+import { commandClass } from './utils';
 
 type FileManagerViewProps = UseVirtualUsbDriveReturn
 
 export default function FileManagerView(props: FileManagerViewProps) {
+  const { t } = useTranslation('common');
   const {
     uploads,
     downloads,
@@ -39,10 +41,14 @@ export default function FileManagerView(props: FileManagerViewProps) {
     selectedCompletedRowKeys,
     setSelectedCompletedRowKeys,
     isDownload,
+    downloadDisabledReason,
+    canDeleteSelected,
+    hasFtcacheUploadingConflict,
     hasActiveTransfers,
     isLoading,
     setListType,
     handleCreateDir,
+    handleCreateFile,
     handleMountWithFileImg,
     handleDelete,
     handleDownload,
@@ -55,23 +61,23 @@ export default function FileManagerView(props: FileManagerViewProps) {
     setState,
     truncateBytes,
     logger,
-  } = props
+  } = props;
   const breadcrumbNodes = React.useMemo(() => {
-    const norm = (p: string) => p.replace(/\\+/g, '/')
-    const clean = norm(currentPath || '/')
-    const parts = clean.split('/').filter(Boolean)
+    const norm = (p: string) => p.replace(/\\+/g, '/');
+    const clean = norm(currentPath || '/');
+    const parts = clean.split('/').filter(Boolean);
     // Build full path items
-    const items: { label: string; full: string; raw: string }[] = []
-    let acc = ''
+    const items: { label: string; full: string; raw: string }[] = [];
+    let acc = '';
     for (const part of parts) {
-      acc = acc ? `${acc}/${part}` : `/${part}`
-      items.push({ label: truncateBytes(part, 10), full: acc, raw: part })
+      acc = acc ? `${acc}/${part}` : `/${part}`;
+      items.push({ label: truncateBytes(part, 10), full: acc, raw: part });
     }
 
     // Split into head (root), middle (hidden), tail (last two)
-    const tailCount = 2
-    const middle = items.length > tailCount ? items.slice(0, -tailCount) : []
-    const tail = items.slice(-tailCount)
+    const tailCount = 2;
+    const middle = items.length > tailCount ? items.slice(0, -tailCount) : [];
+    const tail = items.slice(-tailCount);
 
     return (
       <Breadcrumb>
@@ -84,7 +90,7 @@ export default function FileManagerView(props: FileManagerViewProps) {
               <BreadcrumbLink
                 href="#"
                 data-path="/"
-                onClick={e => handleBreadcrumbClick?.('/')}
+                onClick={_e => handleBreadcrumbClick?.('/')}
                 className="cursor-pointer"
               >
                 My Files
@@ -109,7 +115,7 @@ export default function FileManagerView(props: FileManagerViewProps) {
                         <a
                           href="#"
                           data-path={m.full}
-                          onClick={e => handleBreadcrumbClick?.(m.full)}
+                          onClick={_e => handleBreadcrumbClick?.(m.full)}
                           title={m.raw}
                         >
                           {m.label}
@@ -135,7 +141,7 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   <BreadcrumbLink
                     href="#"
                     data-path={it.full}
-                    onClick={e => handleBreadcrumbClick?.(it.full)}
+                    onClick={_e => handleBreadcrumbClick?.(it.full)}
                     className="cursor-pointer"
                     title={it.raw}
                   >
@@ -147,8 +153,8 @@ export default function FileManagerView(props: FileManagerViewProps) {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-    )
-  }, [currentPath, truncateBytes, handleBreadcrumbClick])
+    );
+  }, [currentPath, truncateBytes, handleBreadcrumbClick]);
 
   return (
     <>
@@ -179,9 +185,9 @@ export default function FileManagerView(props: FileManagerViewProps) {
               (() => {
                 const isRunning =
                   uploads?.some(t => t.state === 'running') ||
-                  downloads?.some(t => t.state === 'running')
+                  downloads?.some(t => t.state === 'running');
                 const totalCount =
-                  (uploads?.length ?? 0) + (downloads?.length ?? 0)
+                  (uploads?.length ?? 0) + (downloads?.length ?? 0);
                 return (
                   <Button
                     size="sm"
@@ -198,13 +204,15 @@ export default function FileManagerView(props: FileManagerViewProps) {
                     />
                     {totalCount > 0 ? (
                       <span
-                        className={`absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[10px] leading-none bg-gray-500 text-white`}
+                        className={
+                          'absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[10px] leading-none bg-gray-500 text-white'
+                        }
                       >
                         {totalCount}
                       </span>
                     ) : null}
                   </Button>
-                )
+                );
               })()}
             {['Kvm', 'None'].includes(fileTransferState) ? (
               <Button
@@ -242,10 +250,18 @@ export default function FileManagerView(props: FileManagerViewProps) {
           <>
             {fileTransferState === 'Kvm' && (
               <>
+                {downloadDisabledReason ? (
+                  <div className="mr-auto text-sm text-[var(--text-muted)]">
+                    {downloadDisabledReason}
+                  </div>
+                ) : (
+                  <div className="mr-auto" />
+                )}
                 <Button
                   size="sm"
                   variant="primary"
                   className="btn-secondary"
+                  title={downloadDisabledReason}
                   disabled={!isDownload}
                   onClick={handleDownload}
                 >
@@ -257,8 +273,15 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   status="danger"
                   className="btn-secondary"
                   loading={isLoading('ftDelFile') || isLoading('ftDelDir')}
+                  title={
+                    hasFtcacheUploadingConflict
+                      ? t(
+                          'toolbar.virtualUsbDrive.deleteDisabled.ftcacheUploading'
+                        )
+                      : undefined
+                  }
                   disabled={
-                    selectedCompletedRowKeys.length === 0 ||
+                    !canDeleteSelected ||
                     isLoading('ftDelFile') ||
                     isLoading('ftDelDir')
                   }
@@ -271,6 +294,14 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   step="overview"
                   formatsText="Supported formats: All file types"
                   accept="*"
+                  beforeUpload={file => {
+                    if (file.size === 0) {
+                      const { path, name } = startParamsFn(file);
+                      handleCreateFile(`${path}/${name}`);
+                      return false;
+                    }
+                    return true;
+                  }}
                   maxFileSize={4 * 1000 * 1000 * 1000}
                   startParams={startParamsFn}
                   onStart={onStartUpload}
@@ -278,15 +309,15 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   onProgress={onProgressUpload}
                   onError={info => {
                     if (info?.name) {
-                      setState(info.name, 'error', info?.error)
+                      setState(info.name, 'error', info?.error);
                     }
                   }}
                   onPause={info => {
                     // Update state to paused
                     setTimeout(() => {
-                      logger.debug('Upload paused', { name: info.name })
-                      setState(info.name, 'paused')
-                    }, 3000)
+                      logger.debug('Upload paused', { name: info.name });
+                      setState(info.name, 'paused');
+                    }, 3000);
                   }}
                   showProgress={false}
                   showInputAlways={true}
@@ -316,48 +347,48 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   icon: <IconUSB className="size-8 opacity-80" />,
                   title: 'File System Not Mounted',
                   description:
-                    "Click 'Mount to Remote' to access the remote computer's file system and manage files.",
+                    'Click \'Mount to Remote\' to access the remote computer\'s file system and manage files.',
                   className: 'py-14',
-                }
+                };
               case 'RemoteUsb':
                 return {
                   icon: <IconNoFile className="size-8 opacity-80" />,
                   title: 'Unable to Display Files',
                   description:
-                    "Click 'Mount Back' to disconnect ArkKVM from the remote computer so you can view, upload, and download files on your local computer.",
+                    'Click \'Mount Back\' to disconnect ArkKVM from the remote computer so you can view, upload, and download files on your local computer.',
                   className: 'py-14',
-                }
+                };
               case 'Kvm':
                 return {
                   icon: <IconNoFile1 className="size-8 opacity-80" />,
                   title: 'No Files Available',
                   description:
-                    "Upload files from your local computer with the button below,or Click 'Mount to Remote' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.",
+                    'Upload files from your local computer with the button below,or Click \'Mount to Remote\' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.',
                   className: 'py-14',
-                }
+                };
               default:
                 return {
                   icon: <IconNoFile className="size-8 opacity-80" />,
                   title: 'No Files Available',
                   description:
-                    "Upload files from your local computer with the button below,or Click 'Mount to Remote' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.",
+                    'Upload files from your local computer with the button below,or Click \'Mount to Remote\' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.',
                   className: 'py-14',
-                }
+                };
             }
           })()}
           rowSelection={{
             selectedRowKeys: selectedCompletedRowKeys,
-            onChange: (keys, rows) => {
-              setSelectedCompletedRowKeys(keys)
+            onChange: (keys) => {
+              setSelectedCompletedRowKeys(keys);
             },
             columnWidth: 40,
           }}
           onCellClick={payload => {
-            const { record, dataIndex, value } = payload
+            const { record, dataIndex, value } = payload;
 
             // When clicking folder name, enter that directory: call getCompletedList('/'+name)
             if (dataIndex === 'name' && record?.is_dir) {
-              if (value) getCompletedList(`${currentPath}/${value}`)
+              if (value) getCompletedList(`${currentPath}/${value}`);
             }
           }}
         />
@@ -383,5 +414,5 @@ export default function FileManagerView(props: FileManagerViewProps) {
         <></>
       )}
     </>
-  )
+  );
 }

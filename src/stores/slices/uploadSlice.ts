@@ -1,4 +1,5 @@
-import { StateCreator } from 'zustand'
+import type { StateCreator } from 'zustand';
+import type { RootState } from '../types';
 
 export type UploadTask = {
   id: string // unique key, e.g. filename or composite
@@ -9,6 +10,10 @@ export type UploadTask = {
   size?: number
   // uploaded bytes so far (for restoring progress)
   uploaded?: number
+  // source identifier (e.g., 'storage', 'virtualUsb', 'device')
+  source?: string
+  // current state ('waiting', 'uploading', 'success', 'error')
+  state?: 'waiting' | 'uploading' | 'success' | 'error'
 }
 
 export interface UploadStateData {
@@ -19,7 +24,7 @@ export interface UploadStateData {
     {
       pause: () => void
       resume: () => void
-      getState?: () => any
+      getState?: () => unknown
       channel?: RTCDataChannel | null
     }
   >
@@ -47,15 +52,15 @@ export interface UploadStateActions {
 
 export type UploadSlice = UploadStateData & UploadStateActions
 
-export const createUploadSlice: StateCreator<any, [], [], UploadSlice> = (
+export const createUploadSlice: StateCreator<RootState, [], [], UploadSlice> = (
   set,
   get
 ) => ({
   uploads: {},
   controllers: {},
   registerUpload: (key, task) => {
-    const id = task.id ?? key
-    set((state: any) => ({
+    const id = task.id ?? key;
+    set((state: RootState) => ({
       uploads: {
         ...(state.uploads || {}),
         [key]: {
@@ -65,46 +70,48 @@ export const createUploadSlice: StateCreator<any, [], [], UploadSlice> = (
           startedAt: task.startedAt,
           size: task.size,
           uploaded: task.uploaded,
+          source: task.source,
+          state: task.state || 'uploading',
         },
       },
-    }))
+    }));
   },
   unregisterUpload: key => {
-    set((state: any) => {
-      const next = { ...(state.uploads || {}) } as Record<string, UploadTask>
-      delete next[key]
-      const ctrls = { ...(state.controllers || {}) } as Record<string, any>
-      delete ctrls[key]
-      return { uploads: next, controllers: ctrls }
-    })
+    set((state: RootState) => {
+      const next = { ...(state.uploads || {}) } as Record<string, UploadTask>;
+      delete next[key];
+      const ctrls = { ...(state.controllers || {}) } as Record<string, UploadStateData['controllers'][string]>;
+      delete ctrls[key];
+      return { uploads: next, controllers: ctrls };
+    });
   },
   getUpload: key => (get().uploads || {})[key],
   getFileNameByKey: key => (get().uploads || {})[key]?.filename,
   clearUploads: () => set(() => ({ uploads: {} })),
   updateUploadProgress: (key, uploaded, size) => {
-    set((state: any) => {
-      const next = { ...(state.uploads || {}) } as Record<string, UploadTask>
-      const cur = next[key]
-      if (!cur) return { uploads: state.uploads || {} }
+    set((state: RootState) => {
+      const next = { ...(state.uploads || {}) } as Record<string, UploadTask>;
+      const cur = next[key];
+      if (!cur) return { uploads: state.uploads || {} };
       next[key] = {
         ...cur,
         uploaded,
         size: size ?? cur.size,
-      }
-      return { uploads: next }
-    })
+      };
+      return { uploads: next };
+    });
   },
   setUploadController: (key, ctrl) => {
-    set((state: any) => ({
+    set((state: RootState) => ({
       controllers: { ...(state.controllers || {}), [key]: ctrl },
-    }))
+    }));
   },
   getUploadController: key => (get().controllers || {})[key],
   removeUploadController: key => {
-    set((state: any) => {
-      const ctrls = { ...(state.controllers || {}) } as Record<string, any>
-      delete ctrls[key]
-      return { controllers: ctrls }
-    })
+    set((state: RootState) => {
+      const ctrls = { ...(state.controllers || {}) } as Record<string, UploadStateData['controllers'][string]>;
+      delete ctrls[key];
+      return { controllers: ctrls };
+    });
   },
-})
+});

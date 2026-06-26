@@ -22,17 +22,17 @@ export const LED_COLORS = {
     primary: '#9ca3af',
     secondary: '#6b7280',
   },
-} as const
+} as const;
 
-export const ANIMATION_DURATION = 300
+export const ANIMATION_DURATION = 300;
 
-export const GLOW_ANIMATION = 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite'
+export const GLOW_ANIMATION = 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite';
 
 export const KEY_STYLES = {
   base: [
     'rounded-xs flex items-center justify-center relative',
     'border border-[var(--btn-outline-border)] transition-all duration-100 ease-out',
-    'text-xs md:text-sm select-none pointer-events-auto',
+    'text-sm md:text-sm select-none pointer-events-auto',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70',
   ],
   states: {
@@ -56,11 +56,11 @@ export const KEY_STYLES = {
     normal: [
       'bg-[var(--btn-outline-bg)] text-[var(--text-color)]',
       'border-[var(--btn-outline-border)]',
-
+      // Bottom shadow simulates key thickness
       'shadow-[0_3px_0_rgba(0,0,0,0.2),0_4px_6px_rgba(0,0,0,0.1)]',
       'hover:shadow-[0_2px_0_rgba(0,0,0,0.2),0_3px_4px_rgba(0,0,0,0.1)] hover:translate-y-[1px]',
       'active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] active:translate-y-[3px]',
       'cursor-pointer',
     ],
   },
-} as const
+} as const;

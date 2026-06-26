@@ -1,36 +1,39 @@
-import { generateTaskId, useFileDownload } from '@/hooks/useFileDownload'
-import { useLoadingMap } from '@/hooks/useLoading'
-import { useAppStore } from '@/stores'
-import type { DownloadItem } from '@/stores/slices/fileTransferDownloadSlice'
-import type { TransferRow } from '@/stores/slices/fileTransferListSlice'
-import { createLogger } from '@/utils/logger'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { useConfirmDialog } from '../../ui/confirm-dialog'
-import { Input } from '../../ui/input'
-import { removeFromQueue } from '../../Upload/uploadLock'
+import { generateTaskId, useFileDownload } from '@/hooks/useFileDownload';
+import { useLoadingMap } from '@/hooks/useLoading';
+import { useAppStore } from '@/stores';
+import type { DownloadItem } from '@/stores/slices/fileTransferDownloadSlice';
+import type { TransferRow } from '@/stores/slices/fileTransferListSlice';
+import { createLogger } from '@/utils/logger';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useConfirmDialog } from '../../ui/confirm-dialog';
+import { Input } from '../../ui/input';
+import { removeFromQueue } from '../../Upload/uploadLock';
 import type {
   DeleteResult,
   Row,
   StorageInfo,
   VirtualUsbDriveProps,
   VMState,
-} from './types'
-import { filterTasksByFtcache, joinPath } from './utils'
+} from './types';
+import { filterTasksByFtcache, joinPath } from './utils';
 
-const logger = createLogger('VirtualUsbDrive')
+const logger = createLogger('VirtualUsbDrive');
 
 export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
+  const { t } = useTranslation('common');
   // Prefer external rpc; fallback to local creation if not provided (backward compatibility)
-  const [send, isConnected, sendAsync] = rpc
-  const getFileNameByKey = useAppStore((s: any) => s.getFileNameByKey)
-  const uploadMap = useAppStore(s => s.fileTransferList.byId)
+  const [send, isConnected, sendAsync] = rpc;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getFileNameByKey = useAppStore((s: any) => s.getFileNameByKey);
+  const uploadMap = useAppStore(s => s.fileTransferList.byId);
   const uploads = Object.values(uploadMap).filter(
     item => item.source === 'virtual-usb'
-  )
-  const { createRow, setSpeed, updateProgress, removeRow, setState } =
-    useAppStore.getState().fileTransferList
-  const getUploadController = useAppStore((s: any) => s.getUploadController)
+  );
+  const { createRow, updateProgress, removeRow, setState } =
+    useAppStore.getState().fileTransferList;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getUploadController = useAppStore((s: any) => s.getUploadController);
 
   // Upload operation callbacks
   const handlePauseUpload = useCallback(
@@ -38,62 +41,66 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       logger.warn('handlePauseUpload called', {
         rowId: row.id,
         rowName: row.name,
-      })
-      const controller = getUploadController?.(row.id)
+      });
+      const controller = getUploadController?.(row.id);
       logger.warn('controller lookup', {
         found: !!controller,
         hasPause: !!controller?.pause,
         controllerState: controller?.getState?.(),
-      })
+      });
       if (controller?.pause) {
-        controller.pause()
-        logger.warn('pause() called, new state:', controller.getState?.())
-
-        setState(row.id, 'paused')
+        controller.pause();
+        logger.warn('pause() called, new state:', controller.getState?.());
+        // Update UI state to paused immediately (do not wait for callback latency)
+        setState(row.id, 'paused');
       } else {
-        logger.error('No controller found for', row.id)
-
-        setState(row.id, 'paused')
+        logger.error('No controller found for', row.id);
+        // Still update UI state
+        setState(row.id, 'paused');
       }
     },
     [getUploadController, setState]
-  )
+  );
 
   const removeUploadController = useAppStore(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (s: any) => s.removeUploadController
-  )
+  );
 
   const handleRemoveUpload = useCallback(
     (id: string) => {
-      const fileName = getFileNameByKey?.(id) || id
-      removeFromQueue(fileName)
+      // Remove from upload queue (pending tasks)
+      // id is usually filename; try both id and getFileNameByKey mapping
+      const fileName = getFileNameByKey?.(id) || id;
+      removeFromQueue(fileName);
 
-      const controller = getUploadController?.(id)
+      // Close DataChannel first and cleanup controller to avoid leaks
+      const controller = getUploadController?.(id);
       if (controller) {
-        const ch = controller.channel as RTCDataChannel | undefined
+        const ch = controller.channel as RTCDataChannel | undefined;
         if (ch) {
           try {
-            ch.onmessage = null
-            ch.onbufferedamountlow = null
-            ch.onerror = null
-            ch.onclose = null
+            ch.onmessage = null;
+            ch.onbufferedamountlow = null;
+            ch.onerror = null;
+            ch.onclose = null;
             if (ch.readyState === 'open' || ch.readyState === 'connecting') {
-              ch.close()
+              ch.close();
             }
           } catch {}
         }
         try {
-          removeUploadController?.(id)
+          removeUploadController?.(id);
         } catch {}
       }
-      removeRow(id)
+      removeRow(id);
     },
     [removeRow, getUploadController, removeUploadController, getFileNameByKey]
-  )
+  );
 
   const [selectedCompletedRowKeys, setSelectedCompletedRowKeys] = useState<
     React.Key[]
-  >([])
+  >([]);
   const {
     is: isLoading,
     start: startLoading,
@@ -107,99 +114,148 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
     'ftCreateDir',
     'ftListFile',
     'ftFileSystemInfo',
-  ])
-  const [fileTransferState, setFileTransferState] = useState<VMState>('None')
-  const [currentPath, setCurrentPath] = useState<string>('/')
-  const currentPathRef = useRef(currentPath)
-  currentPathRef.current = currentPath
+  ]);
+  const [fileTransferState, setFileTransferState] = useState<VMState>('None');
+  const [currentPath, setCurrentPath] = useState<string>('/');
+  const currentPathRef = useRef(currentPath);
+  const refreshTimerRef = useRef<number | null>(null);
+  currentPathRef.current = currentPath;
   const [listType, setListType] = useState<'completed' | 'transfer'>(
     'completed'
-  )
-  const [completedList, setCompletedList] = useState<Row[]>([])
-  const showCompletedList = useMemo(() => {
-    if (fileTransferState === 'Kvm') return completedList
-    return []
-  }, [fileTransferState, completedList])
+  );
+  const [completedList, setCompletedList] = useState<Row[]>([]);
   const [transferType, setTransferType] = useState<'upload' | 'download'>(
     'upload'
-  )
-  const [transferList, setTransferList] = useState<Row[]>()
-  const [createDirName, setCreateDirName] = useState<string>('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  );
+  const inputRef = useRef<HTMLInputElement>(null);
   const {
     setDownloadFileList,
     updateProgress: updateProgressDownload,
     removeRow: removeDownloadRow,
-  } = useAppStore.getState().fileDownloadList
+  } = useAppStore.getState().fileDownloadList;
   const [downloadFile] = useFileDownload({
     onProgress: task => {
       logger.debug('Download progress', {
         name: task.name,
         progress: task.progress,
-      })
+      });
       if (task.progress === 100) {
-        removeDownloadRow(task.id)
+        removeDownloadRow(task.id);
       } else {
-        updateProgressDownload(task.id, task)
+        updateProgressDownload(task.id, task);
       }
     },
     onComplete: task => {
-      logger.info('Download completed', { name: task.name, path: task.path })
-      const id = `${task.name}-${task.path}`
-      removeDownloadRow(id)
+      logger.info('Download completed', { name: task.name, path: task.path });
+      const id = `${task.name}-${task.path}`;
+      removeDownloadRow(id);
     },
-  })
-  const downloadsMap = useAppStore(s => s.fileDownloadList.byId)
-  const downloads = Object.values(downloadsMap)
+  });
+  const downloadsMap = useAppStore(s => s.fileDownloadList.byId);
+  const downloads = Object.values(downloadsMap);
 
   const [storageInfo, setStorageInfo] = useState<StorageInfo>({
     free_space: 0,
     total_space: 0,
     used_space: 0,
-  })
+  });
 
-  const { confirm } = useConfirmDialog()
+  const runningUploadTaskNames = useMemo(() => {
+    return new Set(
+      uploads
+        .filter(upload => upload.state === 'running')
+        .map(upload => upload.name)
+    );
+  }, [uploads]);
+
+  const showCompletedList = useMemo(() => {
+    if (fileTransferState !== 'Kvm') return [];
+    return completedList.filter(item => {
+      if (item.is_dir || !item.name?.endsWith('.ftcache')) return true;
+      const taskName = item.name.replace(/\.ftcache$/i, '');
+      return !runningUploadTaskNames.has(taskName);
+    });
+  }, [fileTransferState, completedList, runningUploadTaskNames]);
+
+  const { confirm } = useConfirmDialog();
+  const selectedCompletedRows = useMemo(
+    () =>
+      showCompletedList.filter((item, i) => selectedCompletedRowKeys.includes(i)),
+    [showCompletedList, selectedCompletedRowKeys]
+  );
+
+  const hasFtcacheUploadingConflict = useMemo(() => {
+    return selectedCompletedRows.some(item => {
+      if (item.is_dir || !item.name?.endsWith('.ftcache')) return false;
+      const taskName = item.name.replace(/\.ftcache$/i, '');
+      return runningUploadTaskNames.has(taskName);
+    });
+  }, [selectedCompletedRows, runningUploadTaskNames]);
+
+  const hasDirSelected = useMemo(() => {
+    return selectedCompletedRows.some(item => item.is_dir);
+  }, [selectedCompletedRows]);
+
+  const canDeleteSelected = useMemo(() => {
+    return selectedCompletedRowKeys.length > 0 && !hasFtcacheUploadingConflict;
+  }, [selectedCompletedRowKeys, hasFtcacheUploadingConflict]);
+
+  const downloadDisabledReason = useMemo(() => {
+    if (selectedCompletedRows.length === 0) return undefined;
+    if (hasDirSelected) {
+      return t('toolbar.virtualUsbDrive.downloadDisabled.folder');
+    }
+    if (hasFtcacheUploadingConflict) {
+      return t('toolbar.virtualUsbDrive.downloadDisabled.ftcacheUploading');
+    }
+    return undefined;
+  }, [
+    selectedCompletedRows,
+    hasDirSelected,
+    hasFtcacheUploadingConflict,
+    t,
+  ]);
+
   const isDownload = useMemo(() => {
-    const targets = completedList.filter((item, i) =>
-      selectedCompletedRowKeys.includes(i)
-    )
-    const isDir = targets.some(item => item.is_dir)
-    return targets.length > 0 && !isDir
-  }, [completedList, selectedCompletedRowKeys])
+    return selectedCompletedRows.length > 0 && !downloadDisabledReason;
+  }, [
+    selectedCompletedRows,
+    downloadDisabledReason,
+  ]);
 
   // Check if there are active upload or download tasks (excluding paused state)
   const hasActiveTransfers = useMemo(() => {
     // Check upload tasks - only check running tasks, exclude paused state
-    const hasActiveUploads = uploads.some(upload => upload.state === 'running')
+    const hasActiveUploads = uploads.some(upload => upload.state === 'running');
 
     // Check download tasks - only check running tasks, exclude paused state
     const hasActiveDownloads = downloads.some(
       download => download.state === 'running'
-    )
+    );
 
-    return hasActiveUploads || hasActiveDownloads
-  }, [uploads, downloads])
+    return hasActiveUploads || hasActiveDownloads;
+  }, [uploads, downloads]);
 
   // --- breadcrumb helpers ---
   const truncateBytes = useCallback((input: string, maxBytes = 10) => {
-    const enc = new TextEncoder()
-    let out = ''
-    let bytes = 0
+    const enc = new TextEncoder();
+    let out = '';
+    let bytes = 0;
     for (const ch of input) {
-      const size = enc.encode(ch).length
+      const size = enc.encode(ch).length;
       if (bytes + size > maxBytes) {
-        return out + '...'
+        return out + '...';
       }
-      out += ch
-      bytes += size
+      out += ch;
+      bytes += size;
     }
-    return out || '/'
-  }, [])
+    return out || '/';
+  }, []);
 
   // --- RPC operations ---
   const getFtFileSystemInfo = useCallback(async () => {
-    if (!isConnected) return
-    startLoading('ftFileSystemInfo')
+    if (!isConnected) return;
+    startLoading('ftFileSystemInfo');
     try {
       const ftFileSystemInfo = await sendAsync(
         {
@@ -208,16 +264,16 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
         {
           resultOnly: true,
         }
-      )
-      setStorageInfo(ftFileSystemInfo as StorageInfo)
+      );
+      setStorageInfo(ftFileSystemInfo as StorageInfo);
     } finally {
-      stopLoading('ftFileSystemInfo')
+      stopLoading('ftFileSystemInfo');
     }
-  }, [sendAsync, isConnected, wrap, startLoading, stopLoading])
+  }, [sendAsync, isConnected, wrap, startLoading, stopLoading]);
 
   const getCompletedList = useCallback(
     async (path = '/') => {
-      startLoading('ftListFile')
+      startLoading('ftListFile');
       try {
         const result = await sendAsync(
           {
@@ -229,57 +285,63 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
           {
             resultOnly: true,
           }
-        )
+        );
 
         if (Array.isArray(result)) {
-          setSelectedCompletedRowKeys([])
-          setCurrentPath(path)
-          setCompletedList(result || [])
+          setSelectedCompletedRowKeys([]);
+          setCurrentPath(path);
+          setCompletedList(result || []);
 
+          // Sync upload task list with device-side .ftcache files
+          // Keep only tasks that still have cache on device; remove completed/invalid ones
           const {
             fileTransferList,
             controllers,
             removeUploadController: rmCtrl,
-          } = useAppStore.getState()
+          } = useAppStore.getState();
           const currentUploads = Object.values(fileTransferList.byId).filter(
             (item: TransferRow) => item.source === 'virtual-usb'
-          )
-          const validTasks = filterTasksByFtcache(result, currentUploads, path)
-          const validIds = new Set(validTasks.map(t => t.id))
+          );
+          const validTasks = filterTasksByFtcache(result, currentUploads, path);
+          const validIds = new Set(validTasks.map(t => t.id));
 
+          // Remove paused tasks in current directory that are not in validIds
+          // Keep waiting tasks (running/pending); only clean paused tasks with no device cache
           currentUploads.forEach((task: TransferRow) => {
             if (
               task.path === path &&
               task.state === 'paused' &&
               !validIds.has(task.id)
             ) {
-              const ctrl = (controllers as any)?.[task.id]
+              // Cleanup potentially stale DataChannel and controller as well
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const ctrl = (controllers as any)?.[task.id];
               if (ctrl) {
-                const ch = ctrl.channel as RTCDataChannel | undefined
+                const ch = ctrl.channel as RTCDataChannel | undefined;
                 if (ch) {
                   try {
-                    ch.onmessage = null
-                    ch.onbufferedamountlow = null
-                    ch.onerror = null
-                    ch.onclose = null
+                    ch.onmessage = null;
+                    ch.onbufferedamountlow = null;
+                    ch.onerror = null;
+                    ch.onclose = null;
                     if (
                       ch.readyState === 'open' ||
                       ch.readyState === 'connecting'
                     ) {
-                      ch.close()
+                      ch.close();
                     }
                   } catch {}
                 }
                 try {
-                  rmCtrl?.(task.id)
+                  rmCtrl?.(task.id);
                 } catch {}
               }
-              fileTransferList.removeRow(task.id)
+              fileTransferList.removeRow(task.id);
             }
-          })
+          });
         }
       } finally {
-        stopLoading('ftListFile')
+        stopLoading('ftListFile');
       }
     },
     [
@@ -291,11 +353,11 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       startLoading,
       stopLoading,
     ]
-  )
+  );
 
   const syncGetFileTransferState = useCallback(
     async (force: boolean = false) => {
-      if (!isConnected && !force) return
+      if (!isConnected && !force) return;
       const result = await wrap(
         'syncFetFileTransferState',
         sendAsync(
@@ -306,38 +368,38 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
             resultOnly: true,
           }
         )
-      )
+      );
 
-      setFileTransferState(result?.target as VMState)
+      setFileTransferState(result?.target as VMState);
 
       if (force) {
         if (result?.target === 'None') {
-          handleMountWithFileImg('Kvm')
+          handleMountWithFileImg('Kvm');
         } else if (result?.target === 'Kvm') {
-          getFtFileSystemInfo()
-          getCompletedList()
+          getFtFileSystemInfo();
+          getCompletedList();
         }
       }
     },
     [sendAsync, isConnected, currentPath, wrap, getCompletedList]
-  )
+  );
 
   // Mount media
   const handleMountWithFileImg = useCallback(
     async (target: 'Kvm' | 'RemoteUsb') => {
-      startLoading('mountWithFileImg')
+      startLoading('mountWithFileImg');
 
       if (fileTransferState !== 'None') {
-        const result = await sendAsync(
+        await sendAsync(
           {
             method: 'unmountWithFileImg',
-            onResponse: resp => {},
-            onError: resp => {},
+            onResponse: () => {},
+            onError: () => {},
           },
           {
             resultOnly: true,
           }
-        )
+        );
       }
 
       send({
@@ -347,18 +409,18 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
         },
         errorMessage: { prefix: 'Failed to mount image:' },
         successMessage: { prefix: 'Mounted successfully' },
-        onResponse(resp) {
+        onResponse() {
           if (target === 'Kvm') {
-            getFtFileSystemInfo()
-            getCompletedList()
+            getFtFileSystemInfo();
+            getCompletedList();
           }
-          syncGetFileTransferState()
-          stopLoading('mountWithFileImg')
+          syncGetFileTransferState();
+          stopLoading('mountWithFileImg');
         },
         onError() {
-          stopLoading('mountWithFileImg')
+          stopLoading('mountWithFileImg');
         },
-      })
+      });
     },
     [
       send,
@@ -367,18 +429,18 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       syncGetFileTransferState,
       fileTransferState,
     ]
-  )
+  );
 
   // Delete files/dirs
   const handleDelete = useCallback(async () => {
-    const targets = completedList.filter((item, i) =>
-      selectedCompletedRowKeys.includes(i)
-    )
-    const delFiles = targets.filter(item => !item.is_dir)
-    const delDir = targets.filter(item => item.is_dir)
+    if (hasFtcacheUploadingConflict) return;
 
-    startLoading('ftDelFile')
-    startLoading('ftDelDir')
+    const targets = selectedCompletedRows;
+    const delFiles = targets.filter(item => !item.is_dir);
+    const delDir = targets.filter(item => item.is_dir);
+
+    startLoading('ftDelFile');
+    startLoading('ftDelDir');
     const tasks = delFiles.map(t =>
       sendAsync({
         method: 'ftDelFile',
@@ -386,7 +448,7 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       })
         .then(() => ({ name: t.name, ok: true }) as DeleteResult)
         .catch(err => ({ name: t.name, ok: false, error: err }) as DeleteResult)
-    )
+    );
     const delDirTasks = delDir.map(t =>
       sendAsync({
         method: 'ftDelDir',
@@ -394,33 +456,35 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       })
         .then(() => ({ name: t.name, ok: true }) as DeleteResult)
         .catch(err => ({ name: t.name, ok: false, error: err }) as DeleteResult)
-    )
+    );
 
     // Wait for all to settle (both success and failure return)
-    const results = await Promise.all([...tasks, ...delDirTasks])
-    stopLoading('ftDelFile')
-    stopLoading('ftDelDir')
-    getCompletedList(currentPath)
-    getFtFileSystemInfo()
+    await Promise.all([...tasks, ...delDirTasks]);
+    stopLoading('ftDelFile');
+    stopLoading('ftDelDir');
+    getCompletedList(currentPath);
+    getFtFileSystemInfo();
   }, [
-    selectedCompletedRowKeys,
+    selectedCompletedRows,
+    hasFtcacheUploadingConflict,
     currentPath,
     sendAsync,
     startLoading,
     stopLoading,
-  ])
+  ]);
 
   // Download selected files
   const handleDownload = useCallback(() => {
-    const targets = completedList
-      .filter((item, i) => selectedCompletedRowKeys.includes(i))
-      .map(item => {
-        return { name: item.name, path: currentPath, totalBytes: item.size }
-      })
+    if (hasFtcacheUploadingConflict) return;
 
-    downloadFile(targets)
-    setListType('transfer')
-    setTransferType('download')
+    const targets = selectedCompletedRows
+      .map(item => {
+        return { name: item.name, path: currentPath, totalBytes: item.size };
+      });
+
+    downloadFile(targets);
+    setListType('transfer');
+    setTransferType('download');
     // Insert placeholder data in download list first, wait for onDownload/onProgress to update
     const seedItems: DownloadItem[] = targets.map(t => ({
       id: generateTaskId(t.name, t.path),
@@ -439,9 +503,14 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       speedFormatted: '0B/s',
       dataChannel: null,
       errorMessage: '',
-    }))
-    setDownloadFileList(seedItems)
-  }, [selectedCompletedRowKeys, currentPath, setDownloadFileList])
+    }));
+    setDownloadFileList(seedItems);
+  }, [
+    selectedCompletedRows,
+    hasFtcacheUploadingConflict,
+    currentPath,
+    setDownloadFileList,
+  ]);
 
   // Create directory
   const handleCreateDir = useCallback(() => {
@@ -458,130 +527,172 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       confirmText: 'Yes',
       cancelText: 'No',
       onConfirm: async () => {
-        const createDirName = inputRef.current?.value?.trim() || ''
+        const createDirName = inputRef.current?.value?.trim() || '';
 
-        startLoading('ftCreateDir')
+        startLoading('ftCreateDir');
         send({
           method: 'ftCreateDir',
           params: {
             path: `${currentPath}/${createDirName}`.replace(/\/+/g, '/'),
           },
-          onResponse(resp) {
-            getCompletedList(currentPath)
+          onResponse() {
+            getCompletedList(currentPath);
 
-            stopLoading('ftCreateDir')
+            stopLoading('ftCreateDir');
           },
           onError() {
-            stopLoading('ftCreateDir')
+            stopLoading('ftCreateDir');
           },
-        })
+        });
       },
-    })
-  }, [inputRef, confirm, currentPath, sendAsync])
+    });
+  }, [inputRef, confirm, currentPath, sendAsync]);
+
+   const handleCreateFile= useCallback((path) => {
+    send({
+          method: 'ftCreateFile',
+          params: {
+            path:path.replace(/\/+/g, '/')
+          },
+          onResponse() {
+            getCompletedList(currentPath);
+            // stopLoading('ftCreateDir');
+          },
+          onError() {
+            // stopLoading('ftCreateDir');
+          },
+        });
+  }, [inputRef, confirm, currentPath, sendAsync]);
 
   const startParamsFn = (file: File) => {
     return {
       path: currentPath.replace(/\/{2,}/g, '/').replace(/([^:])\/$/, '$1'),
       name: file.name,
       size: file.size,
-    }
-  }
+    };
+  };
 
   // Open file
-  const handleOpenFile = useCallback((path: string) => {}, [send])
-  const location = useLocation()
+  const handleOpenFile = useCallback((_path: string) => {}, [send]);
 
   // Connection state effect
   useEffect(() => {
-    logger.info('useEffect isConnected', isConnected)
+    logger.info('useEffect isConnected', isConnected);
     if (isConnected) {
-      syncGetFileTransferState(true)
-      useAppStore.getState().fileTransferList.hydrate()
-      useAppStore.getState().fileTransferList.updateProgress()
+      syncGetFileTransferState(true);
+      useAppStore.getState().fileTransferList.hydrate();
+      useAppStore.getState().fileTransferList.updateProgress();
 
       // Reconcile controller state with task list:
       // If a controller still has an open DataChannel, restore that task to 'running'.
       // If the channel is dead, clean up the stale controller.
       const { fileTransferList, controllers, removeUploadController } =
-        useAppStore.getState()
+        useAppStore.getState();
       if (controllers) {
-        Object.entries(controllers).forEach(([key, ctrl]: [string, any]) => {
-          const channel: RTCDataChannel | null | undefined = ctrl?.channel
+        Object.entries(controllers).forEach(([key, ctrl]) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const channel: RTCDataChannel | null | undefined = (ctrl as any)?.channel;
           if (channel && channel.readyState === 'open') {
             // Channel is still alive — find matching task and set to running
             const task = Object.values(fileTransferList.byId).find(
-              (r: any) => r.name === key || r.id === key
-            )
+              r => r.name === key || r.id === key
+            );
             if (task) {
-              fileTransferList.setState(task.id, 'running')
+              fileTransferList.setState(task.id, 'running');
             }
           } else {
             // Channel is dead — clean up stale controller
-            removeUploadController?.(key)
+            removeUploadController?.(key);
           }
-        })
+        });
       }
-      return
+      return;
     } else {
       // When connection is lost, change all running tasks to paused
-      const { fileTransferList, fileDownloadList } = useAppStore.getState()
+      const { fileTransferList, fileDownloadList } = useAppStore.getState();
 
       // Handle upload tasks
       Object.values(fileTransferList.byId).forEach(upload => {
         if (upload.state === 'running') {
-          fileTransferList.setState(upload.id, 'paused')
+          fileTransferList.setState(upload.id, 'paused');
         }
-      })
+      });
 
       // Handle download tasks
       Object.values(fileDownloadList.byId).forEach(download => {
         if (download.state === 'running') {
-          fileDownloadList.setState(download.id, 'paused')
+          fileDownloadList.setState(download.id, 'paused');
         }
-      })
+      });
     }
-  }, [isConnected, sendAsync])
+  }, [isConnected, sendAsync]);
 
   // Start upload
   const onStartUpload = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (payload: { filename: string; size: number; dataChannel: any }) => {
-      const { filename, size, dataChannel } = payload || ({} as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { filename, size, dataChannel } = payload || ({} as any);
 
-      const rowId = createRow({
+      createRow({
         path: currentPath || '/',
         name: filename,
         totalBytes: size,
         dataChannel: dataChannel?.label || dataChannel, // WebRTC channel name
         source: 'virtual-usb',
-      })
+      });
     },
     [createRow, currentPath, uploads, uploadMap]
-  )
+  );
 
   // Optional: also handle onProgress to update offset and speed (more complete)
   const onProgressUpload = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
       //id: string, offset: number, speedBps?: number
 
-      const { name } = data
-      if (!name) return
+      const { name } = data;
+      if (!name) return;
 
-      updateProgress(name, data)
+      updateProgress(name, data);
     },
     [updateProgress]
-  )
+  );
+
+  const clearRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current !== null) {
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleRefreshAfterUploadSuccess = useCallback(() => {
+    clearRefreshTimer();
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      getCompletedList(currentPathRef.current);
+      getFtFileSystemInfo();
+    }, 3000);
+  }, [clearRefreshTimer, getCompletedList, getFtFileSystemInfo]);
+
+  useEffect(() => {
+    return () => {
+      clearRefreshTimer();
+    };
+  }, [clearRefreshTimer]);
+
   const onSuccessUpload = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file: any) => {
-      removeRow(file?.name)
-      getCompletedList(currentPathRef.current)
-      getFtFileSystemInfo()
+      removeRow(file?.name);
+      scheduleRefreshAfterUploadSuccess();
     },
-    [getFtFileSystemInfo, getCompletedList]
-  )
+    [removeRow, scheduleRefreshAfterUploadSuccess]
+  );
 
   const handleBreadcrumbClick = useCallback((path: string) => {
-    getCompletedList(path)
-  }, [])
+    getCompletedList(path);
+  }, []);
 
   return {
     // State
@@ -599,6 +710,9 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
     selectedCompletedRowKeys,
     setSelectedCompletedRowKeys,
     isDownload,
+    downloadDisabledReason,
+    canDeleteSelected,
+    hasFtcacheUploadingConflict,
     hasActiveTransfers,
     isLoading,
     inputRef,
@@ -609,6 +723,7 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
     handleDelete,
     handleDownload,
     handleCreateDir,
+    handleCreateFile,
     handleMountWithFileImg,
     handleBreadcrumbClick,
     handleOpenFile,
@@ -627,7 +742,7 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
 
     // Logger
     logger,
-  }
+  };
 }
 
 export type UseVirtualUsbDriveReturn = ReturnType<typeof useVirtualUsbDrive>

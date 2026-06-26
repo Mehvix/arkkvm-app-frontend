@@ -150,7 +150,9 @@
     "apply": "应用",
     "enable": "启用",
     "disable": "禁用",
-    "retry": "重试"
+    "retry": "重试",
+    "update": "保存更改",
+    "refresh": "恢复默认"
   },
   "panels": {
     "accessibility": "辅助功能",
@@ -188,6 +190,11 @@
       "relative": {
         "title": "相对模式",
         "desc": "传统行为"
+      },
+      "toast": {
+        "noMouseDevice": "鼠标控制不可用，因为没有启用鼠标设备。",
+        "changedToRelative": "鼠标模式已自动切换为相对模式。",
+        "changedToAbsolute": "鼠标模式已自动切换为绝对模式。"
       }
     }
   },
@@ -343,6 +350,29 @@
       "title": "时间同步",
       "desc": "配置时间同步设置"
     },
+    "vlan": {
+      "title": "VLAN (802.1Q)",
+      "desc": "通过 IEEE 802.1Q 协议将 ArkKVM 连接到带标签的 VLAN 网络。",
+      "enableWarning": {
+        "title": "确认启用 VLAN？",
+        "line1": "启用 VLAN 模式后，设备将使用带标签的 VLAN 接口替代原有的未标记网络接口。",
+        "line2": "配置不当可能导致设备无法访问，请谨慎操作。"
+      },
+      "primaryVlan": {
+        "title": "主 VLAN",
+        "desc": "用于设备对外的系统流量及互联网连接服务。"
+      },
+      "vlanId": {
+        "title": "VLAN ID",
+        "desc": "请输入 1 到 4094 之间的 VLAN ID，交换机端口需允许该标签 VLAN 通过。"
+      },
+      "secondaryVlan": {
+        "title": "辅助 VLAN",
+        "desc": "为 ArkKVM 提供额外的本地访问入口，不承载设备出向系统流量。",
+        "idDesc": "辅助 VLAN 的 ID 不能与主 VLAN 相同。"
+      },
+      "addSecondary": "添加辅助 VLAN"
+    },
     "saveButton": "保存设置",
     "savingButton": "保存中...",
     "ipv4Mode": {
@@ -359,6 +389,7 @@
       "gateway": "网关",
       "subnetMask": "子网掩码",
       "dhcpServer": "DHCP 服务器",
+      "dnsServers": "DNS 服务器",
       "broadcast": "广播地址",
       "bootNextServer": "引导下一服务器",
       "hostname": "主机名",
@@ -373,6 +404,20 @@
       "ipv6Address": "IPv6 地址",
       "validLifetime": "有效生命周期",
       "preferredLifetime": "首选生命周期"
+    },
+    "emptyState": {
+      "switchToDhcp": {
+        "title": "切换到 DHCP？",
+        "desc": "点击「保存设置」应用此更改，设备将自动获取网络信息。"
+      },
+      "ipv4Pending": {
+        "title": "IPv4 信息",
+        "desc": "保存设置后应用此配置，并获取 IPv4 网络信息。"
+      },
+      "ipv6Pending": {
+        "title": "IPv6 信息",
+        "desc": "暂无 IPv6 地址。"
+      }
     }
   },
   "advanced": {
@@ -448,6 +493,9 @@
       "button": "更改密码",
       "formTitle": "更改本地设备密码",
       "formDesc": "输入当前密码和新密码以更新本地设备保护。",
+      "oldPasswordLabel": "当前密码",
+      "newPasswordLabel": "新密码",
+      "confirmPasswordLabel": "确认新密码",
       "oldPasswordPlaceholder": "请输入当前密码",
       "newPasswordPlaceholder": "请输入一个强密码",
       "confirmPasswordPlaceholder": "请再次输入新密码",
@@ -485,7 +533,9 @@
       "apiLabel": "云 API URL",
       "apiPlaceholder": "https://cloud.arkkvm.com/api",
       "appLabel": "云应用 URL",
-      "appPlaceholder": "https://cloud.arkkvm.com/app"
+      "appPlaceholder": "https://cloud.arkkvm.com/app",
+      "invalidApiUrl": "API URL 格式无效",
+      "invalidAppUrl": "应用 URL 格式无效"
     },
     "cloudButtons": {
       "adopt": "将 KVM 添加到云",
@@ -521,6 +571,34 @@
       "close": "关闭",
       "errorEmpty": "请输入当前密码",
       "errorGeneral": "移除密码时发生错误"
+    },
+    "privateNetwork": {
+      "title": "私有网络",
+      "desc": "选择并启用远程访问的私有网络服务"
+    },
+    "tailscale": {
+      "title": "Tailscale",
+      "desc": "将 ArkKVM 连接到您的 Tailscale 网络",
+      "status": {
+        "connecting": "连接中...",
+        "connected": "已连接",
+        "disconnected": "未连接",
+        "offline": "离线",
+        "logged_out": "需要登录",
+        "error": "错误"
+      },
+      "fields": {
+        "status": "状态",
+        "tailscaleIp": "Tailscale IP",
+        "hostname": "主机名"
+      },
+      "actions": {
+        "openLogin": "打开登录页面",
+        "generateNewLink": "生成新的登录链接",
+        "authHint": "请打开下方的登录页面以认证此 ArkKVM 设备。",
+        "authExpiredBefore": "如果登录链接过期或认证未完成，请点击 \"",
+        "authExpiredAfter": "\" 并重试。"
+      }
     }
   }
 }

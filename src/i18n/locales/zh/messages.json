@@ -1,4 +1,12 @@
 {
+  "errors": {
+    "rpcChannelClosed": "RPC 通道已关闭",
+    "rpcDataChannelMissing": "RPC 数据通道不存在",
+    "rpcChannelNotReady": "RPC 通道尚未就绪：{{method}}",
+    "rpcRequestTimedOut": "RPC 请求超时：{{method}}（#{{id}}）- {{timeout}}ms",
+    "rpcError": "RPC 错误 {{code}}",
+    "unknown": "未知错误"
+  },
   "connectionTimeout": {
     "title": "连接超时",
     "subtitle": "无法获取本地 ArkKVM 服务的响应，请确保服务正在运行且可访问。",

@@ -7,33 +7,33 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2025-08-28 16:57:00
  */
-import { createLogger } from '@/utils/logger'
-import React from 'react'
-import { useTranslation } from 'react-i18next'
-import { Button } from '../ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { createLogger } from '@/utils/logger';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
-const logger = createLogger('TranslationTest')
+const logger = createLogger('TranslationTest');
 
 export const TranslationTest: React.FC = () => {
-  const { t, i18n } = useTranslation()
-  const [refreshKey, setRefreshKey] = React.useState(0)
+  const { t, i18n } = useTranslation();
+  const [refreshKey, setRefreshKey] = React.useState(0);
 
   // Force component re-render
   const forceRefresh = () => {
-    setRefreshKey(prev => prev + 1)
-  }
+    setRefreshKey(prev => prev + 1);
+  };
 
   // Switch language directly
   const toggleLanguage = () => {
-    const newLang = i18n.language === 'zh' ? 'en' : 'zh'
-    logger.info('Switching language', { from: i18n.language, to: newLang })
+    const newLang = i18n.language === 'zh' ? 'en' : 'zh';
+    logger.info('Switching language', { from: i18n.language, to: newLang });
 
     i18n.changeLanguage(newLang).then(() => {
-      logger.info('Language switch completed', { language: newLang })
-      forceRefresh()
-    })
-  }
+      logger.info('Language switch completed', { language: newLang });
+      forceRefresh();
+    });
+  };
 
   return (
     <Card key={refreshKey} className="w-full max-w-md">
@@ -67,5 +67,5 @@ export const TranslationTest: React.FC = () => {
         </Button>
       </CardContent>
     </Card>
-  )
-}
+  );
+};

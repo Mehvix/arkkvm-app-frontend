@@ -3,7 +3,7 @@
  * Automatically collects and manages all language layouts.
  */
 
-import type { KeyboardLayout } from './keyboard-types'
+import type { KeyboardLayout } from './keyboard-types';
 
 /** Keyboard layout standard */
 export type KeyboardStandard = 'ansi' | 'iso' | 'jis'
@@ -67,48 +67,43 @@ export type LayoutOption = LayoutMeta & {
   hasMac: boolean
 }
 
-import csCZ from './layouts/cs_CZ'
-import deCH from './layouts/de_CH'
-import deDE from './layouts/de_DE'
-import enGB from './layouts/en_GB'
-import enUS from './layouts/en_US'
-import nlBE from './layouts/nl_BE'
+import csCZ from './layouts/cs_CZ';
+import deCH from './layouts/de_CH';
+import deDE from './layouts/de_DE';
+import enGB from './layouts/en_GB';
+import enUS from './layouts/en_US';
+// import esES from './layouts/es_ES';
+import frFR from './layouts/fr_FR';
+import nlBE from './layouts/nl_BE';
+// esEs esES
 
-const ALL_LANGUAGE_LAYOUTS: LanguageLayoutModule[] = [
-  enUS,
-  enGB,
-  csCZ,
-  deCH,
-  deDE,
-  nlBE,
-]
+const ALL_LANGUAGE_LAYOUTS: LanguageLayoutModule[] = [enUS, enGB, csCZ, deCH, deDE, nlBE,frFR];
 
 /** All layout metadata mapping (id -> meta) */
-export const languageLayoutMetaMap: Record<string, LayoutMeta> = {}
+export const languageLayoutMetaMap: Record<string, LayoutMeta> = {};
 
 /** All layout module mapping (id -> module) */
-export const languageLayoutModuleMap: Record<string, LanguageLayoutModule> = {}
+export const languageLayoutModuleMap: Record<string, LanguageLayoutModule> = {};
 
 /** Language layout options list for UI selection */
-export const languageLayoutOptions: LayoutOption[] = []
+export const languageLayoutOptions: LayoutOption[] = [];
 ALL_LANGUAGE_LAYOUTS.forEach(module => {
-  const { meta } = module
-  languageLayoutMetaMap[meta.id] = meta
-  languageLayoutModuleMap[meta.id] = module
+  const { meta } = module;
+  languageLayoutMetaMap[meta.id] = meta;
+  languageLayoutModuleMap[meta.id] = module;
   languageLayoutOptions.push({
     ...meta,
     hasWindows: !!module.windows,
     hasMac: !!module.mac,
-  })
-})
-
-languageLayoutOptions.sort((a, b) => a.priority - b.priority)
+  });
+});
+languageLayoutOptions.sort((a, b) => a.priority - b.priority);
 
 /**
  * Get layout metadata by language ID.
  */
 export function getLanguageLayoutMeta(id: string): LayoutMeta | undefined {
-  return languageLayoutMetaMap[id]
+  return languageLayoutMetaMap[id];
 }
 
 /**
@@ -117,7 +112,7 @@ export function getLanguageLayoutMeta(id: string): LayoutMeta | undefined {
 export function getLanguageLayoutModule(
   id: string
 ): LanguageLayoutModule | undefined {
-  return languageLayoutModuleMap[id]
+  return languageLayoutModuleMap[id];
 }
 
 /**
@@ -127,9 +122,9 @@ export function getLanguageKeyboardLayout(
   id: string,
   platform: 'windows' | 'mac' = 'windows'
 ): KeyboardLayout | undefined {
-  const module = languageLayoutModuleMap[id]
-  if (!module) return undefined
-  return platform === 'mac' ? module.mac : module.windows
+  const module = languageLayoutModuleMap[id];
+  if (!module) return undefined;
+  return platform === 'mac' ? module.mac : module.windows;
 }
 
 /**
@@ -144,29 +139,29 @@ export function getLanguageLayoutOptionsByRegion(): Record<
     europe: [],
     asia: [],
     americas: [],
-  }
+  };
   languageLayoutOptions.forEach(option => {
-    grouped[option.region]?.push(option)
-  })
-  return grouped
+    grouped[option.region]?.push(option);
+  });
+  return grouped;
 }
 
 /**
  * Get recommended layout options.
  */
 export function getRecommendedLanguageLayouts(): LayoutOption[] {
-  return languageLayoutOptions.filter(option => option.recommended)
+  return languageLayoutOptions.filter(option => option.recommended);
 }
 
 /**
  * Get system language from browser.
  */
 export function getSystemLanguage() {
-  const langs = navigator.languages
+  const langs = navigator.languages;
   return {
     primary: langs?.[0] || navigator.language || 'en-US',
     all: langs || [navigator.language || 'en-US'],
-  }
+  };
 }
 
 /**
@@ -174,29 +169,29 @@ export function getSystemLanguage() {
  * @returns Matched keyboard layout ID, defaults to 'en-US-qwerty' if no match
  */
 export function getDefaultKeyboardLayoutByLanguage(): string {
-  const systemLang = getSystemLanguage()
+  const systemLang = getSystemLanguage();
 
   for (const lang of systemLang.all) {
-    const normalizedLang = lang.toLowerCase()
+    const normalizedLang = lang.toLowerCase();
 
     const exactMatch = languageLayoutOptions.find(option =>
       option.id.toLowerCase().startsWith(normalizedLang)
-    )
+    );
     if (exactMatch) {
-      return exactMatch.id
+      return exactMatch.id;
     }
   }
 
   for (const lang of systemLang.all) {
-    const langCode = lang.split('-')[0].toLowerCase()
+    const langCode = lang.split('-')[0].toLowerCase();
 
     const langMatch = languageLayoutOptions.find(option =>
       option.id.toLowerCase().startsWith(langCode + '-')
-    )
+    );
     if (langMatch) {
-      return langMatch.id
+      return langMatch.id;
     }
   }
 
-  return 'en-US-qwerty'
+  return 'en-US-qwerty';
 }

@@ -1,55 +1,59 @@
-import { Layout } from '@/components/Layout'
-import { useUserStore } from '@/stores'
-import { env } from '@/utils/env'
-import { FC, ReactNode, useEffect } from 'react'
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+/**
+ * @Purpose: Route authentication guard
+ * @Descripttion:
+ * @version: 1.1.0
+ * @Author: zhanglei
+ * @Date: 2025-07-17 14:04:41
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-05-06 21:13:47
+ */
+import { Layout } from '@/components/Layout';
+import { useUserStore } from '@/stores';
+import { env } from '@/utils/env';
+import { FC, ReactNode, useEffect } from 'react';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-const isCloudMode = import.meta.env.RSB_TARGET_MODE === 'cloud'
+// Whether the app is running in cloud mode
+const isCloudMode = env.target;
 
+// Full-page loading spinner while auth state is resolving
 const LoadingSpinner = () => {
   return (
     <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
     </div>
-  )
-}
+  );
+};
 
 const RouteAuth: FC<{ children?: ReactNode }> = ({ children }) => {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     userInfo,
     token,
     isLoggedIn,
     loading,
-    // fetchUserDetail,
-    checkAuth,
-  } = useUserStore()
+  } = useUserStore();
 
+  // Resolve auth status and handle login-page redirection
   useEffect(() => {
     const determineAuthStatus = async () => {
-      if (!isCloudMode) return
+      // Auth checks are only required in cloud mode
+      if (!isCloudMode) return;
 
-      if (token && !loading) {
-        try {
-          // await fetchUserDetail();
-        } catch (error) {
-          console.error('Failed to fetch user details:', error)
-        }
-      }
-
+      // If already logged in on /login, redirect unless opening a device-specific login flow
       if (isLoggedIn && location.pathname === '/login') {
-        const searchParams = new URLSearchParams(location.search)
-        const deviceId = searchParams.get('deviceId')
-
+        const searchParams = new URLSearchParams(location.search);
+        const deviceId = searchParams.get('deviceId');
+        // Keep current page when deviceId exists; otherwise redirect to previous/default path
         if (!deviceId) {
-          const previousPath = location.state?.from?.pathname || '/devices/list'
-          navigate(previousPath, { replace: true })
+          const previousPath = location.state?.from?.pathname || '/devices/list';
+          navigate(previousPath, { replace: true });
         }
       }
-    }
+    };
 
-    determineAuthStatus()
+    determineAuthStatus();
   }, [
     token,
     userInfo,
@@ -58,38 +62,41 @@ const RouteAuth: FC<{ children?: ReactNode }> = ({ children }) => {
     navigate,
     loading,
     isCloudMode,
-  ])
+  ]);
 
-  const protectedPaths = ['/devices/list', '/v-default/devices/:id']
+  // Paths that require authentication
+  const protectedPaths = ['/devices/list', '/v-default/devices/:id'];
   const isProtectedPath = protectedPaths.some(path => {
     if (path.includes(':')) {
-      const regex = new RegExp('^' + path.replace(/:[^/]+/g, '[^/]+') + '$')
-      return regex.test(location.pathname)
+      // Match dynamic route patterns, e.g. /devices/:id
+      const regex = new RegExp('^' + path.replace(/:[^/]+/g, '[^/]+') + '$');
+      return regex.test(location.pathname);
     }
-    return location.pathname === path
-  })
+    return location.pathname === path;
+  });
 
+  // Render directly for routes that do not require auth
   if (!isProtectedPath) {
-    return <>{children || <Outlet />}</>
+    return <>{children || <Outlet />}</>;
   }
 
+  // Device mode does not require cloud auth
   if (!isCloudMode) {
-    return <Layout>{children || <Outlet />}</Layout>
+    return <Layout>{children || <Outlet />}</Layout>;
   }
 
   if (loading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
-
+  // Redirect unauthenticated users to login
   if (!isLoggedIn) {
     if (env.target === 'cloud') {
-      return <Navigate to="/login" state={{ from: location }} replace />
+      return <Navigate to="/login" state={{ from: location }} replace />;
     } else {
-      return <Navigate to="/login" state={{ from: location }} replace />
+      return <Navigate to="/login" state={{ from: location }} replace />;
     }
   }
+  return <Layout>{children || <Outlet />}</Layout>;
+};
 
-  return <Layout>{children || <Outlet />}</Layout>
-}
-
-export default RouteAuth
+export default RouteAuth;

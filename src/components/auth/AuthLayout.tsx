@@ -1,11 +1,18 @@
-import { useLocation, useSearchParams } from 'react-router-dom'
-import { Button } from '@/components'
-import React, { useState } from 'react'
-import { TopNavbar } from '@/components'
+/**
+ * AuthLayout - Cloud Login Layout
+ * Visual style aligned with device local login page
+ */
+import { WelcomeBackground } from '@/components';
+import { Button } from '@/components/ui/button';
+import { normalizeCloudOrigin } from '@/utils/security';
+import React, { useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+
 export interface AuthLayoutProps {
   title: string
   description?: string
   action: string
+  footerText?: string
   leadingIcon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
   actionUrl?: string
   onSubmit?: React.FormEventHandler<HTMLFormElement>
@@ -15,72 +22,89 @@ export default function AuthLayout({
   title,
   description,
   action,
+  footerText,
   leadingIcon: LeadingIcon,
   actionUrl,
   onSubmit,
 }: AuthLayoutProps) {
-  const [sq] = useSearchParams()
-  const location = useLocation()
-  const [submitting, setSubmitting] = useState(false)
+  const [sq] = useSearchParams();
+  const location = useLocation();
+  const [submitting, setSubmitting] = useState(false);
 
-  const protocol = window.location.protocol
-  const hostname = window.location.hostname
-  const port = window.location.port
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  const port = window.location.port;
 
-  const returnTo =
-    sq.get('returnTo') || protocol + '//' + hostname + ':' + port + '/ad-login'
-  const deviceId = sq.get('deviceId') || (location.state as any)?.deviceId
+  const defaultReturnTo = protocol + '//' + hostname + (port ? ':' + port : '') + '/ad-login';
+  const rawReturnTo = sq.get('returnTo');
+  const safeReturnToOrigin = normalizeCloudOrigin(rawReturnTo);
+  const returnTo = safeReturnToOrigin
+    ? safeReturnToOrigin + '/ad-login'
+    : defaultReturnTo;
+  const locationState = location.state as Record<string, unknown> | null;
+  const deviceId = sq.get('deviceId') || (locationState?.deviceId as string | undefined);
 
-  const loading = submitting
+  const loading = submitting;
 
   const mergedHidden: Record<string, string> = {
     ...(deviceId ? { deviceId } : {}),
     ...(returnTo ? { returnTo } : {}),
-  } as Record<string, string>
+  } as Record<string, string>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--theme-bg-color)]">
-      <TopNavbar links={[]} showLoggedIn={false}></TopNavbar>
+    <WelcomeBackground
+      title={title}
+      subtitle={description}
+      className="bg-[#0b0c0f]"
+      minHeight="min-h-screen"
+    >
+      {/* Form area - centered, optimized width for visual presence */}
+      <div className="mt-8 w-[360px] max-w-[calc(100vw-40px)]">
+        <form
+          action={actionUrl}
+          method={actionUrl ? 'POST' : undefined}
+          onSubmit={e => {
+            if (!actionUrl && onSubmit) onSubmit(e);
+            setSubmitting(true);
+          }}
+          className="w-full"
+        >
+          {Object.entries(mergedHidden).map(([k, v]) =>
+            v !== undefined ? (
+              <input key={k} type="hidden" name={k} value={v} />
+            ) : null
+          )}
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-[340px] h-[213px] border border-[var(--border-color)] rounded-[8px] bg-[var(--secondary-bg-color)] text-center pt-[48px]">
-          <h1 className="text-[24px] font-bold text-[var(--text-color)]">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-[8px] text-[12px]  text-[var(--inactive-text-color)]">
-              {description}
-            </p>
-          ) : null}
+          {/* Google login button - full width, aligned with device login style */}
+          <Button
+            variant="outline"
+            className="w-full h-[48px] bg-white hover:bg-slate-50 text-slate-900 font-medium text-[15px] rounded-[12px] border border-slate-200 shadow-lg shadow-black/15 transition-all duration-200 ease-out hover:shadow-xl hover:shadow-black/25 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            type="submit"
+            disabled={loading}
+          >
+            {LeadingIcon ? <LeadingIcon className="w-[26px] h-[26px] size-[30px]" /> : null}
+            <span>{action}</span>
+          </Button>
+        </form>
 
-          <div className="mt-[36px] w-[223px] mx-auto">
-            <form
-              action={actionUrl}
-              method={actionUrl ? 'POST' : undefined}
-              onSubmit={e => {
-                if (!actionUrl && onSubmit) onSubmit(e)
-                setSubmitting(true)
-              }}
+        {/* Footer text - below button, weak hierarchy but clear */}
+        {footerText ? (
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <svg
+              className="w-3.5 h-3.5 text-[var(--text-secondary)]/80"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
             >
-              {Object.entries(mergedHidden).map(([k, v]) =>
-                v !== undefined ? (
-                  <input key={k} type="hidden" name={k} value={v} />
-                ) : null
-              )}
-
-              <Button
-                variant="outline"
-                className="bg-[var(--bg-button-color)] h-[36px] rounded-[4px] w-full text-left justify-start text-[12px]"
-                type="submit"
-                disabled={loading}
-              >
-                {LeadingIcon ? <LeadingIcon /> : null}
-                {action}
-              </Button>
-            </form>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <p className="text-[13px] text-[var(--text-secondary)]/90 tracking-wide">
+              {footerText}
+            </p>
           </div>
-        </div>
+        ) : null}
       </div>
-    </div>
-  )
+    </WelcomeBackground>
+  );
 }

@@ -2,42 +2,25 @@
   "name": "rsbuild-react-ts",
   "version": "1.0.2",
   "private": true,
-  "license": "GPL-2.0",
-  "author": "zhanglei <your_email@example.com>",
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
+  "license": "GPL-2.0-or-later",
   "bugs": {
     "url": ""
   },
   "homepage": "",
+  "packageManager": "pnpm@10.11.1",
+
   "type": "module",
   "scripts": {
-    "gen:api": "tsx scripts/generateApi.ts",
-    "gen:routes": "tsx scripts/generateRoutes.ts",
-    "routes:watch": "tsx scripts/generateRoutes.ts --watch",
-    "dev": "rsbuild dev --open --env-mode  test",
-    "dev:device:test": "cross-env BUILD_TARGET=device rsbuild dev --open --env-mode  device.test  --config rsbuild.config.ts --port 9000",
-    "dev:cloud:test": "cross-env BUILD_TARGET=cloud rsbuild dev --open --env-mode cloud.test --config rsbuild.config.ts --port 80",
-    "local:device": "rsbuild dev --open --env-mode local.device",
-    "local:cloud": "cross-env BUILD_TARGET=cloud rsbuild dev --open --env-mode cloud.local --config rsbuild.config.ts --port 80",
-    "build:device:test:raw": "cross-env BUILD_TARGET=device rsbuild build --mode production --env-mode device.test --config rsbuild.config.ts",
-    "build:device:pro:raw": "cross-env BUILD_TARGET=device rsbuild build --mode production --env-mode device.pro --config rsbuild.config.ts",
-    "build:cloud:test:raw": "cross-env BUILD_TARGET=cloud rsbuild build  --env-mode cloud.test --config rsbuild.config.ts",
-    "build:cloud:pro:raw": "cross-env BUILD_TARGET=cloud rsbuild build --mode production --env-mode cloud.pro --config rsbuild.config.ts",
-    "build:both:test": "tsx scripts/generate-version.ts test && pnpm build:device:test:raw && pnpm build:cloud:test:raw && tsx scripts/write-dist-version.ts test",
-    "build:both:pro": "tsx scripts/generate-version.ts pro && pnpm build:device:pro:raw && pnpm build:cloud:pro:raw && tsx scripts/write-dist-version.ts pro",
-    "build:with:version": "tsx scripts/generate-version.ts pro \"$VERSION\" && pnpm build:device:pro:raw && pnpm build:cloud:pro:raw && tsx scripts/write-dist-version.ts pro",
-    "analyze:device:test": "ANALYZE=1 cross-env BUILD_TARGET=device rsbuild build --mode production --env-mode device.test --config rsbuild.config.ts",
-    "analyze:cloud:test": "ANALYZE=1 cross-env BUILD_TARGET=cloud rsbuild build --mode production --env-mode cloud.test --config rsbuild.config.ts",
-    "preview": "rsbuild preview",
-    "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
-    "format": "prettier --write \"**/*.{ts,js,tsx,jsx}\"",
-    "gen:icons": "tsx scripts/gen-icons-index.ts",
-    "test": "vitest",
-    "test:ui": "vitest --ui"
+    "dev": "./run.sh dev device",
+    "dev:cloud": "./run.sh dev cloud",
+    "build": "./build.sh",
+    "build:test": "./build.sh test",
+    "build:flat": "cross-env CLOUD_BUILD_MODE=flat ./build.sh",
+    "check": "eslint .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepare": "husky",
+    "commitlint": "commitlint --edit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -97,6 +80,8 @@
     "@babel/parser": "^7.28.0",
     "@babel/traverse": "^7.28.0",
     "@babel/types": "^7.28.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@rsbuild/core": "^1.4.3",
     "@rsbuild/plugin-react": "^1.3.3",
     "@rsbuild/plugin-svgr": "^1.2.1",
@@ -114,6 +99,7 @@
     "dotenv": "^17.2.0",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
+    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "msw": "^2.11.1",
     "prettier": "^3.6.2",
@@ -131,5 +117,13 @@
     "@babel/parser": "^7.28.0",
     "@babel/traverse": "^7.28.0",
     "@babel/types": "^7.28.1"
+  },
+   "engines": {
+    "node": ">=20.18.0",
+    "pnpm": ">=10.11.1"
+  },
+  "volta": {
+    "node": "20.18.0",
+    "pnpm": "10.11.1"
   }
 }

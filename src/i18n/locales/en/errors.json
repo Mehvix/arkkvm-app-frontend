@@ -1,0 +1,7 @@
+{
+  "usbDevicesRuntimeApplyRejected": {
+    "title": "Virtual USB Drive In Use",
+    "changeRejectedByUpperLayer": "The Virtual USB Drive is currently mounted to the remote system.\n\nTo prevent data loss or file corruption, mount the drive back to ArkKVM before resetting the device.",
+    "confirm": "Got it"
+  }
+}

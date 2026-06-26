@@ -1,21 +1,24 @@
-import { StateCreator } from 'zustand'
+import type { StateCreator } from 'zustand';
+import type { RootState } from '../types';
 
+/** 1) Panel Identifier Enum */
 export type PanelId =
-  | 'terminal'
-  | 'virtualKeyboard'
-  | 'settings'
-  | 'extension'
-  | 'connectionStats'
-
+  | 'terminal' // Main panel (Mutually exclusive)
+  | 'virtualKeyboard' // Main panel (Mutually exclusive)
+  | 'settings' // Main panel (Mutually exclusive)
+  | 'extension' // Overlay panel (Independent toggle: Extensions/Plugins area)
+  | 'connectionStats' // Overlay panel (Independent toggle: Connection stats floating window)
+  /**
+ * List of mutually exclusive panels.
+ * Only one panel from this list can be active at any given time.
+ */
 const EXCLUSIVE_MAIN: PanelId[] = [
   'terminal',
   'virtualKeyboard',
   'settings',
   'extension',
   'connectionStats',
-]
-const OVERLAYS: PanelId[] = []
-
+];
 export interface UIVisibilityMap {
   terminal: boolean
   virtualKeyboard: boolean
@@ -25,15 +28,12 @@ export interface UIVisibilityMap {
 }
 export type KeyboardLayout = 'windows' | 'apple'
 export interface UISlice {
+  /** The Single Source of Truth for the currently active main panel ('none' indicates no panel is open). */
   activeMain: 'terminal' | 'virtualKeyboard' | 'settings' | 'none'
   controlLayoutMode: 'vertical' | 'horizontal'
-
   visible: UIVisibilityMap
-
   keyboardHeight: number
-
   keyboardLayout: KeyboardLayout
-
   isPasteTextOpen: boolean
   closeMain: () => void
   toggleMain: (
@@ -44,22 +44,16 @@ export interface UISlice {
       | 'extension'
       | 'connectionStats'
   ) => void
-
   showOverlay: (panel: 'extension' | 'connectionStats') => void
   hideOverlay: (panel: 'extension' | 'connectionStats') => void
   toggleOverlay: (panel: 'extension' | 'connectionStats') => void
 
   closeAllPanels: () => void
-
   setKeyboardLayout: (layout: KeyboardLayout) => void
-
   setKeyboardHeight: (height: number) => void
-
   setIsPasteTextOpen: (open: boolean) => void
   togglePasteText: () => void
-
   setControlLayoutMode: (mode: 'vertical' | 'horizontal') => void
-
   keyboardLedState?: {
     caps_lock?: boolean
     num_lock?: boolean
@@ -75,11 +69,10 @@ export interface UISlice {
     kana?: boolean
   }) => void
 }
-
 const asRecord = (arr: PanelId[], v: boolean) =>
-  Object.fromEntries(arr.map(k => [k, v])) as Record<PanelId, boolean>
+  Object.fromEntries(arr.map(k => [k, v])) as Record<PanelId, boolean>;
 
-export const createUISlice: StateCreator<UISlice> = (set, get) => ({
+export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
   activeMain: 'none',
   keyboardHeight: 316,
   keyboardLayout: 'apple',
@@ -94,8 +87,23 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     connectionStats: false,
   },
 
+  showOverlay: panel => {
+    set((state: RootState) => ({
+      ui: { ...state.ui, visible: { ...state.ui.visible, [panel]: true } },
+    }));
+  },
+  hideOverlay: panel => {
+    set((state: RootState) => ({
+      ui: { ...state.ui, visible: { ...state.ui.visible, [panel]: false } },
+    }));
+  },
+  toggleOverlay: panel => {
+    set((state: RootState) => ({
+      ui: { ...state.ui, visible: { ...state.ui.visible, [panel]: !state.ui.visible[panel] } },
+    }));
+  },
   setKeyboardLedState: state => {
-    set((prev: any) => ({
+    set((prev: RootState) => ({
       ui: {
         ...prev.ui,
         keyboardLedState: {
@@ -103,11 +111,10 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
           ...state,
         },
       },
-    }))
+    }));
   },
-
   closeMain: () => {
-    set((state: any) => ({
+    set((state: RootState) => ({
       ui: {
         ...state.ui,
         activeMain: 'none',
@@ -116,31 +123,32 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
           ...asRecord(EXCLUSIVE_MAIN as PanelId[], false),
         },
       },
-    }))
+    }));
   },
-
   toggleMain: panel => {
     if (!panel) {
-      return
+      return;
     }
-    set((state: any) => {
-      const isSame = !state.ui.visible?.[panel] || false
+    set((state: RootState) => {
+      const isSame = !state.ui?.visible?.[panel as keyof UIVisibilityMap] || false;
+      const nextMain = EXCLUSIVE_MAIN.includes(panel as (typeof EXCLUSIVE_MAIN)[number])
+        ? (isSame ? 'none' : panel) as UISlice['activeMain']
+        : state.ui.activeMain;
       return {
         ui: {
           ...state.ui,
-          activeMain: isSame ? 'none' : panel,
+          activeMain: nextMain,
           visible: {
             ...state.ui.visible,
             ...asRecord(EXCLUSIVE_MAIN as PanelId[], false),
             [panel]: isSame,
           },
         },
-      }
-    })
+      };
+    });
   },
-
   closeAllPanels: () => {
-    set((state: any) => ({
+    set((state: RootState) => ({
       ui: {
         ...state.ui,
         activeMain: 'none',
@@ -152,26 +160,24 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
           connectionStats: false,
         },
       },
-    }))
+    }));
   },
   setKeyboardLayout: (layout: KeyboardLayout) => {
-    set((state: any) => ({ ui: { ...state.ui, keyboardLayout: layout } }))
+    set((state: RootState) => ({ ui: { ...state.ui, keyboardLayout: layout } }));
   },
   setKeyboardHeight: (height: number) => {
-    set((state: any) => ({ ui: { ...state.ui, keyboardHeight: height } }))
+    set((state: RootState) => ({ ui: { ...state.ui, keyboardHeight: height } }));
   },
-
   setIsPasteTextOpen: (open: boolean) => {
-    set((state: any) => ({ ui: { ...state.ui, isPasteTextOpen: open } }))
+    set((state: RootState) => ({ ui: { ...state.ui, isPasteTextOpen: open } }));
   },
-
   togglePasteText: () => {
-    set((state: any) => ({
-      ui: { ...state.ui, isPasteTextOpen: !state.ui.isPasteTextOpen },
-    }))
+    set((state: RootState) => ({
+      ui: { ...state.ui, isPasteTextOpen: !state.ui?.isPasteTextOpen },
+    }));
   },
 
   setControlLayoutMode: (mode: 'vertical' | 'horizontal') => {
-    set((state: any) => ({ ui: { ...state.ui, controlLayoutMode: mode } }))
+    set((state: RootState) => ({ ui: { ...state.ui, controlLayoutMode: mode } }));
   },
-})
+});

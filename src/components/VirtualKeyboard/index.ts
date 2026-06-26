@@ -9,21 +9,21 @@
  * VirtualKeyboard component exports
  */
 
-export { default } from './index.tsx'
-export { default as VirtualKeyboard } from './index.tsx'
-export type { VirtualKeyboardProps } from './index.tsx'
+export { default } from './index.tsx';
+export { default as VirtualKeyboard } from './index.tsx';
+export type { VirtualKeyboardProps } from './index.tsx';
 
 // Export key components
-export { default as Key } from './components/Key.tsx'
-export type { KeyProps } from './types'
+export { default as Key } from './components/Key.tsx';
+export type { KeyProps } from './types';
 
 // Export utilities (includes keyboard simulator)
-export * from './utils'
+export * from './utils';
 
 // Export data types
-export type * from './data'
+export type * from './data';
 
 // Hooks
-export * from './hooks'
+export * from './hooks';
 // Constants
-export * from './constants'
+export * from './constants';

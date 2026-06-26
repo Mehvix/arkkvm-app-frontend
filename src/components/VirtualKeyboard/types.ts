@@ -10,6 +10,7 @@
 /**
  * Type definitions for VirtualKeyboard components
  */
+import type { KeyDefinition } from './data/keyboard-types';
 
 export interface KeyProps {
   /** Key code identifier */
@@ -17,9 +18,9 @@ export interface KeyProps {
   /** Display content - supports text, dual-state text array, or custom React node */
   label?: React.ReactNode | string | string[]
   /** Key definition object (used to compute label with getDisplayLabel) */
-  keyDef?: any
+  keyDef?: KeyDefinition
   /** Function to compute display label from key definition */
-  getDisplayLabel?: (key: any) => any
+  getDisplayLabel?: (key: KeyDefinition) => string | string[] | undefined
   /** Additional CSS classes */
   className?: string
   /** Inline styles */

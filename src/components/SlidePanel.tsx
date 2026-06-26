@@ -1,27 +1,29 @@
-import { cn } from '@/lib/utils'
-import React from 'react'
+import { cn } from '@/lib/utils';
+import React from 'react';
 
 export type SlideSide = 'top' | 'bottom' | 'left' | 'right'
 
 export interface SlidePanelProps {
   open: boolean
   side?: SlideSide
-  duration?: number // ms
-  ease?: string // css timing function, e.g. 'ease-in-out'
-  width?: number | string // used for left/right
-  height?: number | string // used for top/bottom
-  className?: string // wrapper class (fixed container)
-  contentClassName?: string // inner content box class
+  duration?: number
+  ease?: string
+  width?: number | string
+  height?: number | string
+  className?: string
+  contentClassName?: string
   style?: React.CSSProperties
   contentStyle?: React.CSSProperties
-  overlay?: boolean // show a dim overlay behind
+  overlay?: boolean
   overlayClassName?: string
   onOverlayClick?: () => void
   children?: React.ReactNode
-  animateOnMount?: boolean // trigger animation when initially mounted and open=true
-  expandMode?: 'size' | 'translate' | 'both' // size: animate width/height; translate: slide; both: combine
-  position?: 'fixed' | 'inline' // fixed: overlay/drawer style; inline: normal flow block
-  closeOnOutside?: boolean // click outside to close (overlay or document area). default: true
+  animateOnMount?: boolean
+  /** size: animate width/height; translate: slide; both: combine */
+  expandMode?: 'size' | 'translate' | 'both'
+  /** fixed: overlay/drawer style; inline: normal flow block */
+  position?: 'fixed' | 'inline'
+  closeOnOutside?: boolean
 }
 
 const sidePositionClass: Record<SlideSide, string> = {
@@ -29,18 +31,18 @@ const sidePositionClass: Record<SlideSide, string> = {
   bottom: 'left-0 right-0 bottom-0',
   left: 'left-0 top-0 bottom-0',
   right: 'right-0 top-0 bottom-0',
-}
+};
 
 function hiddenTransform(side: SlideSide) {
   switch (side) {
     case 'top':
-      return '-translate-y-full'
+      return '-translate-y-full';
     case 'bottom':
-      return 'translate-y-full'
+      return 'translate-y-full';
     case 'left':
-      return '-translate-x-full'
+      return '-translate-x-full';
     case 'right':
-      return 'translate-x-full'
+      return 'translate-x-full';
   }
 }
 
@@ -48,10 +50,10 @@ function openTransform(side: SlideSide) {
   switch (side) {
     case 'top':
     case 'bottom':
-      return 'translate-y-0'
+      return 'translate-y-0';
     case 'left':
     case 'right':
-      return 'translate-x-0'
+      return 'translate-x-0';
   }
 }
 
@@ -75,50 +77,50 @@ export function SlidePanel({
   closeOnOutside = true,
   children,
 }: SlidePanelProps) {
-  const [mounted, setMounted] = React.useState(false)
-  const panelRef = React.useRef<HTMLDivElement>(null)
-  const containerRef = React.useRef<HTMLDivElement>(null)
-  React.useEffect(() => {
-    // delay one frame to ensure browsers can interpolate from hidden to shown on mount
-    if (!mounted) {
-      const id = requestAnimationFrame(() => setMounted(true))
-      return () => cancelAnimationFrame(id)
-    }
-  }, [mounted])
+  const [hasMounted, setHasMounted] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
 
-  // Outside click to close (works for both inline and fixed)
   React.useEffect(() => {
-    if (!(open && closeOnOutside && onOverlayClick)) return
-    const handler = (e: MouseEvent) => {
-      const panelEl = panelRef.current
-      const containerEl = containerRef.current
-      const target = e.target as Node | null
-      if (!target) return
-      // If click is outside both panel and container, treat as outside
+    if (!hasMounted) {
+      const id = requestAnimationFrame(() => setHasMounted(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [hasMounted]);
+
+  const isVisible = open && (hasMounted || !animateOnMount);
+
+  React.useEffect(() => {
+    if (!(open && closeOnOutside && onOverlayClick)) return;
+    const handleDocumentMouseDown = (e: MouseEvent) => {
+      const panelEl = panelRef.current;
+      const wrapperEl = wrapperRef.current;
+      const target = e.target as Node | null;
+      if (!target) return;
       if (
         panelEl &&
         !panelEl.contains(target) &&
-        containerEl &&
-        !containerEl.contains(target)
+        wrapperEl &&
+        !wrapperEl.contains(target)
       ) {
-        onOverlayClick?.()
+        onOverlayClick?.();
       }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open, closeOnOutside, onOverlayClick])
-  // Target size according to side
-  const targetSize: React.CSSProperties = {}
-  const isVertical = side === 'top' || side === 'bottom'
+    };
+    document.addEventListener('mousedown', handleDocumentMouseDown);
+    return () =>
+      document.removeEventListener('mousedown', handleDocumentMouseDown);
+  }, [open, closeOnOutside, onOverlayClick]);
+
+  const targetSizeStyle: React.CSSProperties = {};
+  const isVertical = side === 'top' || side === 'bottom';
   if (isVertical) {
-    targetSize.height = height ?? 400
-    targetSize.width = '100%'
+    targetSizeStyle.height = height ?? 400;
+    targetSizeStyle.width = '100%';
   } else {
-    targetSize.width = width ?? 400
-    targetSize.height = '100%'
+    targetSizeStyle.width = width ?? 400;
+    targetSizeStyle.height = '100%';
   }
 
-  // Transition style
   const transitionStyle: React.CSSProperties = {
     transitionProperty: [
       expandMode !== 'translate' ? (isVertical ? 'height' : 'width') : '',
@@ -129,11 +131,12 @@ export function SlidePanel({
       .join(', '),
     transitionDuration: `${duration}ms`,
     transitionTimingFunction: ease,
-  }
+  };
 
-  const panel = (
+  const panelNode = (
     <div
-      ref={containerRef}
+      ref={wrapperRef}
+      data-kvm-ignore="true"
       className={cn(
         position === 'fixed'
           ? cn(
@@ -149,27 +152,23 @@ export function SlidePanel({
       <div
         ref={panelRef}
         className={cn(
-          // base
           'bg-[var(--bg-secondary)] shadow-lg transform-gpu will-change-transform will-change-opacity overflow-hidden',
-          // translate when closed vs open
           expandMode !== 'size'
-            ? open && (mounted || !animateOnMount)
+            ? isVisible
               ? openTransform(side)
               : hiddenTransform(side)
             : '',
-          // opacity fade
-          open && (mounted || !animateOnMount) ? 'opacity-100' : 'opacity-0',
+          isVisible ? 'opacity-100' : 'opacity-0',
           contentClassName
         )}
         style={{
-          // size expansion
           ...(expandMode !== 'translate'
-            ? open && (mounted || !animateOnMount)
-              ? targetSize
+            ? isVisible
+              ? targetSizeStyle
               : isVertical
-                ? { height: 0, width: targetSize.width }
-                : { width: 0, height: targetSize.height }
-            : targetSize),
+                ? { height: 0, width: targetSizeStyle.width }
+                : { width: 0, height: targetSizeStyle.height }
+            : targetSizeStyle),
           ...transitionStyle,
           ...contentStyle,
         }}
@@ -178,17 +177,15 @@ export function SlidePanel({
         {children}
       </div>
     </div>
-  )
+  );
 
-  // Overlay only applies when position is fixed
-  if (!(position === 'fixed' && overlay)) return panel
+  if (!(position === 'fixed' && overlay)) return panelNode;
 
   return (
     <div
       className="fixed inset-0 z-[999]"
       style={{ pointerEvents: open ? 'auto' : 'none' }}
     >
-      {/* Backdrop */}
       <div
         className={cn(
           'absolute inset-0 bg-black/40',
@@ -198,9 +195,9 @@ export function SlidePanel({
         style={transitionStyle}
         onClick={closeOnOutside ? onOverlayClick : undefined}
       />
-      {panel}
+      {panelNode}
     </div>
-  )
+  );
 }
 
-export default SlidePanel
+export default SlidePanel;

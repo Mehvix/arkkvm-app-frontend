@@ -7,13 +7,13 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-11 02:35:25
  */
-import { IconFolder, IconReturn } from '@/assets/icons'
-import { Tabs } from '@radix-ui/react-tabs'
-import TransferList from '../../TransferList'
-import { Button } from '../../ui/button'
-import { TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
-import { downloadsColumns } from './columns'
-import type { UseVirtualUsbDriveReturn } from './useVirtualUsbDrive'
+import { IconFolder, IconReturn } from '@/assets/icons';
+import { Tabs } from '@radix-ui/react-tabs';
+import TransferList from '../../TransferList';
+import { Button } from '../../ui/button';
+import { TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { downloadsColumns } from './columns';
+import type { UseVirtualUsbDriveReturn } from './useVirtualUsbDrive';
 
 type TransferListViewProps = UseVirtualUsbDriveReturn
 
@@ -26,7 +26,7 @@ export default function TransferListView(props: TransferListViewProps) {
     setListType,
     handlePauseUpload,
     handleRemoveUpload,
-  } = props
+  } = props;
 
   return (
     <>
@@ -79,7 +79,7 @@ export default function TransferListView(props: TransferListViewProps) {
             />
           </TabsContent>
           <TabsContent value="download">
-            <TransferList
+             <TransferList
               columns={downloadsColumns}
               list={downloads}
               showActions={false}
@@ -109,5 +109,5 @@ export default function TransferListView(props: TransferListViewProps) {
         </Tabs>
       </div>
     </>
-  )
+  );
 }

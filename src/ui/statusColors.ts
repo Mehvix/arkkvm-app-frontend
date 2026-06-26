@@ -7,7 +7,7 @@ export const StatusPalette = {
   info: 'text-sky-400',
   error: 'text-rose-400',
   idle: 'text-zinc-400',
-} as const
+} as const;
 
 // Registry maps a domain.state to a palette key
 export const StatusColorRegistry: Record<string, keyof typeof StatusPalette> = {
@@ -32,16 +32,16 @@ export const StatusColorRegistry: Record<string, keyof typeof StatusPalette> = {
   'rtc.rpc.open': 'ok',
   'rtc.rpc.closing': 'warn',
   'rtc.rpc.closed': 'error',
-}
+};
 
 export function getStatusColor(kind: string, state: string): string {
-  const key = `${kind}.${state}`
-  const paletteKey = StatusColorRegistry[key] ?? 'idle'
-  return StatusPalette[paletteKey]
+  const key = `${kind}.${state}`;
+  const paletteKey = StatusColorRegistry[key] ?? 'idle';
+  return StatusPalette[paletteKey];
 }
 
 export function getStatusVisual(kind: string, state: string) {
   return {
     colorClass: getStatusColor(kind, state),
-  } as const
+  } as const;
 }

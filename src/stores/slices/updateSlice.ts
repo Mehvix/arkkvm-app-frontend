@@ -1,21 +1,15 @@
-/**
- * @Purpose:
- * @Descripttion:
- * @version:
- * @Author: zhanglei
- * @Date: 2025-10-07 20:20:57
- * @LastEditors: zhanglei
- * @LastEditTime: 2026-02-07 02:24:24
- */
-import type { StateCreator } from 'zustand'
+import type { StateCreator } from 'zustand';
+import type { RootState } from '../types';
 
+/** Version information. */
 export interface VersionInfo {
+  /** Current app version. */
   currentAppVersion: string
-
+  /** Current system version. */
   currentSystemVersion: string
-
+  /** Available app update version. */
   updateAppVersion: string | null
-
+  /** Available system update version. */
   updateSystemVersion: string | null
 }
 
@@ -26,7 +20,7 @@ export type OTAState = {
   metadataFetchedAt: number | null
   appUpdatePending: boolean
   systemUpdatePending: boolean
-
+  /** Version information. */
   versionInfo: VersionInfo
   appDownloadProgress: number
   appDownloadFinishedAt: number | null
@@ -42,6 +36,17 @@ export type OTAState = {
   systemUpdatedAt: number | null
 }
 
+/**
+ * Update dialog view state.
+ * - loading: initial state
+ * - updateAvailable: update detected after manual check
+ * - upToDate: no update available after manual check
+ * - download: download progress view (systemDownloadProgress)
+ * - verify: verification progress view (systemVerificationProgress)
+ * - preparing: update progress view (systemUpdateProgress)
+ * - updateCompleted: update finished and waiting for restart
+ * - error: error state requiring manual action
+ */
 export type UpdateModalView =
   | 'loading'
   | 'updateAvailable'
@@ -58,9 +63,9 @@ export interface UpdateStateData {
   updateDialogHasBeenMinimized: boolean
   modalView: UpdateModalView
   updateErrorMessage: string | null
-
+  /** Whether the dialog is open (ephemeral, reset on refresh). */
   isDialogOpen: boolean
-
+  /** Whether to show reconnect overlay after update completion. */
   isReconnectOverlayVisible: boolean
 }
 
@@ -73,13 +78,13 @@ export interface UpdateStateActions {
   setModalView: (view: UpdateStateData['modalView']) => void
   setUpdateErrorMessage: (msg: string | null) => void
   resetOtaState: () => void
-
+  /** Open the dialog. */
   openDialog: () => void
-
+  /** Close the dialog. */
   closeDialog: () => void
-
+  /** Show reconnect overlay. */
   showReconnectOverlay: () => void
-
+  /** Hide reconnect overlay. */
   hideReconnectOverlay: () => void
 }
 
@@ -110,73 +115,78 @@ const defaultOTAState = (): OTAState => ({
   appUpdatedAt: null,
   systemUpdateProgress: 0,
   systemUpdatedAt: null,
-})
+});
 
-export const createUpdateSlice: StateCreator<UpdateSlice> = set => ({
+export const createUpdateSlice: StateCreator<RootState, [], [], UpdateSlice> = set => ({
   update: {
-    // data
+    // Data
     isUpdatePending: false,
     otaState: defaultOTAState(),
     updateDialogHasBeenMinimized: false,
     modalView: 'loading',
     updateErrorMessage: null,
-    isDialogOpen: false,
-    isReconnectOverlayVisible: false,
+    isDialogOpen: false, // Closed by default and reset on refresh.
+    isReconnectOverlayVisible: false, // Hidden by default.
 
-    // actions
+    // Actions
     setIsUpdatePending: isPending =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, isUpdatePending: isPending },
       })),
 
     setOtaState: next =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: {
           ...state.update,
           otaState:
             typeof next === 'function'
-              ? (next as any)(state.update.otaState)
+              ? (next as (prev: OTAState) => OTAState)(state.update.otaState)
               : { ...state.update.otaState, ...(next as Partial<OTAState>) },
         },
       })),
 
     setUpdateDialogHasBeenMinimized: minimized =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, updateDialogHasBeenMinimized: minimized },
       })),
 
     setModalView: view =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, modalView: view },
       })),
 
     setUpdateErrorMessage: msg =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, updateErrorMessage: msg },
       })),
 
+    // Open dialog.
     openDialog: () =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, isDialogOpen: true },
       })),
 
+    // Close dialog.
     closeDialog: () =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, isDialogOpen: false },
       })),
 
+    // Show reconnect overlay after update completion.
     showReconnectOverlay: () =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, isReconnectOverlayVisible: true },
       })),
 
+    // Hide reconnect overlay.
     hideReconnectOverlay: () =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: { ...state.update, isReconnectOverlayVisible: false },
       })),
 
+    // Reset OTA state to defaults for retry or restart of the flow.
     resetOtaState: () =>
-      set((state: any) => ({
+      set((state: UpdateSlice) => ({
         update: {
           ...state.update,
           otaState: defaultOTAState(),
@@ -186,4 +196,4 @@ export const createUpdateSlice: StateCreator<UpdateSlice> = set => ({
         },
       })),
   },
-})
+});

@@ -7,25 +7,40 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2025-12-04 16:20:54
  */
-import { Switch } from '@/components/ui/switch'
-import React from 'react'
-import SettingBlock, { type SettingBlockProps } from './SettingBlock'
+import { Switch } from '@/components/ui/switch';
+import React from 'react';
+import SettingBlock, { type SettingBlockProps } from './SettingBlock';
 
 export interface SettingSwitchProps extends Omit<
   SettingBlockProps,
   'children'
 > {
+  /**
+   * Current switch state
+   */
   checked: boolean
-
+  /**
+   * Callback triggered when switch state changes
+   */
   onCheckedChange: (checked: boolean) => void
-
+  /**
+   * Whether switch is disabled
+   */
   disabled?: boolean
-
+  /**
+   * Custom switch className
+   */
   switchClassName?: string
-
+  /**
+   * Extra bottom content (e.g. hint text)
+   */
   children?: React.ReactNode
 }
 
+/**
+ * Reusable settings switch component.
+ * Combines SettingBlock layout and Switch control.
+ */
 export default function SettingSwitch({
   checked,
   onCheckedChange,
@@ -46,5 +61,5 @@ export default function SettingSwitch({
       </SettingBlock.Right>
       {children && <SettingBlock.Bottom>{children}</SettingBlock.Bottom>}
     </SettingBlock>
-  )
+  );
 }

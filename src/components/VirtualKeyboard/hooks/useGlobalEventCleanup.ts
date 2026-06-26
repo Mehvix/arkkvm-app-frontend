@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 /**
  * Custom hook for handling global mouse/touch events
@@ -12,20 +12,20 @@ export const useGlobalEventCleanup = (
   onRelease: () => void
 ) => {
   useEffect(() => {
-    if (!isPressed) return
+    if (!isPressed) return;
 
-    const handleGlobalMouseUp = () => onRelease()
-    const handleGlobalTouchEnd = () => onRelease()
+    const handleGlobalMouseUp = () => onRelease();
+    const handleGlobalTouchEnd = () => onRelease();
 
     // Add global listeners to catch release events outside the component
-    document.addEventListener('mouseup', handleGlobalMouseUp)
-    document.addEventListener('touchend', handleGlobalTouchEnd)
-    document.addEventListener('touchcancel', handleGlobalTouchEnd)
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+    document.addEventListener('touchcancel', handleGlobalTouchEnd);
 
     return () => {
-      document.removeEventListener('mouseup', handleGlobalMouseUp)
-      document.removeEventListener('touchend', handleGlobalTouchEnd)
-      document.removeEventListener('touchcancel', handleGlobalTouchEnd)
-    }
-  }, [isPressed, onRelease])
-}
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+      document.removeEventListener('touchcancel', handleGlobalTouchEnd);
+    };
+  }, [isPressed, onRelease]);
+};

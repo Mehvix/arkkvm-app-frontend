@@ -5,8 +5,8 @@
  * - A custom trigger element (e.g., Button) with drag support
  * - A default styled drop zone with idle/dragging hints
  */
-import React from 'react'
-import { Label } from '../ui/label'
+import React from 'react';
+import { Label } from '../ui/label';
 
 interface UploadZoneProps {
   label?: string
@@ -43,8 +43,8 @@ function UploadZone({
   pickingRef,
   customUploadTrigger,
   uploaderContainerClassName,
-  initSize,
-  initTotalBytes,
+  initSize: _initSize,
+  initTotalBytes: _initTotalBytes,
   onDragOver,
   onDragEnter,
   onDragLeave,
@@ -52,11 +52,11 @@ function UploadZone({
   onFileSelected,
 }: UploadZoneProps) {
   const openPicker = () => {
-    if (disabled) return
-    if (pickingRef.current) return
-    pickingRef.current = true
-    inputRef.current?.click()
-  }
+    if (disabled) return;
+    if (pickingRef.current) return;
+    pickingRef.current = true;
+    inputRef.current?.click();
+  };
 
   return (
     <div className={disabled ? 'opacity-60' : ''}>
@@ -83,14 +83,16 @@ function UploadZone({
             multiple
             onChange={onFileSelected}
           />
-          <div onClick={openPicker}>{customUploadTrigger}</div>
+          <div onClick={openPicker}>
+            {customUploadTrigger}
+          </div>
         </div>
       ) : (
         // Default upload box mode
         <div
           className={
-            `mt-2 relative rounded-md p-6 text-center overflow-hidden transition-colors border ` +
-            `${dragging ? 'border-[var(--btn-primary-bg)] bg-[var(--btn-primary-bg)]/5' : 'border-[var(--border-color)]'} ` +
+            'mt-2 relative rounded-md p-6 text-center overflow-hidden transition-colors border ' +
+            `${dragging ? 'border-(--btn-primary-bg) bg-(--btn-primary-bg)/5' : 'border-(--border-color)'} ` +
             `${disabled ? 'pointer-events-none' : 'cursor-pointer'} ` +
             `${className}`
           }
@@ -114,15 +116,17 @@ function UploadZone({
             onChange={onFileSelected}
           />
           <div className="pointer-events-none flex flex-col items-center">
-            <div className="text-sm">{dragging ? draggingText : idleText}</div>
-            <div className="text-xs  mt-2 text-[var(--text-secondary)]">
-              {formatsText}
+
+            <div className="text-sm">
+              {dragging ? draggingText : idleText}
             </div>
+            <div className="text-sm  mt-2 text-(--text-secondary)">{formatsText}</div>
+
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default React.memo(UploadZone)
+export default React.memo(UploadZone);

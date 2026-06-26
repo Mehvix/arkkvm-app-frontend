@@ -1,7 +1,7 @@
-import { IconK, IconLogo, IconM, IconR, IconV } from '@/assets/icons'
-import { cn } from '@/lib/utils'
-import { useAppStore } from '@/stores'
-import React from 'react'
+import { IconK, IconLogo, IconM, IconR, IconV } from '@/assets/icons';
+import { cn } from '@/lib/utils';
+import { useAppStore } from '@/stores';
+import React from 'react';
 
 export type BrandLogoProps = {
   /** Render only the icon or the full wordmark */
@@ -25,59 +25,62 @@ export type BrandLogoProps = {
  */
 export const BrandLogo: React.FC<BrandLogoProps> = ({
   type = 'full',
-  variant = 'auto',
   size = 28,
   primaryColor,
-  accentColor = '#EF4444',
-  className = 'text-[26px] size-[26px]',
-
+  className,
   style,
 }) => {
-  const theme = useAppStore(state => state.currentTheme)
+  const theme = useAppStore(state => state.currentTheme);
 
-  const mainColor = primaryColor ?? (theme === 'light' ? '#0A0A0A' : '#FFFFFF')
-  const letterPx = Math.max(12, Math.round(size))
+  const mainColor = primaryColor ?? (theme === 'light' ? '#0A0A0A' : '#FFFFFF');
+  const letterPx = Math.max(12, Math.round(size));
+  const iconPx = size + 6;
 
-  const iconPx = size + 6 // IconLogo is bigger by 8px (~two steps)
-  const iconSizeClass = `size-[${iconPx}px] text-[${iconPx}px]`
-  const letterSizeClass = `size-[${letterPx}px] text-[${letterPx}px]`
+  const iconStyle: React.CSSProperties = { width: iconPx, height: iconPx, flexShrink: 0 };
+  const letterStyle: React.CSSProperties = { width: letterPx, height: letterPx, flexShrink: 0 };
+
   if (type === 'icon') {
-    return <IconLogo className={cn(iconSizeClass, className)} />
+    return <IconLogo className={cn('brand-logo-icon', className)} style={{ ...iconStyle, ...style }} />;
   }
 
   return (
     <div
-      className={cn('flex items-center justify-center  gap-[2px]')}
-      style={{ color: mainColor }}
+      className={cn('flex items-center justify-center gap-[2px] brand-logo-container', className)}
+      style={{
+        '--logo-color': mainColor,
+        '--logo-size': size,
+        '--icon-size': iconPx,
+        ...style,
+      } as React.CSSProperties}
     >
       <IconLogo
-        className={cn(className, iconSizeClass)}
-        style={{ fontSize: iconPx, width: iconPx, height: iconPx }}
+        className="brand-logo-icon"
+        style={iconStyle}
       />
 
       <IconR
-        className={cn(className, letterSizeClass)}
-        style={{ fontSize: size, width: size, height: size }}
+        className="brand-logo-letter"
+        style={letterStyle}
       />
       <IconK
-        className={cn(className, letterSizeClass)}
-        style={{ fontSize: size, width: size, height: size }}
+        className="brand-logo-letter"
+        style={letterStyle}
       />
       <IconK
-        className={cn(className, letterSizeClass)}
-        style={{ fontSize: size, width: size, height: size }}
+        className="brand-logo-letter"
+        style={letterStyle}
       />
 
       <IconV
-        className={cn(className, letterSizeClass)}
-        style={{ fontSize: size, width: size, height: size }}
+        className="brand-logo-letter"
+        style={letterStyle}
       />
       <IconM
-        className={cn(className, letterSizeClass)}
-        style={{ fontSize: size, width: size, height: size }}
+        className="brand-logo-letter"
+        style={letterStyle}
       />
     </div>
-  )
-}
+  );
+};
 
-export default BrandLogo
+export default BrandLogo;

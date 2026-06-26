@@ -1,0 +1,8 @@
+{
+  "changeRejectedByUpperLayer": " ",
+  "virtualUsbDriveInUse": {
+    "title": "虚拟 USB 驱动器正在使用中",
+    "description": "虚拟 USB 驱动器当前已挂载到远程系统。\n\n为防止数据丢失或文件损坏，请在重置设备前将驱动器重新挂载回 ArkKVM。",
+    "confirm": "知道了"
+  }
+}

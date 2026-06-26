@@ -5,46 +5,46 @@
  * @Author: zhanglei
  * @Date: 2025-07-23 14:55:13
  * @LastEditors: zhanglei
- * @LastEditTime: 2025-07-23 15:00:34
+ * @LastEditTime: 2026-05-19 16:01:11
  */
 
-import React, { useEffect, useMemo, useState } from 'react'
-import { useForm, FormProvider, Controller } from 'react-hook-form'
+import React, { useEffect, useMemo, useState } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
+import { Checkbox } from './ui/checkbox';
 import {
   Form,
-  FormItem,
-  FormLabel,
   FormControl,
-  FormMessage,
   FormDescription,
   FormField,
-} from './ui/form'
-import { Input } from './ui/input'
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from './ui/form';
+import { Input } from './ui/input';
 import {
   Select,
-  SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
-} from './ui/select'
-import { Checkbox } from './ui/checkbox'
+} from './ui/select';
 
-export type BaseFormFieldOption = { label: string; value: any }
+export type BaseFormFieldOption = { label: string; value: string }
 export type BaseFormFieldProps = {
   label: string
   prop: string
   type: 'input' | 'select' | 'checkbox' | string
   parentKey?: string
-  defaultValue?: any
+  defaultValue?: unknown
   options?: BaseFormFieldOption[]
   fetchOptions?: (() => Promise<BaseFormFieldOption[]>) | undefined
-  render?: (field: any, form: any) => React.ReactNode
+  render?: (field: unknown, form: unknown) => React.ReactNode
   width?: string
   labelWidth?: string | null | undefined
-  unit?: string | ((val: any) => string)
-  props?: { [key: string]: any }
-  on?: { [key: string]: (...args: any[]) => void }
-  dynamicShow?: ((form: any) => boolean) | boolean
+  unit?: string | ((val: unknown) => string)
+  props?: Record<string, unknown>
+  on?: Record<string, (...args: unknown[]) => void>
+  dynamicShow?: ((form: unknown) => boolean) | boolean
   children?: BaseFormFieldProps[]
   description?: string
   extra?: React.ReactNode
@@ -52,12 +52,13 @@ export type BaseFormFieldProps = {
 
 export type BaseFormProps = {
   fields: BaseFormFieldProps[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit?: (data: any, methods: any) => void | Promise<void>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   defaultValues?: Record<string, any>
   layout?: 'vertical' | 'horizontal'
   loading?: boolean
   className?: string
-  style?: React.CSSProperties
 }
 
 export const BaseForm: React.FC<BaseFormProps> = ({
@@ -67,29 +68,38 @@ export const BaseForm: React.FC<BaseFormProps> = ({
   layout = 'vertical',
   loading = false,
   className,
-  style,
 }) => {
-  const form = useForm({ defaultValues })
+  const form = useForm({ defaultValues });
   const [optionsMap, setOptionsMap] = useState<
     Record<string, BaseFormFieldOption[]>
-  >({})
+  >({});
 
+  // Memoize fields to prevent unnecessary re-renders
+  const memoizedFields = useMemo(() => fields, [fields]);
+
+  // Load async options
   useEffect(() => {
-    fields.forEach(async item => {
-      if (item.fetchOptions && typeof item.fetchOptions === 'function') {
-        const opts = await item.fetchOptions()
-        setOptionsMap(prev => ({ ...prev, [item.prop]: opts }))
+    const fetchOptions = async () => {
+      for (const item of memoizedFields) {
+        if (item.fetchOptions && typeof item.fetchOptions === 'function') {
+          const opts = await item.fetchOptions();
+          setOptionsMap(prev => ({ ...prev, [item.prop]: opts }));
+        }
       }
-    })
-  }, [fields])
+    };
 
+    fetchOptions();
+  }, [memoizedFields]);
+
+  // Render a single form item
   const renderFormItem = (item: BaseFormFieldProps) => {
+    // Dynamic visibility logic
     if (typeof item.dynamicShow === 'function' && !item.dynamicShow(form))
-      return null
-    if (typeof item.dynamicShow === 'boolean' && !item.dynamicShow) return null
-
-    if (item.render) return item.render(form.getFieldState(item.prop), form)
-
+      return null;
+    if (typeof item.dynamicShow === 'boolean' && !item.dynamicShow) return null;
+    // Custom render
+    if (item.render) return item.render(form.getFieldState(item.prop), form);
+    // Component type
     switch (item.type) {
       case 'input':
         return (
@@ -98,11 +108,9 @@ export const BaseForm: React.FC<BaseFormProps> = ({
             name={item.prop}
             control={form.control}
             render={({ field }) => (
-              <FormItem style={item.width ? { width: item.width } : undefined}>
+              <FormItem className={item.width ? `w-[${item.width}]` : ''}>
                 <FormLabel
-                  style={
-                    item.labelWidth ? { width: item.labelWidth } : undefined
-                  }
+                  className={item.labelWidth ? `w-[${item.labelWidth}]` : ''}
                 >
                   {item.label}
                 </FormLabel>
@@ -117,7 +125,7 @@ export const BaseForm: React.FC<BaseFormProps> = ({
               </FormItem>
             )}
           />
-        )
+        );
       case 'select':
         return (
           <FormField
@@ -125,11 +133,9 @@ export const BaseForm: React.FC<BaseFormProps> = ({
             name={item.prop}
             control={form.control}
             render={({ field }) => (
-              <FormItem style={item.width ? { width: item.width } : undefined}>
+              <FormItem className={item.width ? `w-[${item.width}]` : ''}>
                 <FormLabel
-                  style={
-                    item.labelWidth ? { width: item.labelWidth } : undefined
-                  }
+                  className={item.labelWidth ? `w-[${item.labelWidth}]` : ''}
                 >
                   {item.label}
                 </FormLabel>
@@ -142,7 +148,7 @@ export const BaseForm: React.FC<BaseFormProps> = ({
                     <SelectTrigger>
                       <SelectValue
                         placeholder={
-                          item.props?.placeholder || `Select ${item.label}`
+                          item.props?.placeholder || `Please select ${item.label}`
                         }
                       />
                     </SelectTrigger>
@@ -165,7 +171,7 @@ export const BaseForm: React.FC<BaseFormProps> = ({
               </FormItem>
             )}
           />
-        )
+        );
       case 'checkbox':
         return (
           <FormField
@@ -173,11 +179,9 @@ export const BaseForm: React.FC<BaseFormProps> = ({
             name={item.prop}
             control={form.control}
             render={({ field }) => (
-              <FormItem style={item.width ? { width: item.width } : undefined}>
+              <FormItem className={item.width ? `w-[${item.width}]` : ''}>
                 <FormLabel
-                  style={
-                    item.labelWidth ? { width: item.labelWidth } : undefined
-                  }
+                  className={item.labelWidth ? `w-[${item.labelWidth}]` : ''}
                 >
                   {item.label}
                 </FormLabel>
@@ -196,19 +200,20 @@ export const BaseForm: React.FC<BaseFormProps> = ({
               </FormItem>
             )}
           />
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
+  // Recursive rendering with children support
   const renderFields = (items: BaseFormFieldProps[]) =>
     items.map(item => (
       <React.Fragment key={item.prop}>
         {renderFormItem(item)}
         {item.children && renderFields(item.children)}
       </React.Fragment>
-    ))
+    ));
 
   return (
     <FormProvider {...form}>
@@ -216,7 +221,6 @@ export const BaseForm: React.FC<BaseFormProps> = ({
         <form
           onSubmit={form.handleSubmit(data => onSubmit?.(data, form))}
           className={className}
-          style={style}
         >
           <div
             className={`base-form-fields flex flex-col gap-3 ${layout === 'horizontal' ? 'flex-row' : ''}`}
@@ -227,5 +231,5 @@ export const BaseForm: React.FC<BaseFormProps> = ({
         </form>
       </Form>
     </FormProvider>
-  )
-}
+  );
+};

@@ -1,10 +1,10 @@
-import { StateCreator } from 'zustand'
+import type { StateCreator } from 'zustand';
 interface MouseMove {
   x: number
   y: number
   buttons: number
 }
-interface MouseSlice {
+export interface MouseSlice {
   mouseX: number
   mouseY: number
   mouseMove?: MouseMove
@@ -17,4 +17,4 @@ export const createMouseSlice: StateCreator<MouseSlice> = set => ({
   mouseY: 0,
   setMouseMove: (move?: MouseMove) => set({ mouseMove: move }),
   setMousePosition: (x, y) => set({ mouseX: x, mouseY: y }),
-})
+});

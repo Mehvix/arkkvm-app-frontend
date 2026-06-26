@@ -1,6 +1,6 @@
 /**
- * @Purpose: Automatically generate routing configuration files
- * @Descripttion: Generate routing configuration based on page file structure and automatically monitor file changes
+ * @Purpose: Auto-generate route configuration file
+ * @Descripttion: Generate route config from page file structure and watch file changes
  * @version: 2.0.0
  * @Author: zhanglei
  * @Date: 2025-07-17 15:07:50
@@ -8,142 +8,136 @@
  * @LastEditTime: 2025-07-21 17:19:21
  */
 // scripts/generateRoutes.ts
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import chokidar from 'chokidar'
+import chokidar from 'chokidar';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Get the directory of the current file
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// Resolve current script directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Check and get the pages directory path
+// Resolve pages directory path
 function getPagesDir() {
-  const baseDir = path.resolve(__dirname, '../src')
-  // Check whether it is pages or page directory
+  const baseDir = path.resolve(__dirname, '../src');
+  // Support both pages and page directory names
   if (fs.existsSync(path.join(baseDir, 'pages'))) {
-    return path.join(baseDir, 'pages')
+    return path.join(baseDir, 'pages');
   } else if (fs.existsSync(path.join(baseDir, 'page'))) {
-    return path.join(baseDir, 'page')
+    return path.join(baseDir, 'page');
   }
-  console.warn('⚠️ pages or page directory not found, default using page')
-  return path.join(baseDir, 'page')
+  console.warn('⚠️ pages/page directory not found, fallback to page');
+  return path.join(baseDir, 'page');
 }
 
-const pagesDir = getPagesDir()
-const outPath = path.resolve(__dirname, '../src/router/routeConfig.ts')
+const pagesDir = getPagesDir();
+const outPath = path.resolve(__dirname, '../src/router/routeConfig.ts');
 
 function walk(dir, baseRoute = '') {
   if (!fs.existsSync(dir)) {
-    console.warn(`⚠️ Directory not found: ${dir}`)
-    return []
+    console.warn(`⚠️ Directory does not exist: ${dir}`);
+    return [];
   }
 
-  const entries = fs.readdirSync(dir)
-  const routes = []
+  const entries = fs.readdirSync(dir);
+  const routes = [];
 
   for (const entry of entries) {
-    const fullPath = path.join(dir, entry)
-    const stat = fs.statSync(fullPath)
+    const fullPath = path.join(dir, entry);
+    const stat = fs.statSync(fullPath);
 
     if (stat.isDirectory()) {
-      const subRoutes = walk(fullPath, path.join(baseRoute, entry))
-      routes.push(...subRoutes)
-      continue
+      const subRoutes = walk(fullPath, path.join(baseRoute, entry));
+      routes.push(...subRoutes);
+      continue;
     }
 
-    // Supports .page.tsx or index.tsx files
+    // Support .page.tsx and index.tsx files
     if (entry.endsWith('.page.tsx') || entry === 'index.tsx') {
-      let routePath = path.join(baseRoute, entry.replace(/\.(page\.)?tsx$/, ''))
-      routePath = routePath.replace(/\\/g, '/') // Windows path compatible
-      routePath = routePath.replace(/\/index$/, '')
-      routePath = routePath.replace(/\[([^\]]+)\]/g, ':$1')
+      let routePath = path.join(baseRoute, entry.replace(/\.(page\.)?tsx$/, ''));
+      routePath = routePath.replace(/\\/g, '/'); // Windows path compatibility
+      routePath = routePath.replace(/\/index$/, '');
+      routePath = routePath.replace(/\[([^\]]+)\]/g, ':$1');
 
-      // Calculate import path
-      let importPath
+      // Resolve import path
+      let importPath;
       if (pagesDir.includes('pages')) {
         importPath = fullPath
           .replace(path.resolve(__dirname, '../src'), '@')
           .replace(/\\/g, '/')
-          .replace(/\.tsx$/, '')
+          .replace(/\.tsx$/, '');
       } else {
         importPath = fullPath
           .replace(path.resolve(__dirname, '../src'), '@')
           .replace(/\\/g, '/')
-          .replace(/\.tsx$/, '')
+          .replace(/\.tsx$/, '');
       }
 
       routes.push({
         routePath: routePath || '/',
-        importPath,
-      })
+        importPath
+      });
     }
   }
 
-  return routes
+  return routes;
 }
 
 async function generate() {
-  // Make sure the output directory exists
-  const outDir = path.dirname(outPath)
+  // Ensure output directory exists
+  const outDir = path.dirname(outPath);
   if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true })
+    fs.mkdirSync(outDir, { recursive: true });
   }
 
-  const routeInfos = walk(pagesDir)
-  const routeEntries = []
+  const routeInfos = walk(pagesDir);
+  const routeEntries = [];
 
-  // Use for...of instead of map to use await
+  // Use for...of instead of map for await support
   for (const { routePath, importPath } of routeInfos) {
     try {
-      // Dynamically import modules
-      const module = await import(importPath)
-      // Get meta object
-      const meta = module.meta || {}
+      // Dynamic import
+      const module = await import(importPath);
+      // Read module meta
+      const meta = module.meta || {};
 
-      // Use meta.path if it exists and is valid, otherwise use the automatically generated routePath
-      let finalPath = routePath
-      if (
-        meta.path &&
-        typeof meta.path === 'string' &&
-        meta.path.trim() !== ''
-      ) {
-        // Make sure the path starts with /
-        finalPath = meta.path.startsWith('/') ? meta.path : `/${meta.path}`
-        // Remove the / at the end of the path
-        console.log('meta', meta?.path)
-        console.log('finalPath', finalPath)
-        finalPath = finalPath.replace(/\/+$/, '')
+      // Use meta.path when present and valid; otherwise use generated routePath
+      let finalPath = routePath;
+      if (meta.path && typeof meta.path === 'string' && meta.path.trim() !== '') {
+        // Ensure path starts with /
+        finalPath = meta.path.startsWith('/') ? meta.path : `/${meta.path}`;
+        // Remove trailing /
+        console.log('meta',meta?.path);
+        console.log('finalPath',finalPath);
+        finalPath = finalPath.replace(/\/+$/, '');
       }
 
-      // Create a copy of meta to avoid modifying the original object
-      const metaCopy = { ...meta }
-      // Make sure path does not appear repeatedly in meta
-      delete metaCopy.path
+      // Clone meta to avoid mutating original object
+      const metaCopy = { ...meta };
+      // Ensure path is not duplicated in meta
+      delete metaCopy.path;
 
-      // Make sure the path is a valid URL path
-      finalPath = finalPath.replace(/[^\w\-/]/g, '')
+      // Normalize to a valid URL path
+      finalPath = finalPath.replace(/[^\w\-/]/g, '');
 
-      // Generate routing configuration
-      // Generate formatted routing configuration
-      const indent = '  ' // 2 spaces for indentation
-      const metaStr =
-        Object.entries(metaCopy).length > 0
-          ? `,\n${indent.repeat(3)}meta: ${JSON.stringify(metaCopy, null, 2).replace(/\n/g, `\n${indent.repeat(3)}`)}`
-          : ''
+      // Generate formatted route entry
+      const indent = '  '; // 2 spaces for indentation
+      const metaStr = Object.entries(metaCopy).length > 0
+        ? `,\n${indent.repeat(3)}meta: ${JSON.stringify(metaCopy, null, 2).replace(/\n/g, `\n${indent.repeat(3)}`)}`
+        : '';
 
-      const routeStr = `${indent.repeat(1)}{\n${indent.repeat(2)}path: '${finalPath}',\n${indent.repeat(2)}element: lazy(() => import('${importPath}'))${metaStr}\n${indent.repeat(1)}}`
+      const routeStr = `${indent.repeat(1)}{\n${indent.repeat(2)}path: '${finalPath}',\n${indent.repeat(2)}element: lazy(() => import('${importPath}'))${metaStr}\n${indent.repeat(1)}}`;
 
-      routeEntries.push(routeStr)
+      routeEntries.push(routeStr);
 
-      console.log(`✅ Generate routes: ${finalPath} -> ${importPath}`)
+      console.log(`✅ Route generated: ${finalPath} -> ${importPath}`);
     } catch (error) {
-      console.error(`❌ Import ${importPath} failed:`, error)
+      console.error(`❌ Failed to import ${importPath}:`, error);
     }
   }
 
   const fileContent = `
-      // ⚠️ This file is automatically generated by generateRoutes.ts, please do not modify it manually
+      // ⚠️ This file is auto-generated by generateRoutes.ts. Do not edit manually.
       import { lazy } from 'react';
       import { RouteObject } from 'react-router-dom';
 
@@ -159,80 +153,78 @@ async function generate() {
       export const routes: CustomRouteObject[] = [
         ${routeEntries.join(',\n  ')}
       ];
-      `
+      `;
 
   try {
-    fs.writeFileSync(outPath, fileContent, 'utf-8')
-    console.log('✅ routeConfig.ts generated successfully')
+    fs.writeFileSync(outPath, fileContent, 'utf-8');
+    console.log('✅ routeConfig.ts generated successfully');
   } catch (err) {
-    console.error('❌ Failed to write routeConfig.ts:', err)
+    console.error('❌ Failed to write routeConfig.ts:', err);
   }
 }
 
-// Change the function to asynchronous in the ESM environment and call it immediately
+// In ESM, run an async main entry
 async function main() {
-  // Determine whether to activate listening mode
-  const watchMode = process.argv.includes('--watch')
+  // Check watch mode
+  const watchMode = process.argv.includes('--watch');
 
-  // Generate a routing configuration first
-  await generate()
-  console.log('✅ Routes configuration generated to:', outPath)
+  // Generate once first
+  await generate();
+  console.log('✅ Route config generated at:', outPath);
 
-  // If it is in listening mode, start file monitoring
+  // Start file watcher in watch mode
   if (watchMode) {
-    startWatcher()
+    startWatcher();
   }
 }
 
-// Start file monitoring
+// Start file watcher
 function startWatcher() {
-  console.log('👀 Start monitoring page file changes...')
+  console.log('👀 Watching page files for changes...');
 
-  // Monitor .page.tsx and index.tsx file changes
-  const watcher = chokidar.watch(
-    [path.join(pagesDir, '**/*.page.tsx'), path.join(pagesDir, '**/index.tsx')],
-    {
-      persistent: true,
-      ignoreInitial: true,
-    }
-  )
+  // Watch .page.tsx and index.tsx changes
+  const watcher = chokidar.watch([
+    path.join(pagesDir, '**/*.page.tsx'),
+    path.join(pagesDir, '**/index.tsx')
+  ], {
+    persistent: true,
+    ignoreInitial: true
+  });
 
-  // Listen for file addition, modification or deletion events
+  // Listen for add/change/delete events
   watcher
     .on('add', handleChange)
     .on('change', handleChange)
-    .on('unlink', handleChange)
+    .on('unlink', handleChange);
 
-  console.log(`🔍 Monitor directory: ${pagesDir}`)
-  console.log('💡 Tip: Press Ctrl+C to stop monitoring')
+  console.log(`🔍 Watching directory: ${pagesDir}`);
+  console.log('💡 Tip: press Ctrl+C to stop watching');
 }
 
 // Handle file changes
 async function handleChange(filePath) {
-  console.log(
-    `📝 Detected file change: ${path.relative(process.cwd(), filePath)}`
-  )
+  console.log(`📝 File changed: ${path.relative(process.cwd(), filePath)}`);
 
-  // Delay execution to avoid frequent triggering
+  // Debounce to avoid frequent regeneration
   debounce(async () => {
-    console.log('🔄 Regenerate routes configuration...')
-    await generate()
-  }, 300)()
+    console.log('🔄 Regenerating route configuration...');
+    await generate();
+  }, 300)();
 }
 
-// Anti-shake function
+// Debounce helper
 function debounce(fn, delay) {
-  let timer = null
-  return function (...args) {
-    if (timer) clearTimeout(timer)
+  let timer = null;
+  return function(...args) {
+    if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
-      fn.apply(this, args)
-    }, delay)
-  }
+      fn.apply(this, args);
+    }, delay);
+  };
 }
 
-// Execute main function
+// Run entrypoint
 main().catch(err => {
-  console.error('❌ Routes generation failed:', err)
-  process.exit(1)
-})
+  console.error('❌ Route generation failed:', err);
+  process.exit(1);
+});

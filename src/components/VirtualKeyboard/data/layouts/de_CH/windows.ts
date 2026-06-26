@@ -1,14 +1,23 @@
-import { createKeyDef } from '../../merge'
-import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows'
+import { createKeyDef } from '../../merge';
+import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
 
-const DEAD_KEY_CIRCUMFLEX = { code: 'BracketLeft' }
-const DEAD_KEY_GRAVE = { code: 'BracketLeft', mod: ['ShiftLeft'] }
-const DEAD_KEY_TILDE = { code: 'BracketRight', mod: ['AltRight'] }
-const DEAD_KEY_ACUTE = { code: 'Quote' }
+/**
+ * Swiss German dead key definitions (for diacritic character combinations)
+ * Dead Keys: When pressed, do not immediately output a character, wait for next character input to combine into a diacritic character
+ */
+const DEAD_KEY_CIRCUMFLEX = { code: 'BracketLeft' }; // ^ circumflex
+const DEAD_KEY_GRAVE = { code: 'BracketLeft', mod: ['ShiftLeft'] }; // ` grave accent
+const DEAD_KEY_TILDE = { code: 'BracketRight', mod: ['AltRight'] }; // ~ tilde
+const DEAD_KEY_ACUTE = { code: 'Quote' }; // ´ acute accent
 
+/**
+ * Swiss German AltGr character mapping
+ * Swiss keyboard emphasizes multilingual support (German, French, Italian)
+ */
 const DE_CH_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
   {
-    Digit1: { altGr: '¦' },
+    // Top row number keys
+    Digit1: { altGr: '¦' }, // AltGr+1 -> ¦ (broken bar)
     Digit2: { altGr: '@' }, // AltGr+2 -> @
     Digit3: { altGr: '#' }, // AltGr+3 -> #
     Digit4: { altGr: '°' }, // AltGr+4 -> °
@@ -16,23 +25,24 @@ const DE_CH_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
     Digit6: { altGr: '¬' }, // AltGr+6 -> ¬
     Digit7: { altGr: '|' }, // AltGr+7 -> |
     Digit8: { altGr: '¢' }, // AltGr+8 -> ¢
-    Digit9: { altGr: "'" }, // AltGr+9 -> '
-    Digit0: { altGr: "'" }, // AltGr+0 -> '
+    Digit9: { altGr: '\'' }, // AltGr+9 -> '
+    Digit0: { altGr: '\'' }, // AltGr+0 -> '
     Equal: { altGr: '{' }, // AltGr+^ -> {
     Backquote: { altGr: '}' }, // AltGr+§ -> }
-    Minus: { altGr: '´' },
-    Equal: { altGr: '~' },
-
+    Minus:{altGr: '´'},
+    Equal:{altGr:'~'},
+    // Letter area
     KeyE: { altGr: '€' }, // AltGr+E -> €
     BracketLeft: { altGr: '[' }, // AltGr+ü -> [
     BracketRight: { altGr: ']' }, // AltGr+¨ -> ]
 
     Quote: { altGr: '{' }, //
     Backslash: { altGr: '}' },
-
+    // ISO extra key
     IntlBackslash: { altGr: '\\' }, // AltGr+< -> \
-  }
+  };
 
+// ✅ Swiss German (Windows) — Swiss German QWERTZ keyboard layout
 export const DE_CH_WIN_LAYOUT = {
   id: 'de-ch-win',
   name: 'Deutsch (Schweiz)',
@@ -95,14 +105,16 @@ export const DE_CH_WIN_LAYOUT = {
         base: '9',
         shift: ')',
         caps: '9',
+
       }),
       createKeyDef('Digit0', {
         base: '0',
         shift: '=',
         caps: '0',
+
       }),
-      createKeyDef('Minus', { base: "'", shift: '?', ...DE_CH_ALTGR.Minus }),
-      createKeyDef('Equal', { base: '^', shift: '`', ...DE_CH_ALTGR.Equal }),
+      createKeyDef('Minus', { base: '\'', shift: '?' ,  ...DE_CH_ALTGR.Minus,}),
+      createKeyDef('Equal', { base: '^', shift: '`',  ...DE_CH_ALTGR.Equal, }),
       createKeyDef('Backspace', undefined, { width: 1.5 }),
     ],
     [
@@ -113,7 +125,7 @@ export const DE_CH_WIN_LAYOUT = {
       createKeyDef('KeyR'),
       createKeyDef('KeyT'),
 
-      createKeyDef('KeyY', { base: 'z', shift: 'Z' }),
+       createKeyDef('KeyY', { base: 'z', shift: 'Z' }),
       createKeyDef('KeyU'),
       createKeyDef('KeyI'),
       createKeyDef('KeyO'),
@@ -135,7 +147,7 @@ export const DE_CH_WIN_LAYOUT = {
       createKeyDef('Delete'),
     ],
     [
-      createKeyDef('CapsLock', undefined, { width: 1.8 }),
+      createKeyDef('CapsLock',undefined , { width: 1.8 }),
       createKeyDef('KeyA'),
       createKeyDef('KeyS'),
       createKeyDef('KeyD'),
@@ -150,6 +162,7 @@ export const DE_CH_WIN_LAYOUT = {
         {
           base: 'ö',
           shift: 'é',
+
         },
         { showDualState: false }
       ),
@@ -162,21 +175,17 @@ export const DE_CH_WIN_LAYOUT = {
         },
         { showDualState: false }
       ),
-      createKeyDef('Backslash', {
-        base: '$',
-        shift: '£',
-        ...DE_CH_ALTGR.Backslash,
-      }),
+      createKeyDef('Backslash', { base: '$', shift: '£',  ...DE_CH_ALTGR.Backslash }),
       createKeyDef('Enter', undefined, { width: 1.8 }),
     ],
     [
-      createKeyDef('ShiftLeft', undefined, { width: 1.3 }),
+      createKeyDef('ShiftLeft',undefined, { width: 1.3 }),
       createKeyDef('IntlBackslash', {
         base: '<',
         shift: '>',
         ...DE_CH_ALTGR.IntlBackslash,
       }),
-      createKeyDef('KeyZ', { base: 'y', shift: 'Y' }),
+     createKeyDef('KeyZ', { base: 'y', shift: 'Y' }),
       createKeyDef('KeyX'),
       createKeyDef('KeyC'),
       createKeyDef('KeyV'),
@@ -186,7 +195,7 @@ export const DE_CH_WIN_LAYOUT = {
       createKeyDef('Comma', { base: ',', shift: ';' }),
       createKeyDef('Period', { base: '.', shift: ':' }),
       createKeyDef('Slash', { base: '-', shift: '_' }),
-      createKeyDef('ShiftRight', undefined, { width: 2.7 }),
+      createKeyDef('ShiftRight',undefined, { width: 2.7 }),
     ],
     [
       createKeyDef('ControlLeft', undefined, { width: 1.2 }),
@@ -200,9 +209,11 @@ export const DE_CH_WIN_LAYOUT = {
   ],
   rightPanel: RIGHT_PANEL_ROWS,
   extraChars: {
+    // Swiss German special characters (directly typable, no dead key required)
     ß: { code: 'Minus', mod: ['AltRight'] }, // AltGr+' -> ß
 
-    é: { code: 'Semicolon', mod: ['ShiftLeft'] },
+    // Vowels with acute accent - direct key or dead key ´
+    é: { code: 'Semicolon', mod: ['ShiftLeft'] }, // Shift+ö -> é (direct)
     É: { code: 'Semicolon', mod: ['ShiftLeft', 'CapsLock'] },
     á: { code: 'KeyA', deadKey: DEAD_KEY_ACUTE },
     Á: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_ACUTE },
@@ -213,9 +224,10 @@ export const DE_CH_WIN_LAYOUT = {
     ú: { code: 'KeyU', deadKey: DEAD_KEY_ACUTE },
     Ú: { code: 'KeyU', mod: ['ShiftLeft'], deadKey: DEAD_KEY_ACUTE },
 
-    à: { code: 'Quote', mod: ['ShiftLeft'] },
+    // Vowels with grave accent - direct key or dead key `
+    à: { code: 'Quote', mod: ['ShiftLeft'] }, // Shift+ä -> à (direct)
     À: { code: 'Quote', mod: ['ShiftLeft', 'CapsLock'] },
-    è: { code: 'BracketLeft', mod: ['ShiftLeft'] },
+    è: { code: 'BracketLeft', mod: ['ShiftLeft'] }, // Shift+ü -> è (direct)
     È: { code: 'BracketLeft', mod: ['ShiftLeft', 'CapsLock'] },
     ì: { code: 'KeyI', deadKey: DEAD_KEY_GRAVE },
     Ì: { code: 'KeyI', mod: ['ShiftLeft'], deadKey: DEAD_KEY_GRAVE },
@@ -224,6 +236,7 @@ export const DE_CH_WIN_LAYOUT = {
     ù: { code: 'KeyU', deadKey: DEAD_KEY_GRAVE },
     Ù: { code: 'KeyU', mod: ['ShiftLeft'], deadKey: DEAD_KEY_GRAVE },
 
+    // Vowels with circumflex accent - use dead key ^
     â: { code: 'KeyA', deadKey: DEAD_KEY_CIRCUMFLEX },
     Â: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_CIRCUMFLEX },
     ê: { code: 'KeyE', deadKey: DEAD_KEY_CIRCUMFLEX },
@@ -235,6 +248,7 @@ export const DE_CH_WIN_LAYOUT = {
     û: { code: 'KeyU', deadKey: DEAD_KEY_CIRCUMFLEX },
     Û: { code: 'KeyU', mod: ['ShiftLeft'], deadKey: DEAD_KEY_CIRCUMFLEX },
 
+    // Characters with tilde
     ã: { code: 'KeyA', deadKey: DEAD_KEY_TILDE },
     Ã: { code: 'KeyA', mod: ['ShiftLeft'], deadKey: DEAD_KEY_TILDE },
     õ: { code: 'KeyO', deadKey: DEAD_KEY_TILDE },
@@ -242,6 +256,7 @@ export const DE_CH_WIN_LAYOUT = {
     ñ: { code: 'KeyN', deadKey: DEAD_KEY_TILDE },
     Ñ: { code: 'KeyN', mod: ['ShiftLeft'], deadKey: DEAD_KEY_TILDE },
 
+    // Vowels with umlaut/diaeresis
     ü: { code: 'BracketLeft' },
     Ü: { code: 'BracketLeft', mod: ['ShiftLeft'] },
     ö: { code: 'Semicolon' },
@@ -255,7 +270,8 @@ export const DE_CH_WIN_LAYOUT = {
     ÿ: { code: 'KeyY', deadKey: { code: 'BracketRight' } }, // ¨ + y
     Ÿ: { code: 'KeyY', mod: ['ShiftLeft'], deadKey: { code: 'BracketRight' } },
 
-    ç: { code: 'Digit4', mod: ['ShiftLeft'] },
+    // French cedilla
+    ç: { code: 'Digit4', mod: ['ShiftLeft'] }, // Shift+4 -> ç (direct)
     Ç: { code: 'Digit4', mod: ['ShiftLeft', 'CapsLock'] },
   },
-}
+};

@@ -1,5 +1,5 @@
-import React from 'react'
-import { cn } from '@/lib/utils'
+import React from 'react';
+import { cn } from '@/lib/utils';
 
 export type SettingItemProps = {
   title: React.ReactNode
@@ -16,7 +16,7 @@ export function SettingItem({
   children,
   as = 'li',
 }: SettingItemProps) {
-  const Comp: any = as
+  const Comp = as as React.ElementType;
   return (
     <Comp className={cn('flex items-center justify-between', className)}>
       <div>
@@ -29,7 +29,7 @@ export function SettingItem({
       </div>
       {children ? <div>{children}</div> : null}
     </Comp>
-  )
+  );
 }
 
-export default SettingItem
+export default SettingItem;

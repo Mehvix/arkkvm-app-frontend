@@ -7,21 +7,22 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2025-12-17 16:56:53
  */
-import * as PopoverPrimitive from '@radix-ui/react-popover'
-import * as React from 'react'
+import * as PopoverPrimitive from '@radix-ui/react-popover';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { useFullscreenPortalContainer } from '@/contexts/FullscreenPortalContext';
+import { cn } from '@/lib/utils';
 
 function Popover({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />
+  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
 function PopoverTrigger({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
 function PopoverContent({
@@ -30,8 +31,9 @@ function PopoverContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const portalContainer = useFullscreenPortalContainer();
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={portalContainer ?? undefined}>
       <PopoverPrimitive.Content
         data-slot="popover-content"
         align={align}
@@ -43,13 +45,13 @@ function PopoverContent({
         {...props}
       />
     </PopoverPrimitive.Portal>
-  )
+  );
 }
 
 function PopoverAnchor({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
-  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />
+  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 
-export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger }
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger };

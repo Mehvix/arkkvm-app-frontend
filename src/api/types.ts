@@ -1,47 +1,72 @@
-export interface kvmChangePasswordRequest {
-  newPassword?: string
-  oldPassword?: string
-}
+/*
+ * @Author: zhanglei
+ * @Date: 2026-06-23 19:21:25
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-06-23 19:38:53
+ * @FilePath: /git-arkkvm-app-frontend/src/api/types.ts
+ */
 
-export interface kvmCloudRegisterRequest {
-  clientId?: string
-  cloudApi?: string
-  oidcGoogle?: string
-  token?: string
-}
 
-export interface kvmCloudState {
-  appUrl?: string
-  connected?: boolean
-  url?: string
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared
+// ─────────────────────────────────────────────────────────────────────────────
 
-export interface kvmDeviceStatus {
-  isSetup?: boolean
-}
+/** Auth mode reported by the device. */
+export type DeviceAuthMode = 'password' | 'noPassword' | 'no'
 
-export interface kvmLocalDevice {
-  authMode?: string
-  deviceId?: string
-  loopbackOnly?: boolean
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth
+// ─────────────────────────────────────────────────────────────────────────────
 
-export interface KvmConsoleLoginRequest {
-  password?: string
+export interface kvmLoginRequest {
+  password: string
 }
 
 export interface kvmSetPasswordRequest {
-  password?: string
+  password: string
 }
 
+export interface kvmChangePasswordRequest {
+  oldPassword: string
+  newPassword: string
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Device
+// ─────────────────────────────────────────────────────────────────────────────
+export interface kvmLocalDevice {
+  deviceId: string
+  authMode: DeviceAuthMode
+  loopbackOnly: boolean
+}
+export interface kvmDeviceStatus {
+  isSetup: boolean
+}
 export interface kvmSetupRequest {
-  localAuthMode?: string
-  password?: string
+  localAuthMode: string
+  password: string
+  microphoneEmulation: boolean
+  camera_emulation: boolean
+  auto_update?: boolean
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cloud
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface kvmCloudRegisterRequest {
+  token: string
+}
+
+export interface kvmCloudState {
+  connected: boolean
+  deviceId?: string
+}
 export interface kvmWebRTCSessionRequest {
-  OidcGoogle?: string
-  iceServers?: string[]
-  ip?: string
-  sd?: string
+  sdp: string
+  type: RTCSdpType
+}
+
+export interface kvmIceConfigResponse {
+  iceServers?: RTCIceServer | RTCIceServer[]
 }

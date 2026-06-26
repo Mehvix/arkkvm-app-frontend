@@ -1,4 +1,4 @@
-import { type JsonRpcHandle } from '@/hooks/useJsonRpc'
+import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
 
 export interface VirtualUsbDriveProps {
   onWake?: (device: { name: string; macAddress: string }) => void
@@ -26,5 +26,5 @@ export interface StorageInfo {
 export interface DeleteResult {
   name: string
   ok: boolean
-  error?: any
+  error?: unknown
 }

@@ -13,12 +13,14 @@
  * Persists across component remounts and instances to ensure
  * only one file uploads at a time via WebRTC DataChannel.
  */
-import { useAppStore } from '@/stores'
-import { UPLOAD_LOCK_TIMEOUT } from './constants'
+import { useAppStore } from '@/stores';
+import { UPLOAD_LOCK_TIMEOUT } from './constants';
 
-let _globalUploading = false
-let _globalUploadingTimestamp = 0
+// ── Global upload lock ──────────────────────────────────────
+let _globalUploading = false;
+let _globalUploadingTimestamp = 0;
 
+// ── Global upload queue ─────────────────────────────────────
 export interface QueuedFile {
   file: File
   /** Channel label obtained from the initial RPC call */
@@ -26,28 +28,33 @@ export interface QueuedFile {
   /** Bytes already uploaded (for resume) */
   alreadyUploadedBytes: number
   /** Original dataChannel value from RPC (string or object) */
-  dataChannel: any
+  dataChannel: string | RTCDataChannel | null
   /** Callback to start upload directly (skips RPC) */
-  onReady: (
-    file: File,
-    channelLabel: string,
-    alreadyUploadedBytes: number,
-    dataChannel: any
-  ) => void
+  onReady: (file: File, channelLabel: string, alreadyUploadedBytes: number, dataChannel: string | RTCDataChannel | null) => void
 }
-export const uploadQueue: QueuedFile[] = []
+export const uploadQueue: QueuedFile[] = [];
 
-export const pausedFiles = new Set<string>()
+// ── Module-level pause markers to avoid closure-scope issues ──
+export const pausedFiles = new Set<string>();
 
+/**
+ * Safely acquire upload lock.
+ * Automatically releases stale lock when timeout is reached
+ * or when no active task is running.
+ *
+ * @returns `true` if lock acquired, `false` if another upload is in progress
+ */
 export function acquireUploadLock(): boolean {
-  if (_globalUploading) {
-    const timedOut =
-      Date.now() - _globalUploadingTimestamp > UPLOAD_LOCK_TIMEOUT
 
-    const controllers = useAppStore.getState().controllers || {}
+  if (_globalUploading) {
+    const timedOut = Date.now() - _globalUploadingTimestamp > UPLOAD_LOCK_TIMEOUT;
+
+    // Check whether controllers contain an active DataChannel via controller.getState()
+    const controllers = useAppStore.getState().controllers || {};
     const hasActiveUpload = Object.values(controllers).some(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (ctrl: any) => ctrl?.getState?.()?.readyState === 'open'
-    )
+    );
 
     if (timedOut || !hasActiveUpload) {
       console.warn('[Upload] Force releasing stale upload lock', {
@@ -55,31 +62,68 @@ export function acquireUploadLock(): boolean {
         hasActiveUpload,
         controllerKeys: Object.keys(controllers),
         queueLength: uploadQueue.length,
-      })
-      _globalUploading = false
+      });
+      _globalUploading = false;
+      // Keep queue intact; queued files are still valid and should continue
     } else {
-      return false
+      return false; // Lock is still valid and an active channel exists
     }
   }
-  _globalUploading = true
-  _globalUploadingTimestamp = Date.now()
-  return true
+  _globalUploading = true;
+  _globalUploadingTimestamp = Date.now();
+  return true;
 }
 
+/**
+ * Release upload lock.
+ */
 export function releaseUploadLock(): void {
-  _globalUploading = false
-  _globalUploadingTimestamp = 0
+  _globalUploading = false;
+  _globalUploadingTimestamp = 0;
 }
 
+/**
+ * Dequeue next file waiting for upload.
+ *
+ * @returns Next queued item, or `undefined` if queue is empty
+ */
 export function dequeueNextFile(): QueuedFile | undefined {
-  return uploadQueue.shift()
+  return uploadQueue.shift();
 }
 
+/**
+ * Remove queued file by filename.
+ *
+ * @returns `true` if the file was found and removed
+ */
 export function removeFromQueue(filename: string): boolean {
-  const idx = uploadQueue.findIndex(q => q.file.name === filename)
+  const idx = uploadQueue.findIndex(q => q.file.name === filename);
   if (idx !== -1) {
-    uploadQueue.splice(idx, 1)
-    return true
+    uploadQueue.splice(idx, 1);
+    return true;
   }
-  return false
+  return false;
+}
+
+/**
+ * Get all queued files (read-only copy).
+ *
+ * @returns Array of queued files
+ */
+export function getQueuedFiles(): ReadonlyArray<QueuedFile> {
+  return [...uploadQueue];
+}
+
+/**
+ * Clear all queued files.
+ */
+export function clearQueue(): void {
+  uploadQueue.length = 0;
+}
+
+/**
+ * Check if upload lock is currently held.
+ */
+export function isUploadLocked(): boolean {
+  return _globalUploading;
 }

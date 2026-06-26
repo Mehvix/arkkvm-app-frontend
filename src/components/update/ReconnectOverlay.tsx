@@ -1,47 +1,61 @@
-import { Loading } from '@/components/ui/Loading'
-import { useAppStore } from '@/stores'
-import { AnimatePresence, motion } from 'framer-motion'
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Button } from '../ui/button'
+/**
+ * @Purpose: Reconnection prompt overlay after update completion
+ * @Author: zhanglei
+ * @Date: 2026-02-07
+ */
+import { Loading } from '@/components/ui/Loading';
+import { useAppStore } from '@/stores';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '../ui/button';
 
-const RECONNECT_DELAY_SECONDS = 15
+/** Reconnect countdown seconds */
+const RECONNECT_DELAY_SECONDS = 15;
 
+/**
+ * Reconnection prompt overlay after update completion
+ * Shows countdown, auto-reconnects device after 15 seconds
+ * Reconnect logic triggered by parent component listening to isReconnectOverlayVisible state change
+ */
 export function ReconnectOverlay() {
-  const { t } = useTranslation('settings')
-  const [countdown, setCountdown] = useState(RECONNECT_DELAY_SECONDS)
+  const { t } = useTranslation('settings');
+  const [countdown, setCountdown] = useState(RECONNECT_DELAY_SECONDS);
 
-  const isVisible = useAppStore(s => s.update.isReconnectOverlayVisible)
-  const hideOverlay = useAppStore.getState().update.hideReconnectOverlay
+  const isVisible = useAppStore(s => s.update.isReconnectOverlayVisible);
+  const hideOverlay = useAppStore.getState().update.hideReconnectOverlay;
 
+  // Countdown logic
   useEffect(() => {
     if (!isVisible) {
-      setCountdown(RECONNECT_DELAY_SECONDS)
-      return
+      setCountdown(RECONNECT_DELAY_SECONDS);
+      return;
     }
 
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          clearInterval(timer)
-          return 0
+          clearInterval(timer);
+          return 0;
         }
-        return prev - 1
-      })
-    }, 1000)
+        return prev - 1;
+      });
+    }, 1000);
 
-    return () => clearInterval(timer)
-  }, [isVisible])
+    return () => clearInterval(timer);
+  }, [isVisible]);
 
+  // Close overlay when countdown ends (parent component listens to state change to trigger reconnect)
   useEffect(() => {
     if (isVisible && countdown === 0) {
-      hideOverlay()
+      hideOverlay();
     }
-  }, [isVisible, countdown, hideOverlay])
+  }, [isVisible, countdown, hideOverlay]);
 
+  // Manual reconnect immediately
   const handleReconnectNow = useCallback(() => {
-    hideOverlay()
-  }, [hideOverlay])
+    hideOverlay();
+  }, [hideOverlay]);
 
   return (
     <AnimatePresence>
@@ -58,19 +72,19 @@ export function ReconnectOverlay() {
             exit={{ scale: 0.9, opacity: 0 }}
             className="flex flex-col items-center gap-6 p-8 text-center"
           >
-            {}
+            {/* Loading animation */}
             <div className="relative">
               <Loading type="spinner" size="xl" color="blue" />
             </div>
 
-            {}
+            {/* Title */}
             <h2 className="text-2xl font-semibold text-white">
               {t('updateDialog.reconnect.title', {
                 defaultValue: 'Update Completed',
               })}
             </h2>
 
-            {}
+            {/* Description */}
             <p className="max-w-md text-base text-gray-300">
               {t('updateDialog.reconnect.desc', {
                 defaultValue:
@@ -79,8 +93,11 @@ export function ReconnectOverlay() {
               })}
             </p>
 
-            {}
-            <Button onClick={handleReconnectNow}>
+            {/* Reconnect now button */}
+            <Button
+              onClick={handleReconnectNow}
+
+            >
               {t('updateDialog.reconnect.reconnectNow', {
                 defaultValue: 'Reconnect Now',
               })}
@@ -89,5 +106,5 @@ export function ReconnectOverlay() {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }

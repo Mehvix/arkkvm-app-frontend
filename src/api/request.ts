@@ -2,29 +2,21 @@
  * Lightweight fetch API wrapper with timeout, authentication, and error handling.
  */
 
-import { env } from '@/utils/env'
-import { createLogger } from '@/utils/logger'
+import { normalizeUrl } from '@/utils/common';
+import { env } from '@/utils/env';
+import { createLogger } from '@/utils/logger';
 
-const logger = createLogger('API')
+const logger = createLogger('API');
 
 const getBaseURL = (): string => {
-  return env.apiBaseUrl as string
-}
-
-/**
- * Normalize URL by removing duplicate slashes.
- * Example: http://localhost:3000//api/v1/user -> http://localhost:3000/api/v1/user
- */
-const normalizeUrl = (url: string): string => {
-  return url.replace(/([^:]\/)\/+/g, '$1')
-}
-
+  return env.apiBaseUrl as string;
+};
 export interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean>
   timeout?: number
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number
   data: T
   message: string
@@ -32,245 +24,319 @@ export interface ApiResponse<T = any> {
 }
 
 const buildRequestUrl = (url: string, config: RequestConfig = {}) => {
-  const { params, ...restConfig } = config
-  let finalUrl = url
+  const { params, ...restConfig } = config;
+  let finalUrl = url;
 
   if (params && Object.keys(params).length > 0) {
-    const searchParams = new URLSearchParams()
+    const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        searchParams.append(key, String(value))
+        searchParams.append(key, String(value));
       }
-    })
-    finalUrl += (url.includes('?') ? '&' : '?') + searchParams.toString()
+    });
+    finalUrl += (url.includes('?') ? '&' : '?') + searchParams.toString();
   }
 
-  return { finalUrl, config: restConfig }
-}
+  return { finalUrl, config: restConfig };
+};
 
 const buildRequestHeaders = (config: RequestConfig) => {
-  const headers = new Headers(config.headers)
-
+  const headers = new Headers(config.headers);
+  if (env.target !== 'cloud') {
+    headers.set('Accept', 'application/json');
+  }
   if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
+    headers.set('Content-Type', 'application/json');
   }
 
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token');
   if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`)
+    headers.set('Authorization', `Bearer ${token}`);
   }
-  const csrfToken = sessionStorage.getItem('csrfToken')
-  if (csrfToken && !headers.has('X-Csrf-Token')) {
-    headers.set('X-Csrf-Token', csrfToken)
+  const csrfToken = sessionStorage.getItem('csrfToken');
+  if (csrfToken && !headers.has('X-CSRF-Token')) {
+    headers.set('X-CSRF-Token', csrfToken);
   }
 
-  return { ...config, headers }
-}
+  return { ...config, headers };
+};
 
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
-  if (!ms) return promise
+  if (!ms) return promise;
 
   const timeout = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(`Request timeout: ${ms}ms`)), ms)
-  })
+    setTimeout(() => reject(new Error(`Request timeout: ${ms}ms`)), ms);
+  });
 
-  return Promise.race([promise, timeout])
-}
+  return Promise.race([promise, timeout]);
+};
 
-async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-  logger.debug('Response received:', response.status, response.url)
-  const csrfToken =
-    response.headers.get('X-Csrf-Token') ||
-    response.headers.get('x-csrf-token') ||
-    response.headers.get('X-CSRF-Token')
-
-  logger.debug(
-    'Response headers:',
-    Object.fromEntries(response.headers.entries())
-  )
+function extractCsrfToken(response: Response): void {
+  const csrfToken = response.headers.get('X-CSRF-Token') ||
+                    response.headers.get('x-csrf-token') ||
+                    response.headers.get('X-CSRF-Token');
 
   if (csrfToken) {
-    sessionStorage.setItem('csrfToken', csrfToken)
-    logger.info('CSRF Token saved to sessionStorage:', csrfToken)
-    document.cookie = `x-csrf-token=${csrfToken}; path=/; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
-    logger.info('CSRF Token set as Cookie for WebSocket')
+    sessionStorage.setItem('csrfToken', csrfToken);
+    logger.info('CSRF Token saved to sessionStorage:', csrfToken);
   } else {
-    logger.debug('No CSRF Token found in response headers')
+    logger.debug('No CSRF Token found in response headers');
+  }
+}
+
+async function parseErrorResponse(response: Response): Promise<{ data: unknown; message: string }> {
+  let errorData: Record<string, unknown> | null = null;
+  let errorMessage = `HTTP error: ${response.status} ${response.statusText}`;
+
+  try {
+    const ct = response.headers.get('content-type') ?? '';
+    if (ct.includes('application/json')) {
+      errorData = await response.json() as Record<string, unknown>;
+      if (typeof errorData?.message === 'string') {
+        errorMessage = errorData.message;
+      } else if (errorData?.error && typeof (errorData.error as Record<string, unknown>).brief === 'string') {
+        errorMessage = (errorData.error as Record<string, unknown>).brief as string;
+      }
+    } else {
+      await response.text();
+    }
+  } catch {
+    // ignore parse errors, keep default errorMessage
   }
 
-  if (!response.ok) {
-    const errorMsg = `HTTP error: ${response.status} ${response.statusText}`
-    const isAuthLoginLocal = response.url.includes('/auth/login-local')
-    logger.error(errorMsg)
+  logger.error(errorMessage, errorData);
+  return { data: errorData, message: errorMessage };
+}
 
-    if (response.status === 401) {
-      localStorage.removeItem('token')
-      sessionStorage.removeItem('csrfToken')
-      document.cookie = 'x-csrf-token=; path=/; Max-Age=0'
-      const isCloudAccess = env.target === 'cloud'
-      logger.debug('Unauthorized access detected, redirecting...', {
-        isCloudAccess,
-      })
+function handleUnauthorized(_response: Response, errorData: unknown, errorMessage: string): ApiResponse<unknown> | null {
+  const isOnLoginPage = window.location.pathname === '/login' || window.location.pathname === '/login-local';
 
-      if (isCloudAccess) {
-        window.location.href = '/login'
-      } else if (!isAuthLoginLocal) {
-        window.location.href = '/login-local'
-      } else {
-        const data = await response.json()
-        return data
-      }
-
-      logger.warn('Unauthorized, please login again')
-    }
-
-    if (response.status === 403) {
-      const localAuthMode = localStorage.getItem('localAuthMode')
-      const isCloudAccess = env.target === 'cloud'
-      logger.debug('Forbidden access detected', {
-        localAuthMode,
-        isCloudAccess,
-      })
-
-      if (!isCloudAccess && localAuthMode === 'password' && !isAuthLoginLocal) {
-        localStorage.removeItem('token')
-        sessionStorage.removeItem('csrfToken')
-        document.cookie = 'x-csrf-token=; path=/; Max-Age=0'
-        window.location.href = '/login-local'
-        logger.warn('Forbidden, redirecting to login page')
-      }
-    }
-
-    throw new Error(errorMsg)
+  if (isOnLoginPage) {
+    const result = {
+      code: 401,
+      success: false,
+      data: '' as unknown,
+      message: errorMessage,
+    };
+    logger.debug('[401] on login page, returning to caller:', result);
+    return result;
   }
 
-  const contentType = response.headers.get('content-type')
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('csrfToken');
+  const isCloudAccess = env.target === 'cloud';
+  logger.debug('Unauthorized access detected, redirecting...', { isCloudAccess });
+
+  if (isCloudAccess) {
+    window.location.href = '/login';
+  } else {
+    window.location.href = '/login-local';
+  }
+
+  logger.warn('Unauthorized, please login again');
+  return null;
+}
+
+function handleForbidden(_response: Response): void {
+  const localAuthMode = localStorage.getItem('localAuthMode');
+  const isCloudAccess = env.target === 'cloud';
+  const isOnLoginPage = window.location.pathname === '/login' || window.location.pathname === '/login-local';
+
+  logger.debug('Forbidden access detected', { localAuthMode, isCloudAccess });
+  if (!isCloudAccess && localAuthMode === 'password' && !isOnLoginPage) {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('csrfToken');
+    // window.location.href = '/login-local';
+    logger.warn('Forbidden, redirecting to login page');
+  }
+}
+
+async function handleSuccessResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  const contentType = response.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
-    const data = await response.json()
+    const data = await response.json();
     if (data && data.csrfToken) {
-      sessionStorage.setItem('csrfToken', data.csrfToken)
-      logger.info('CSRF Token saved from response body:', data.csrfToken)
-      document.cookie = `x-csrf-token=${data.csrfToken}; path=/; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`
-      logger.info('CSRF Token set as Cookie for WebSocket')
+      sessionStorage.setItem('csrfToken', data.csrfToken);
+      logger.info('CSRF Token saved from response body:', data.csrfToken);
     }
 
     if (data && data.code !== undefined && !data.success && data.code !== 200) {
-      logger.error('API business error:', data.message)
-      throw new Error(data.message || 'Business logic failed')
+      logger.error('API business error:', data.message);
+      return {
+        code: data.code,
+        success: false,
+        data: data.data ?? ('' as unknown as T),
+        message: data.message || 'Business logic failed',
+      };
     }
 
-    return data as ApiResponse<T>
+    if (data && typeof data === 'object' && 'success' in data && 'code' in data) {
+      return data as ApiResponse<T>;
+    }
+    return {
+      code: 200,
+      success: true,
+      data: data as T,
+      message: 'Success',
+    };
   } else {
-    const text = await response.text()
+    const text = await response.text();
     return {
       code: 200,
       success: true,
       data: text as unknown as T,
       message: 'Success',
-    }
+    };
   }
+}
+
+async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  extractCsrfToken(response);
+
+  if (!response.ok) {
+    const { data: errorData, message: errorMessage } = await parseErrorResponse(response);
+
+    if (response.status === 400) {
+      logger.warn('Bad Request (400):', errorMessage);
+    }
+
+    if (response.status === 401) {
+      const result = handleUnauthorized(response, errorData, errorMessage);
+      if (result) return result as ApiResponse<T>;
+    }
+
+    if (response.status === 403) {
+      handleForbidden(response);
+    }
+
+    const errorResult = {
+      code: response.status,
+      success: false,
+      data: '' as unknown as T,
+      message: errorMessage,
+    };
+    logger.debug(`[${response.status}] ${response.url}`, errorResult);
+    return errorResult;
+  }
+
+  const result = await handleSuccessResponse<T>(response);
+  logger.debug(`[${response.status}] ${response.url}`, result);
+  return result;
+}
+
+function safeRequest<T>(promise: Promise<ApiResponse<T>>): Promise<ApiResponse<T>> {
+  return promise.catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Request failed:', message);
+    return {
+      code: 0,
+      success: false,
+      data: '' as unknown as T,
+      message,
+    };
+  });
 }
 
 export const request = {
   /**
    * Perform GET request
    */
-  get: async <T = any>(
+  get: async <T = unknown>(
     url: string,
     config?: RequestConfig
   ): Promise<ApiResponse<T>> => {
-    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config)
-    const configWithHeaders = buildRequestHeaders(finalConfig)
+    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config);
+    const configWithHeaders = buildRequestHeaders(finalConfig);
 
     const fetchPromise = fetch(normalizeUrl(getBaseURL() + finalUrl), {
       ...configWithHeaders,
       mode: 'cors',
       method: 'GET',
-    }).then(response => handleResponse<T>(response))
+    }).then(response => handleResponse<T>(response));
 
-    return withTimeout(fetchPromise, config?.timeout || 60000)
+    return safeRequest(withTimeout(fetchPromise, config?.timeout || 60000));
   },
 
   /**
    * Perform POST request
    */
-  post: async <T = any>(
+  post: async <T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: RequestConfig
   ): Promise<ApiResponse<T>> => {
-    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config)
-    const configWithHeaders = buildRequestHeaders(finalConfig)
+    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config);
+    const configWithHeaders = buildRequestHeaders(finalConfig);
 
     const fetchPromise = fetch(normalizeUrl(getBaseURL() + finalUrl), {
       ...configWithHeaders,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    }).then(response => handleResponse<T>(response))
+    }).then(response => handleResponse<T>(response));
 
-    return withTimeout(fetchPromise, config?.timeout || 60000)
+    return safeRequest(withTimeout(fetchPromise, config?.timeout || 60000));
   },
 
   /**
    * Perform PUT request
    */
-  put: async <T = any>(
+  put: async <T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: RequestConfig
   ): Promise<ApiResponse<T>> => {
-    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config)
-    const configWithHeaders = buildRequestHeaders(finalConfig)
+    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config);
+    const configWithHeaders = buildRequestHeaders(finalConfig);
 
     const fetchPromise = fetch(normalizeUrl(getBaseURL() + finalUrl), {
       ...configWithHeaders,
       method: 'PUT',
       mode: 'cors',
       body: data ? JSON.stringify(data) : undefined,
-    }).then(response => handleResponse<T>(response))
+    }).then(response => handleResponse<T>(response));
 
-    return withTimeout(fetchPromise, config?.timeout || 60000)
+    return safeRequest(withTimeout(fetchPromise, config?.timeout || 60000));
   },
 
   /**
    * Perform DELETE request
    */
-  delete: async <T = any>(
+  delete: async <T = unknown>(
     url: string,
     config?: RequestConfig,
-    data?: any
+    data?: unknown
   ): Promise<ApiResponse<T>> => {
-    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config)
-    const configWithHeaders = buildRequestHeaders(finalConfig)
+    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config);
+    const configWithHeaders = buildRequestHeaders(finalConfig);
 
     const fetchPromise = fetch(normalizeUrl(getBaseURL() + finalUrl), {
       ...configWithHeaders,
       method: 'DELETE',
       body: data ? JSON.stringify(data) : undefined,
-    }).then(response => handleResponse<T>(response))
+    }).then(response => handleResponse<T>(response));
 
-    return withTimeout(fetchPromise, config?.timeout || 60000)
+    return safeRequest(withTimeout(fetchPromise, config?.timeout || 60000));
   },
 
   /**
    * Perform PATCH request
    */
-  patch: async <T = any>(
+  patch: async <T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: RequestConfig
   ): Promise<ApiResponse<T>> => {
-    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config)
-    const configWithHeaders = buildRequestHeaders(finalConfig)
+    const { finalUrl, config: finalConfig } = buildRequestUrl(url, config);
+    const configWithHeaders = buildRequestHeaders(finalConfig);
 
     const fetchPromise = fetch(normalizeUrl(getBaseURL() + finalUrl), {
       ...configWithHeaders,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
-    }).then(response => handleResponse<T>(response))
+    }).then(response => handleResponse<T>(response));
 
-    return withTimeout(fetchPromise, config?.timeout || 60000)
+    return safeRequest(withTimeout(fetchPromise, config?.timeout || 60000));
   },
-}
+};
 
-export default request
+export default request;

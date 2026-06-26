@@ -1,12 +1,6 @@
-/**
- * @Purpose:
- * @Descripttion:
- * @version:
- * @Author: zhanglei
- * @Date: 2025-10-27 16:25:25
- * @LastEditors: zhanglei
- * @LastEditTime: 2026-02-03 14:47:03
- */
+import type { StateCreator } from 'zustand';
+import type { RootState } from '../types';
+
 export type HdmiStates =
   | 'ready'
   | 'no_signal'
@@ -26,52 +20,56 @@ export interface ATXState {
 }
 
 export interface DeviceState {
+  // Raw video resolution.
   videoWidth: number
   videoHeight: number
   setVideoResolution: (width: number, height: number) => void
 
+  // Container size (video element client area).
   containerWidth: number
   containerHeight: number
   setContainerSize: (width: number, height: number) => void
 
+  // HDMI connection state.
   hdmiConnectionState: HdmiStates
   setHdmiConnectionState: (state: HdmiStates) => void
 
+  // ATX power state (device-related).
   atxState: ATXState
   setAtxState: (state: ATXState) => void
 }
 
-export const createDeviceStateSlice = (set, get) => ({
+export const createDeviceStateSlice: StateCreator<RootState, [], [], DeviceState> = (set) => ({
   videoWidth: 0,
   videoHeight: 0,
   setVideoResolution: (width: number, height: number) => {
-    set({ videoWidth: width, videoHeight: height })
+    set({ videoWidth: width, videoHeight: height });
   },
   containerWidth: 0,
   containerHeight: 0,
   setContainerSize: (width: number, height: number) => {
-    set({ containerWidth: width, containerHeight: height })
+    set({ containerWidth: width, containerHeight: height });
   },
-
+  // Initial state: connecting.
   hdmiConnectionState: 'connecting' as HdmiStates,
   setHdmiConnectionState: (state: HdmiStates) => {
-    if (!state) return
-    const { ready, error } = state
+    if (!state) return;
+    const { ready, error } = state;
 
     if (ready) {
-      return set({ hdmiConnectionState: 'ready' })
+      return set({ hdmiConnectionState: 'ready' });
     } else if (error) {
-      return set({ hdmiConnectionState: error })
+      return set({ hdmiConnectionState: error });
     } else {
-      return set({ hdmiConnectionState: 'connecting' })
+      return set({ hdmiConnectionState: 'connecting' });
     }
   },
-
+  // ATX power state.
   atxState: {
     power: false,
     hdd: false,
   } as ATXState,
   setAtxState: (state: ATXState) => {
-    set({ atxState: state })
+    set({ atxState: state });
   },
-})
+});

@@ -1,23 +1,14 @@
-/**
- * @Purpose:
- * @Descripttion:
- * @version:
- * @Author: zhanglei
- * @Date: 2025-08-26 20:32:39
- * @LastEditors: zhanglei
- * @LastEditTime: 2025-10-14 19:04:12
- */
 import type {
   JsonRpcResponse,
   JsonRpcSend,
   MethodParamsMap,
-} from '@/hooks/useJsonRpc'
-import type { DeviceSettings } from '@/stores/devicesStore'
+} from '@/hooks/useJsonRpc';
+import type { DeviceSettings } from '@/stores/devicesStore';
 
 // Helper: unwrap JSON-RPC response
-function getResult(resp: JsonRpcResponse): any {
-  if ('error' in resp) throw new Error(resp.error.message || 'RPC error')
-  return (resp as any).result
+function getResult(resp: JsonRpcResponse): unknown {
+  if ('error' in resp) throw new Error(resp.error.message || 'RPC error');
+  return (resp as { result?: unknown }).result;
 }
 
 export type SendAsync = <M extends keyof MethodParamsMap>(
@@ -28,59 +19,57 @@ export type SendAsync = <M extends keyof MethodParamsMap>(
 export async function fetchDeviceSettings(
   sendAsync: SendAsync
 ): Promise<Partial<DeviceSettings>> {
+  // Fetch required settings in parallel.
   const [
     updateStatusResp,
     netSettingsResp,
-    tlsStateResp,
     jigglerResp,
     autoUpdateResp,
   ] = await Promise.all([
     sendAsync({ method: 'getUpdateStatus' }).catch(e => e),
     sendAsync({ method: 'getNetworkSettings' }).catch(e => e),
-    sendAsync({ method: 'getTLSState' }).catch(e => e),
     sendAsync({ method: 'getJigglerState' }).catch(e => e),
     sendAsync({ method: 'getAutoUpdateState' }).catch(e => e),
-  ])
+  ]);
 
-  const out: Partial<DeviceSettings> = {}
+  const settings: Partial<DeviceSettings> = {};
 
+  // Version information.
   try {
-    const u = getResult(updateStatusResp as any) as any
-
-    out.appVersion = String(u?.local?.appVersion ?? '')
-    out.systemVersion = String(u?.local?.systemVersion ?? '')
+    const updateStatus = getResult(updateStatusResp as JsonRpcResponse) as Record<string, Record<string, unknown>>;
+    // Device response shape: local.appVersion / local.systemVersion.
+    settings.appVersion = String(updateStatus?.local?.appVersion ?? '');
+    settings.systemVersion = String(updateStatus?.local?.systemVersion ?? '');
   } catch {}
 
+  // Network settings mapping.
   try {
-    const s = getResult(netSettingsResp as any) as any
-    out.network = {
-      mac: String(s?.mac ?? ''),
-      hostname: String(s?.hostname ?? ''),
-      httpProxy: String(s?.httpProxy ?? ''),
-      domainMode: (s?.domainMode ?? 'dhcp') as any,
-      domainSuffix: String(s?.domainSuffix ?? ''),
-      mdns: (s?.mdns ?? 'auto') as any,
-      timeSync: (s?.timeSync ?? 'ntp+http') as any,
-      ntpServer: String(s?.ntpServer ?? ''),
-      httpTimeUrl: String(s?.httpTimeUrl ?? ''),
-      ipv4Mode: (s?.ipv4Mode ?? 'dhcp') as any,
-      ipv6Mode: (s?.ipv6Mode ?? 'slaac') as any,
-    }
+    const networkSettings = getResult(netSettingsResp as JsonRpcResponse) as Record<string, unknown>;
+    settings.network = {
+      mac_address: String(networkSettings?.mac_address ?? ''),
+      hostname: String(networkSettings?.hostname ?? ''),
+      http_proxy: String(networkSettings?.http_proxy ?? ''),
+      domain: String(networkSettings?.domain ?? ''),
+      ipv4_mode: String(networkSettings?.ipv4_mode ?? 'dhcp'),
+      ipv6_mode: String(networkSettings?.ipv6_mode ?? 'slaac'),
+      lldp_mode: String(networkSettings?.lldp_mode ?? ''),
+      mdns_mode: String(networkSettings?.mdns_mode ?? 'auto'),
+      time_sync_mode: String(networkSettings?.time_sync_mode ?? 'ntp+http'),
+    };
   } catch {}
 
+  // Mouse jiggler state.
   try {
-    const j = getResult(jigglerResp as any) as any
-    out.jiggler = !!j?.enabled
+    const jigglerState = getResult(jigglerResp as JsonRpcResponse) as Record<string, unknown>;
+    settings.jiggler = !!jigglerState?.enabled;
   } catch {}
 
+  // Auto-update state.
   try {
-    const a = getResult(autoUpdateResp as any) as any
-    out.autoUpdate = !!a?.enabled
+    const autoUpdateState = getResult(autoUpdateResp as JsonRpcResponse) as Record<string, unknown>;
+    settings.autoUpdate = !!autoUpdateState?.enabled;
   } catch {}
 
-  try {
-    const t = getResult(tlsStateResp as any) as any
-  } catch {}
 
-  return out
+  return settings;
 }

@@ -1,8 +1,13 @@
-import { Loading } from '@/components/ui/Loading'
-import { AnimatePresence, motion } from 'framer-motion'
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Button } from '../ui/button'
+/**
+ * @Purpose: Reconnect prompt overlay after device restart
+ * @Author: zhanglei
+ * @Date: 2026-02-10
+ */
+import { Loading } from '@/components/ui/Loading';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '../ui/button';
 
 interface RestartOverlayProps {
   isVisible: boolean
@@ -10,42 +15,49 @@ interface RestartOverlayProps {
   delaySeconds?: number
 }
 
+/**
+ * Reconnect prompt overlay after device restart
+ * Shows countdown, auto-reconnects when countdown ends
+ */
 export function RestartOverlay({
   isVisible,
   onClose,
   delaySeconds = 15,
 }: RestartOverlayProps) {
-  const { t } = useTranslation('common')
-  const [countdown, setCountdown] = useState(delaySeconds)
+  const { t } = useTranslation('common');
+  const [countdown, setCountdown] = useState(delaySeconds);
 
+  // Countdown logic
   useEffect(() => {
     if (!isVisible) {
-      setCountdown(delaySeconds)
-      return
+      setCountdown(delaySeconds);
+      return;
     }
 
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          clearInterval(timer)
-          return 0
+          clearInterval(timer);
+          return 0;
         }
-        return prev - 1
-      })
-    }, 1000)
+        return prev - 1;
+      });
+    }, 1000);
 
-    return () => clearInterval(timer)
-  }, [isVisible, delaySeconds])
+    return () => clearInterval(timer);
+  }, [isVisible, delaySeconds]);
 
+  // Close overlay when countdown ends
   useEffect(() => {
     if (isVisible && countdown === 0) {
-      onClose()
+      onClose();
     }
-  }, [isVisible, countdown, onClose])
+  }, [isVisible, countdown, onClose]);
 
+  // Manual reconnect immediately
   const handleReconnectNow = useCallback(() => {
-    onClose()
-  }, [onClose])
+    onClose();
+  }, [onClose]);
 
   return (
     <AnimatePresence>
@@ -62,17 +74,17 @@ export function RestartOverlay({
             exit={{ scale: 0.9, opacity: 0 }}
             className="flex flex-col items-center gap-6 p-8 text-center"
           >
-            {}
+            {/* Loading animation */}
             <div className="relative">
               <Loading type="spinner" size="xl" color="blue" />
             </div>
 
-            {}
+            {/* Title */}
             <h2 className="text-2xl font-semibold text-white">
               {t('restart.title', { defaultValue: 'Device Restarting' })}
             </h2>
 
-            {}
+            {/* Description */}
             <p className="max-w-md text-base text-gray-300">
               {t('restart.desc', {
                 defaultValue:
@@ -81,7 +93,7 @@ export function RestartOverlay({
               })}
             </p>
 
-            {}
+            {/* Reconnect now button */}
             <Button onClick={handleReconnectNow}>
               {t('reconnect', { defaultValue: 'Reconnect Now' })}
             </Button>
@@ -89,5 +101,5 @@ export function RestartOverlay({
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }

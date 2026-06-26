@@ -2,17 +2,17 @@
  * Mac Keyboard Layout Component
  * Includes main keyboard area + arrow keys at the bottom right
  */
-import React from 'react'
-import Key from './Key'
-import type { KeyRow } from '../data/keyboard-types'
-import type { VirtualKeyboardModifierState } from '../utils/modifierStateManager'
+import React from 'react';
+import Key from './Key';
+import type { KeyRow } from '../data/keyboard-types';
+import type { VirtualKeyboardModifierState } from '../utils/modifierStateManager';
 
 export interface MacLayoutProps {
   keyRows: KeyRow[]
   specialKeys: KeyRow
   arrowKeys: KeyRow
   safeModifierKeys: VirtualKeyboardModifierState
-  getDisplayLabel: (key: any) => any
+  getDisplayLabel: (key: unknown) => string | string[] | undefined
   checkKeyPressed: (keyCode: string) => boolean
   handleModifierKeyDown: (keyCode: string, label?: string) => void
   handleKeyDown: (keyCode: string, label?: string) => void
@@ -39,16 +39,16 @@ const MacLayout: React.FC<MacLayoutProps> = ({
         {keyRows.map((keys, i) => (
           <div className="flex flex-wrap" key={`keyRow${i}`}>
             {keys.map(key => {
-              const isModifier = key.isModifier
+              const isModifier = key.isModifier;
               const displayLabel = key.showDualState
                 ? key.label
-                : getDisplayLabel(key)
+                : getDisplayLabel(key);
               const globalKeyState = isModifier
                 ? safeModifierKeys[
                     key.keyCode as keyof typeof safeModifierKeys
                   ] || false
-                : false
-              const isKeyPressed = checkKeyPressed(key.keyCode)
+                : false;
+              const isKeyPressed = checkKeyPressed(key.keyCode);
 
               return (
                 <Key
@@ -62,7 +62,7 @@ const MacLayout: React.FC<MacLayoutProps> = ({
                   isPressed={isKeyPressed}
                   pressedColor={pressedKeyColor}
                 />
-              )
+              );
             })}
           </div>
         ))}
@@ -71,14 +71,14 @@ const MacLayout: React.FC<MacLayoutProps> = ({
         <div className="flex flex-wrap w-full items-center">
           {/* Special Keys (Fn, Ctrl, Alt, Cmd, Space, etc.) */}
           {specialKeys.map(key => {
-            const isModifier = key.isModifier
-            const displayLabel = getDisplayLabel(key)
+            const isModifier = key.isModifier;
+            const displayLabel = getDisplayLabel(key);
             const globalKeyState = isModifier
               ? safeModifierKeys[
                   key.keyCode as keyof typeof safeModifierKeys
                 ] || false
-              : false
-            const isKeyPressed = checkKeyPressed(key.keyCode)
+              : false;
+            const isKeyPressed = checkKeyPressed(key.keyCode);
 
             return (
               <Key
@@ -93,7 +93,7 @@ const MacLayout: React.FC<MacLayoutProps> = ({
                 isPressed={isKeyPressed}
                 pressedColor={pressedKeyColor}
               />
-            )
+            );
           })}
 
           {/* Arrow Keys in T-shape (Mac Style) */}
@@ -159,7 +159,7 @@ const MacLayout: React.FC<MacLayoutProps> = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default MacLayout
+export default MacLayout;

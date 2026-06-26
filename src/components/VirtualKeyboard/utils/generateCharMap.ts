@@ -54,29 +54,30 @@ export function generateCharMapFromLayout(
     ':': { code: 'Period', mod: ['ShiftLeft'] },
     '-': { code: 'Slash' },
     _: { code: 'Slash', mod: ['ShiftLeft'] },
-  }
+  };
+  const layoutRows = layout.rows;
 
-  if (layout.rows && Array.isArray(layout.rows)) {
-    for (const row of layout.rows) {
+  if (layoutRows && Array.isArray(layoutRows)) {
+    for (const row of layoutRows) {
       for (const key of row) {
-        processKeyDefinition(key, map)
+        processKeyDefinition(key, map);
       }
     }
   }
 
-  if (layout.rightPanel && Array.isArray(layout.rightPanel)) {
-    for (const row of layout.rightPanel) {
-      for (const key of row) {
-        processKeyDefinition(key, map)
-      }
-    }
-  }
+  // if (layout.rightPanel && Array.isArray(layout.rightPanel)) {
+  //   for (const row of layout.rightPanel) {
+  //     for (const key of row) {
+  //       processKeyDefinition(key, map);
+  //     }
+  //   }
+  // }
 
   if (layout.extraChars) {
-    Object.assign(map, layout.extraChars)
+    Object.assign(map, layout.extraChars);
   }
 
-  return map
+  return map;
 }
 
 /**
@@ -86,49 +87,48 @@ function processKeyDefinition(
   key: { keyCode: string; legends?: Record<string, string> },
   map: LayoutChars
 ): void {
-  if (!key || !key.keyCode || !key.legends) return
+  if (!key || !key.keyCode || !key.legends) return;
 
-  const { keyCode, legends } = key
+  const { keyCode, legends } = key;
 
   for (const [modState, char] of Object.entries(legends)) {
-    if (!char) continue
+    if (!char) continue;
 
-    const entry: CharMapEntry = { code: keyCode }
+    const entry: CharMapEntry = { code: keyCode };
 
     switch (modState) {
       case 'base':
-        break
+        break;
       case 'shift':
-        entry.mod = ['ShiftLeft']
-        break
+        entry.mod = ['ShiftLeft'];
+        break;
       case 'caps':
-        continue
+        continue;
       case 'shift+caps':
-        continue
+        continue;
       case 'altGr':
-        entry.mod = ['AltRight']
-        break
+        entry.mod = ['AltRight'];
+        break;
       case 'shift+altGr':
-        entry.mod = ['ShiftLeft', 'AltRight']
-        break
+        entry.mod = ['ShiftLeft', 'AltRight'];
+        break;
       case 'fn':
-        continue
+        continue;
       case 'fn+shift':
       case 'fn+altGr':
       case 'fn+shift+altGr':
-        continue
+        continue;
       default:
-        continue
+        continue;
     }
-
-    map[char] = entry
+    map[char] = entry;
   }
 }
 
 /**
  * Cache for generated character mapping tables.
  */
-const charMapCache = new Map<string, LayoutChars>()
+const charMapCache = new Map<string, LayoutChars>();
 
 /**
  * Get or generate character mapping table for specified layout (with cache).
@@ -142,17 +142,17 @@ export function getOrGenerateCharMap(
   layout: KeyboardLayoutData
 ): LayoutChars {
   if (charMapCache.has(layoutId)) {
-    return charMapCache.get(layoutId)!
+    return charMapCache.get(layoutId)!;
   }
 
-  const charMap = generateCharMapFromLayout(layout)
-  charMapCache.set(layoutId, charMap)
-  return charMap
+  const charMap = generateCharMapFromLayout(layout);
+  charMapCache.set(layoutId, charMap);
+  return charMap;
 }
 
 /**
  * Clear character mapping cache.
  */
 export function clearCharMapCache(): void {
-  charMapCache.clear()
+  charMapCache.clear();
 }

@@ -8,26 +8,22 @@ import {
   IconRouter,
   IconSetting,
   IconTerminal,
-} from '@/assets/icons'
-import { activeClass } from '@/components/ui/variants'
-import { ConnectionState } from '@/hooks/useDesktopRtc'
-import { type JsonRpcHandle } from '@/hooks/useJsonRpc'
-import { cn } from '@/lib/utils'
-import { useAppStore, useUiStore } from '@/stores'
-import {
-  useActiveDeviceSettings,
-  useSettingsActions,
-} from '@/stores/devicesStore'
-import { memo, MouseEvent, useCallback, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import Extension from '../kvm/Extension'
-import { Button } from '../ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import MediaDeviceControl from './MediaDeviceControl'
-import PasteText from './PasteText'
-import VirtualMedia from './VirtualMedia'
-import VirtualUsbDrive from './VirtualUsbDrive'
-import WakeOnLAN from './WakeOnLAN'
+} from '@/assets/icons';
+import { activeClass } from '@/components/ui/variants';
+import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
+import { cn } from '@/lib/utils';
+import { useUiStore } from '@/stores';
+import { useActiveDeviceSettings } from '@/stores/devicesStore';
+import React, { memo, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import Extension from '../kvm/Extension';
+import { Button } from '../ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import MediaDeviceControl from './MediaDeviceControl';
+import PasteText from './PasteText';
+import VirtualMedia from './VirtualMedia';
+import VirtualUsbDrive from './VirtualUsbDrive';
+import WakeOnLAN from './WakeOnLAN';
 
 export interface KeyboardEventData {
   /** Keyboard event type: keydown, keyup, keypress */
@@ -86,21 +82,21 @@ export interface FullScreenData {
 
 interface ControlToolbarProps {
   /** Keyboard control click event */
-  onKeyboardClick?: (event: MouseEvent<any>) => void
+  onKeyboardClick?: (event: React.MouseEvent<HTMLElement>) => void
   /** Mouse control click event */
-  onMouseClick?: (event: MouseEvent<any>) => void
+  onMouseClick?: (event: React.MouseEvent<HTMLElement>) => void
   /** Settings click event */
-  onSettingClick?: (event: MouseEvent<any>) => void
+  onSettingClick?: (event: React.MouseEvent<HTMLElement>) => void
   /** Terminal click event */
-  onTerminalClick?: (event: MouseEvent<any>) => void
+  onTerminalClick?: (event: React.MouseEvent<HTMLElement>) => void
   /** Fullscreen click event */
-  onFullScreenClick?: (event: MouseEvent<any>, data?: FullScreenData) => void
+  onFullScreenClick?: (event: React.MouseEvent<HTMLElement>, data?: FullScreenData) => void
   /** Exit fullscreen click event */
-  onMinimizeClick?: (event: MouseEvent<any>, data?: FullScreenData) => void
+  onMinimizeClick?: (event: React.MouseEvent<HTMLElement>, data?: FullScreenData) => void
   /** Whether currently in fullscreen mode */
   isFullScreen?: boolean
   /** Current connection state */
-  connectionState?: ConnectionState
+  connectionState?: string
   /** Whether keyboard control is enabled */
   keyboardEnabled?: boolean
   /** Whether mouse control is enabled */
@@ -115,147 +111,130 @@ interface ControlToolbarProps {
   onStatsClick?: () => void
   /** OCR text recognition click event */
   onOcrClick?: () => void
-  /** Whether OCR is active */
-  ocrEnabled?: boolean
   /** JSON-RPC handle */
   rpc: JsonRpcHandle
+  /** Optional ref to imperatively close all toolbar popovers from parent */
+  closeAllPopoversRef?: React.RefObject<(() => void) | null>
 }
 
 export default memo(function ControlToolbar({
   onKeyboardClick,
-  onMouseClick,
+  onMouseClick: _onMouseClick,
   onSettingClick,
   onTerminalClick,
-  onFullScreenClick,
-  onMinimizeClick,
-  isFullScreen = false,
-  connectionState,
+  onFullScreenClick: _onFullScreenClick,
+  onMinimizeClick: _onMinimizeClick,
+  isFullScreen: _isFullScreen = false,
+  connectionState: _connectionState,
   keyboardEnabled = false,
-  mouseEnabled = false,
-  terminalEnabled = false,
-  onPasteTextClick,
-  onVirtualMediaClick,
-  onWakeOnLanClick,
-  onExtensionClick,
-  onStatsClick,
-  onOcrClick,
-  ocrEnabled = false,
+  mouseEnabled: _mouseEnabled = false,
+  terminalEnabled: _terminalEnabled = false,
+  onPasteTextClick: _onPasteTextClick,
+  onVirtualMediaClick: _onVirtualMediaClick,
+  onWakeOnLanClick: _onWakeOnLanClick,
+  onExtensionClick: _onExtensionClick,
+  onStatsClick: _onStatsClick,
+  onOcrClick: _onOcrClick,
+  closeAllPopoversRef,
 
   rpc,
-}: ControlToolbarProps = {}) {
-  const [send, isChannelReady, sendAsync] = rpc
-  const { setNestedDeviceSetting } = useSettingsActions()
-  const activeMain = useUiStore(s => s.activeMain)
-  const visibleTerminal = useUiStore(s => s.visible.terminal)
-  const visibleVirtualKeyboard = useUiStore(s => s.visible.virtualKeyboard)
-  const toggleMain = useUiStore(s => s.toggleMain)
-  const closeAllPanels = useUiStore(s => s.closeAllPanels)
-  const toggleOverlay = useUiStore(s => s.toggleOverlay)
-  const isPasteTextOpen = useUiStore(s => s.isPasteTextOpen)
-  const setIsPasteTextOpen = useUiStore(s => s.setIsPasteTextOpen)
-  const [isVirtualMediaOpen, setIsVirtualMediaOpen] = useState(false)
-  const [virtualMediaDialogOpen, setVirtualMediaDialogOpen] = useState(false)
-  const [isVirtualUsbDriveOpen, setIsVirtualUsbDriveOpen] = useState(false)
-  const [isWakeOnLanOpen, setIsWakeOnLanOpen] = useState(false)
-  const [isExtensionOpen, setIsExtensionOpen] = useState(false)
+}: ControlToolbarProps) {
+  const [send, isChannelReady, sendAsync] = rpc;
+  const visibleTerminal = useUiStore(s => s.visible.terminal);
+  const visibleVirtualKeyboard = useUiStore(s => s.visible.virtualKeyboard);
+  const toggleMain = useUiStore(s => s.toggleMain);
+  const closeAllPanels = useUiStore(s => s.closeAllPanels);
+  const [isVirtualMediaOpen, setIsVirtualMediaOpen] = useState(false);
+  const [isPasteTextPanelOpen, setIsPasteTextPanelOpen] = useState(false);
+  const [virtualMediaDialogOpen, setVirtualMediaDialogOpen] = useState(false);
+  const virtualMediaInternalDialogsRef = React.useRef<(() => void) | null>(null);
+  const [isVirtualUsbDriveOpen, setIsVirtualUsbDriveOpen] = useState(false);
+  const [isWakeOnLanOpen, setIsWakeOnLanOpen] = useState(false);
+  const [isExtensionOpen, setIsExtensionOpen] = useState(false);
   const webTerminalEnabled = useActiveDeviceSettings(
     state => state.webTerminalEnabled
-  )
-  const fileTransfer = useActiveDeviceSettings(state => state.fileTransfer)
-  const pasteText = useAppStore(s => s.pasteText)
-  const debugMode = useActiveDeviceSettings(state => state.debugMode)
-  const { t } = useTranslation('common')
+  );
+  const usbDeviceConfig = useActiveDeviceSettings(
+    state => state.usbDeviceConfig
+  );
+  const fileTransfer = useActiveDeviceSettings(state => state.fileTransfer);
+  const { t } = useTranslation('common');
 
   const popoverContentClassName = cn(
-    'w-[400px] max-w-[90vw] bg-[var(--bg-secondary)]',
+    'w-[520px] max-w-[90vw] bg-[var(--bg-secondary)]',
     'max-h-[80vh] flex flex-col',
     'data-[state=open]:animate-in data-[state=open]:fade-in-0',
     'data-[state=open]:slide-in-from-top-2 data-[state=open]:duration-300',
     'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
     'data-[state=closed]:slide-out-to-top-2 data-[state=closed]:duration-200',
     'data-[state=open]:ease-out data-[state=closed]:ease-in'
-  )
+  );
 
-  const buttonClassName = ''
-  const getIconClassName = (isEnabled: boolean, defaultColor?: string) => {
+  const buttonClassName = '';
+  const getIconClassName = (_isEnabled: boolean, _defaultColor?: string) => {
     return `size-[12px] text-[12px] ${isChannelReady ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}
-    }`
-  }
+    }`;
+  };
 
+  // Close all popovers (mutual exclusion)
   const closeAllPopovers = useCallback(() => {
-    setIsPasteTextOpen(false)
-    setIsVirtualMediaOpen(false)
-    setIsVirtualUsbDriveOpen(false)
-    setIsWakeOnLanOpen(false)
-    setIsExtensionOpen(false)
-  }, [])
+    setIsPasteTextPanelOpen(false);
+    setIsVirtualMediaOpen(false);
+    virtualMediaInternalDialogsRef.current?.();
+    setIsVirtualUsbDriveOpen(false);
+    setIsWakeOnLanOpen(false);
+    setIsExtensionOpen(false);
+  }, []);
 
+  useEffect(() => {
+    if (closeAllPopoversRef) {
+      (closeAllPopoversRef as React.MutableRefObject<(() => void) | null>).current = closeAllPopovers;
+    }
+  }, [closeAllPopoversRef, closeAllPopovers]);
+
+  // Close all other panels when opening a popover
   const openPopoverExclusive = useCallback(
     (setter: (open: boolean) => void, open: boolean) => {
       if (open) {
-        closeAllPopovers()
-        closeAllPanels()
+        closeAllPopovers();
+        closeAllPanels();
       }
-      setter(open)
+      setter(open);
     },
     [closeAllPopovers, closeAllPanels]
-  )
+  );
 
-  const handleKeyboardClick = (event: MouseEvent<SVGSVGElement>) => {
+  const handleKeyboardClick = (event: React.MouseEvent<HTMLElement>) => {
     if (isChannelReady) {
       if (onKeyboardClick) {
-        return onKeyboardClick(event)
+        return onKeyboardClick(event);
       }
-      closeAllPopovers()
-      toggleMain('virtualKeyboard')
+      closeAllPopovers();
+      toggleMain('virtualKeyboard');
     }
-  }
+  };
 
-  const handleMouseClick = (event: MouseEvent<SVGSVGElement>) => {
+  const handleSettingClick = (event: React.MouseEvent<HTMLElement>) => {
     if (isChannelReady) {
-      return onMouseClick?.(event)
+      if (onSettingClick) return onSettingClick?.(event);
+      closeAllPopovers();
+      toggleMain('settings');
     }
-  }
+  };
 
-  const handleSettingClick = (event: MouseEvent<SVGSVGElement>) => {
-    if (isChannelReady) {
-      if (onSettingClick) return onSettingClick?.(event)
-      closeAllPopovers()
-      toggleMain('settings')
-    }
-  }
-
-  const handleTerminalClick = (event: MouseEvent<SVGSVGElement>) => {
-    event.stopPropagation()
+  const handleTerminalClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
     if (isChannelReady) {
       if (onTerminalClick) {
-        return onTerminalClick(event)
+        return onTerminalClick(event);
       }
-      closeAllPopovers()
-      toggleMain('terminal')
+      closeAllPopovers();
+      toggleMain('terminal');
     }
-  }
-
-  const handleFullScreenClick = (event: MouseEvent<SVGSVGElement>) => {
-    if (isChannelReady) {
-      onFullScreenClick?.(event)
-    }
-  }
-
-  const handleMinimizeClick = (event: MouseEvent<SVGSVGElement>) => {
-    if (isChannelReady) {
-      onMinimizeClick?.(event)
-    }
-  }
-
-  const handleOcrClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (isChannelReady) {
-      onOcrClick?.()
-    }
-  }
+  };
 
   return (
-    <div className="flex items-center justify-between text-[#dbdbdb] w-full flex-wrap gap-y-2  border-b border-[var(--border-color)] py-[6px] px-[18px]">
+    <div className="flex items-center justify-between text-[#dbdbdb] w-full flex-wrap gap-y-2  border-b border-(--border-color) py-[6px] px-[18px]">
       {/* Left group */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Web Terminal */}
@@ -264,9 +243,9 @@ export default memo(function ControlToolbar({
             variant="default"
             className={cn(buttonClassName, visibleTerminal && activeClass)}
             onMouseDown={e => {
-              e.preventDefault()
-              e.stopPropagation()
-              handleTerminalClick(e as any)
+              e.preventDefault();
+              e.stopPropagation();
+              handleTerminalClick(e);
             }}
             disabled={!isChannelReady}
             title={t('toolbar.webTerminal')}
@@ -275,34 +254,98 @@ export default memo(function ControlToolbar({
             <span>{t('toolbar.webTerminal')}</span>
           </Button>
         )}
+        {/* Paste Text Split Button with Popover */}
         <Popover
           modal={false}
-          open={isPasteTextOpen}
+          open={isPasteTextPanelOpen}
           onOpenChange={open => {
-            openPopoverExclusive(setIsPasteTextOpen, open)
+            setIsPasteTextPanelOpen(open);
           }}
         >
-          <PopoverTrigger asChild>
-            <Button
-              variant="default"
-              className={buttonClassName}
-              disabled={!isChannelReady}
-              title={t('toolbar.pasteText')}
+          <div className="flex items-center">
+            {/* Main Paste Text Button - as PopoverTrigger */}
+            <PopoverTrigger asChild>
+              {/* rounded-r-none */}
+              <Button
+                variant="default"
+                className={cn(buttonClassName, ' border-r border-(--border-color)')}
+                disabled={!isChannelReady || !usbDeviceConfig?.keyboard}
+                title={t('toolbar.pasteText')}
+                onClick={() => {
+                  closeAllPopovers();
+                }}
+              >
+                <IconClipboard className={getIconClassName(isPasteTextPanelOpen)} />
+                <span>{t('toolbar.pasteText')}</span>
+              </Button>
+            </PopoverTrigger>
+            {/* Dropdown Arrow for Copy Text - stop event propagation */}
+            {/* <DropdownMenu
+              modal={true}
+              open={isCopyTextDropdownOpen}
+              onOpenChange={setIsCopyTextDropdownOpen}
             >
-              <IconClipboard className={getIconClassName(isPasteTextOpen)} />
-              <span>{t('toolbar.pasteText')}</span>
-            </Button>
-          </PopoverTrigger>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  className={cn(buttonClassName, 'rounded-l-none px-2 focus:outline-none focus-visible:outline-none focus-visible:ring-0')}
+                  disabled={!isChannelReady || !usbDeviceConfig?.keyboard}
+                  title={t('toolbar.moreTextActions', { defaultValue: 'More text actions' })}
+                  onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <svg
+                    className="size-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="pointer-events-auto"
+                onPointerDown={(e: React.PointerEvent) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                }}
+              >
+                <DropdownMenuItem
+                  className="pointer-events-auto"
+                  onClick={(e: MouseEvent<HTMLDivElement>) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setIsCopyTextDropdownOpen(false);
+                    handleOcrClick(e as unknown as MouseEvent<HTMLButtonElement>);
+                  }}
+                  disabled={!isChannelReady}
+                >
+                  <Type className="mr-2 size-4" />
+                  {t('toolbar.copyText', { defaultValue: 'Copy text' })}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu> */}
+          </div>
           <PopoverContent
-            className={cn(popoverContentClassName, 'bg-[var(--bg-secondary)]')}
+            className={cn(popoverContentClassName, 'bg-(--bg-secondary) mt-[6px] w-[550px] overflow-auto')}
             sideOffset={8}
             align="start"
             onOpenAutoFocus={e => e.preventDefault()}
-            className="mt-[6px]"
           >
             <PasteText
               onSend={() => {
-                setIsPasteTextOpen(false)
+                setIsPasteTextPanelOpen(false);
               }}
             />
           </PopoverContent>
@@ -320,7 +363,7 @@ export default memo(function ControlToolbar({
             <Button
               variant="default"
               className={buttonClassName}
-              disabled={!isChannelReady}
+              disabled={!isChannelReady || !usbDeviceConfig?.mass_storage}
               title={t('toolbar.virtualMedia')}
             >
               <IconCd className={getIconClassName(isVirtualMediaOpen)} />
@@ -341,6 +384,7 @@ export default memo(function ControlToolbar({
               onClose={() => setIsVirtualMediaOpen(false)}
               onDialogStateChange={setVirtualMediaDialogOpen}
               rpc={rpc}
+              closeInternalDialogsRef={virtualMediaInternalDialogsRef}
             />
           </PopoverContent>
         </Popover>
@@ -357,7 +401,7 @@ export default memo(function ControlToolbar({
               <Button
                 variant="default"
                 className={buttonClassName}
-                disabled={!isChannelReady}
+                disabled={!isChannelReady || !usbDeviceConfig?.mass_storage}
                 title={t('Virtual USB Drive')}
               >
                 <IconFileTransfer
@@ -368,14 +412,13 @@ export default memo(function ControlToolbar({
             </PopoverTrigger>
             {/*  className="bg-[transparent] border-[transparent] shadow-none" */}
             <PopoverContent
-              className={popoverContentClassName}
               sideOffset={8}
               align="start"
               onOpenAutoFocus={e => e.preventDefault()}
-              className="bg-[transparent] border-[transparent] shadow-none p-[0] w-[750px] mt-[6px]"
+              className="bg-transparent border-transparent shadow-none p-0 w-[750px] mt-[6px]"
             >
               <VirtualUsbDrive
-                className="bg-[red]"
+
                 onClose={() => setIsVirtualMediaOpen(false)}
                 rpc={[send, isChannelReady, sendAsync]}
               />
@@ -408,7 +451,7 @@ export default memo(function ControlToolbar({
           >
             <WakeOnLAN
               onWake={() => {
-                setIsWakeOnLanOpen(false)
+                setIsWakeOnLanOpen(false);
               }}
               onClose={() => {}}
             />
@@ -419,34 +462,18 @@ export default memo(function ControlToolbar({
         <Button
           variant="default"
           className={buttonClassName}
-          onClick={e => handleKeyboardClick(e as any)}
-          disabled={!isChannelReady}
+          onClick={e => handleKeyboardClick(e)}
+          disabled={!isChannelReady || !usbDeviceConfig?.keyboard}
           title={keyboardEnabled ? t('keyboard.enable') : t('keyboard.disable')}
         >
           <IconKeyboard className={getIconClassName(visibleVirtualKeyboard)} />
           <span>{t('toolbar.virtualKeyboard')}</span>
         </Button>
 
-        {/* OCR Text Recognition */}
-        {/* <Button
-          variant="default"
-          className={cn(buttonClassName, ocrEnabled && activeClass)}
-          onClick={handleOcrClick}
-          disabled={!isChannelReady}
-          title={ocrEnabled ? 'OCR Active' : 'OCR Text Recognition'}
-        >
-          <Type
-            className={cn(
-              getIconClassName(ocrEnabled),
-              ocrEnabled && 'text-blue-500'
-            )}
-          />
-          <span>{ocrEnabled ? 'OCR Active' : 'OCR'}</span>
-        </Button> */}
       </div>
 
       {/* Right group */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <MediaDeviceControl
           rpc={[send, isChannelReady, sendAsync]}
           className="flex flex-row gap-[8px]"
@@ -484,8 +511,8 @@ export default memo(function ControlToolbar({
           className={buttonClassName}
           disabled={!isChannelReady}
           onClick={() => {
-            closeAllPopovers()
-            toggleMain('connectionStats')
+            closeAllPopovers();
+            toggleMain('connectionStats');
           }}
           title={t('toolbar.connectionStats')}
         >
@@ -498,7 +525,7 @@ export default memo(function ControlToolbar({
           variant="default"
           className={buttonClassName}
           disabled={!isChannelReady}
-          onClick={handleSettingClick as any}
+          onClick={handleSettingClick}
           title={t('toolbar.settings')}
         >
           <IconSetting className="size-[12px]" />
@@ -506,5 +533,5 @@ export default memo(function ControlToolbar({
         </Button>
       </div>
     </div>
-  )
-})
+  );
+});

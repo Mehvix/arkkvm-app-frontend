@@ -4,8 +4,8 @@
  * @author zhanglei
  */
 
-import { Maximize2, Minimize2, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Maximize2, Minimize2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface DraggablePanelProps {
   title?: string
@@ -21,7 +21,7 @@ interface DraggablePanelProps {
 }
 
 export function DraggablePanel({
-  title = 'Panel',
+  title: _title = 'Panel',
   children,
   isOpen,
   onClose,
@@ -30,78 +30,82 @@ export function DraggablePanel({
   showHeader = true,
   width = '540px',
 }: DraggablePanelProps) {
-  const [position, setPosition] = useState(defaultPosition)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [isMaximized, setIsMaximized] = useState(false)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const rafRef = useRef<number>()
+  const [position, setPosition] = useState(defaultPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isMaximized, setIsMaximized] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>();
 
   const toggleMaximize = () => {
-    setIsMaximized(!isMaximized)
-  }
+    setIsMaximized(!isMaximized);
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (isMaximized) return
-
+    // Disable dragging when maximized.
+    if (isMaximized) return;
+    // Allow dragging only from the header area.
     if ((e.target as HTMLElement).closest('.drag-handle')) {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(true)
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
       setDragStart({
         x: e.clientX - position.x,
         y: e.clientY - position.y,
-      })
+      });
     }
-  }
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        // Cancel pending frame before scheduling the next one.
         if (rafRef.current) {
-          cancelAnimationFrame(rafRef.current)
+          cancelAnimationFrame(rafRef.current);
         }
 
+        // Use RAF to keep drag updates smooth.
         rafRef.current = requestAnimationFrame(() => {
-          const newX = e.clientX - dragStart.x
-          const newY = e.clientY - dragStart.y
+          const newX = e.clientX - dragStart.x;
+          const newY = e.clientY - dragStart.y;
 
+          // Clamp panel position within viewport bounds.
           const maxX =
-            window.innerWidth - (panelRef.current?.offsetWidth || 540)
+            window.innerWidth - (panelRef.current?.offsetWidth || 540);
           const maxY =
-            window.innerHeight - (panelRef.current?.offsetHeight || 600)
+            window.innerHeight - (panelRef.current?.offsetHeight || 600);
 
           setPosition({
             x: Math.max(0, Math.min(newX, maxX)),
             y: Math.max(0, Math.min(newY, maxY)),
-          })
-        })
+          });
+        });
       }
-    }
+    };
 
     const handleMouseUp = () => {
-      setIsDragging(false)
-    }
+      setIsDragging(false);
+    };
 
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
+        cancelAnimationFrame(rafRef.current);
       }
-    }
-  }, [isDragging, dragStart])
+    };
+  }, [isDragging, dragStart]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <>
-      {}
+      {/* Full-screen overlay during drag to block underlying pointer interactions. */}
       {isDragging && (
         <div
           className="fixed inset-0 z-[9998] cursor-move select-none"
@@ -111,7 +115,7 @@ export function DraggablePanel({
             WebkitUserSelect: 'none',
           }}
           onMouseMove={e => {
-            e.preventDefault()
+            e.preventDefault();
           }}
         />
       )}
@@ -119,6 +123,7 @@ export function DraggablePanel({
       <div
         ref={panelRef}
         data-draggable-panel="true"
+        data-kvm-ignore="true"
         className={`fixed bg-white dark:bg-gray-800 shadow-2xl z-[9999] border border-gray-200 dark:border-gray-700 ${
           isDragging ? '' : 'transition-all duration-300'
         } ${isMaximized ? 'rounded-none' : 'rounded-xl'} ${className}`}
@@ -139,7 +144,7 @@ export function DraggablePanel({
         }
         onMouseDown={handleMouseDown}
       >
-        {}
+        {/* Draggable header area. */}
         {showHeader && (
           <div
             className={`drag-handle flex items-center justify-between px-5 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 ${
@@ -149,7 +154,7 @@ export function DraggablePanel({
             }`}
           >
             <div className="flex items-center gap-1">
-              {}
+              {/* Maximize/restore button. */}
               <button
                 onClick={toggleMaximize}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
@@ -167,7 +172,7 @@ export function DraggablePanel({
                   />
                 )}
               </button>
-              {}
+              {/* Close button. */}
               <button
                 onClick={onClose}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
@@ -179,7 +184,7 @@ export function DraggablePanel({
           </div>
         )}
 
-        {}
+        {/* Content area. */}
         <div
           className={`overflow-y-auto bg-white dark:bg-gray-800 ${
             showHeader
@@ -206,11 +211,11 @@ export function DraggablePanel({
           {children}
         </div>
 
-        {}
+        {/* Drag visual hint. */}
         {isDragging && (
           <div className="absolute inset-0 bg-blue-500/5 rounded-xl pointer-events-none ring-2 ring-blue-400/50" />
         )}
       </div>
     </>
-  )
+  );
 }

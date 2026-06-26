@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import React from 'react'
+import { AnimatePresence, motion } from 'framer-motion';
+import React from 'react';
 
 export interface DefaultLoadingOverlayProps {
   loading: boolean
@@ -24,8 +24,8 @@ export const DefaultLoadingOverlay: React.FC<DefaultLoadingOverlayProps> = ({
   layout = 'row',
   backdropClassName,
 }) => {
-  const backdrop = backdropClassName ?? 'bg-black/40'
-  const dir = layout === 'col' ? 'flex-col' : 'flex-row'
+  const backdrop = backdropClassName ?? 'bg-black/40';
+  const dir = layout === 'col' ? 'flex-col' : 'flex-row';
 
   return (
     <AnimatePresence initial={false}>
@@ -37,7 +37,7 @@ export const DefaultLoadingOverlay: React.FC<DefaultLoadingOverlayProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <div className={`flex items-center gap-3 text-xs ${dir}`}>
+          <div className={`flex items-center gap-3 text-sm ${dir}`}>
             <span
               className={`inline-block rounded-full border-2 border-white/30 border-t-white animate-spin ${spinnerClassName}`}
             />
@@ -48,5 +48,5 @@ export const DefaultLoadingOverlay: React.FC<DefaultLoadingOverlayProps> = ({
         </motion.div>
       )}
     </AnimatePresence>
-  )
-}
+  );
+};

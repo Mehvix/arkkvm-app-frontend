@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils'
-import React from 'react'
+import { cn } from '@/lib/utils';
+import React from 'react';
 
 export type SettingBlockProps = {
   title: React.ReactNode
@@ -42,9 +42,9 @@ type RightSlotProps = { children?: React.ReactNode; className?: string }
 type BottomSlotProps = { children?: React.ReactNode; className?: string }
 
 function SettingBlockRight({ children, className }: RightSlotProps) {
-  return <div className={cn('', className)}>{children}</div>
+  return <div className={cn('', className)}>{children}</div>;
 }
-SettingBlockRight.displayName = 'SettingBlockRight'
+SettingBlockRight.displayName = 'SettingBlockRight';
 
 function SettingBlockBottom({ children, className }: BottomSlotProps) {
   return (
@@ -56,9 +56,9 @@ function SettingBlockBottom({ children, className }: BottomSlotProps) {
     >
       {children}
     </div>
-  )
+  );
 }
-SettingBlockBottom.displayName = 'SettingBlockBottom'
+SettingBlockBottom.displayName = 'SettingBlockBottom';
 
 function SettingBlockComp({
   title,
@@ -72,30 +72,37 @@ function SettingBlockComp({
   contentSize,
   paddingBottom = 24,
 }: SettingBlockProps) {
-  const childArray = React.Children.toArray(children)
-  let rightFromSlot: React.ReactNode | undefined
-  let bottomFromSlot: React.ReactNode | undefined
-  const contentNodes: React.ReactNode[] = []
+  const childArray = React.Children.toArray(children);
+  let rightFromSlot: React.ReactNode | undefined;
+  let bottomFromSlot: React.ReactNode | undefined;
+  const contentNodes: React.ReactNode[] = [];
 
   childArray.forEach(child => {
     if (React.isValidElement(child)) {
+      // Check whether this is SettingBlock.Right
       if (
         child.type === SettingBlockRight ||
-        (child.type as any)?.displayName === 'SettingBlockRight'
+        (child.type as React.ComponentType & { displayName?: string })?.displayName === 'SettingBlockRight'
       ) {
-        rightFromSlot = child
-      } else if (
+        // Preserve full element so internal wrapper div/className remain effective
+        rightFromSlot = child;
+      }
+      // Check whether this is SettingBlock.Bottom
+      else if (
         child.type === SettingBlockBottom ||
-        (child.type as any)?.displayName === 'SettingBlockBottom'
+        (child.type as React.ComponentType & { displayName?: string })?.displayName === 'SettingBlockBottom'
       ) {
-        bottomFromSlot = child
-      } else {
-        contentNodes.push(child as React.ReactNode)
+        // Preserve full element to keep className and nested structure
+        bottomFromSlot = child;
+      }
+      // Treat remaining content as normal body content
+      else {
+        contentNodes.push(child as React.ReactNode);
       }
     } else {
-      contentNodes.push(child as React.ReactNode)
+      contentNodes.push(child as React.ReactNode);
     }
-  })
+  });
 
   // Helper function to convert size to style
   const getSizeStyle = (
@@ -103,25 +110,25 @@ function SettingBlockComp({
     property: string = 'fontSize'
   ) => {
     if (typeof size === 'number') {
-      return { [property]: `${size}px` }
+      return { [property]: `${size}px` };
     }
-    return {}
-  }
+    return {};
+  };
 
   // Helper function to get size class
   const getSizeClass = (size?: string | number, defaultClass: string = '') => {
     if (typeof size === 'string') {
-      return size
+      return size;
     }
-    return defaultClass
-  }
+    return defaultClass;
+  };
 
   const leftContent =
     contentNodes.length > 0 ? (
       <div
         className={cn(
           'mt-1 leading-6 text-[var(--inactive-text-color)]',
-          getSizeClass(contentSize, 'text-xs')
+          getSizeClass(contentSize, 'text-sm ')
         )}
         style={getSizeStyle(contentSize)}
       >
@@ -131,18 +138,18 @@ function SettingBlockComp({
       <div
         className={cn(
           'mt-1 leading-6 font-[400] text-[var(--inactive-text-color)]',
-          getSizeClass(contentSize, 'text-xs')
+          getSizeClass(contentSize, 'text-sm ')
         )}
         style={getSizeStyle(contentSize)}
       >
         {content}
       </div>
-    ) : null
+    ) : null;
 
   const rightContent =
     rightFromSlot ??
-    (right ? <SettingBlockRight>{right}</SettingBlockRight> : null)
-  const bottomContent = bottomFromSlot ?? null
+    (right ? <SettingBlockRight>{right}</SettingBlockRight> : null);
+  const bottomContent = bottomFromSlot ?? null;
   return (
     <div
       className={
@@ -189,13 +196,13 @@ function SettingBlockComp({
       </div>
       {bottomContent}
     </div>
-  )
+  );
 }
 
 const SettingBlock = Object.assign(SettingBlockComp, {
   Right: SettingBlockRight,
   Bottom: SettingBlockBottom,
-})
+});
 
-export { SettingBlock, SettingBlockBottom, SettingBlockRight }
-export default SettingBlock
+export { SettingBlock, SettingBlockBottom, SettingBlockRight };
+export default SettingBlock;

@@ -1,124 +1,126 @@
 /**
- * @Purpose: Handle Tailwind prefix problem in UI components
- * @Description: Automatically modify the class name in the component file and use the pn function to process the prefix
+ * @Purpose: Fix Tailwind prefix usage in UI components
+ * @Description: Automatically rewrites class names to use the pn helper for prefix handling
  * @Author: zhanglei
  * @Date: 2025-07-18 19:20:00
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs')
+const path = require('path')
 
-// UI component directory
-const componentsDir = path.join(__dirname, '../src/components/ui');
+const prefix = 'jg-'
 
-// Processed file count
-let processedFiles = 0;
-let modifiedFiles = 0;
+// UI components directory
+const componentsDir = path.join(__dirname, '../src/components/ui')
 
-// Check if directory exists
+// Process counters
+let processedFiles = 0
+let modifiedFiles = 0
+
+// Ensure source directory exists
 if (!fs.existsSync(componentsDir)) {
-  console.error(`Error: Component directory not found: ${componentsDir}`);
-  process.exit(1);
+  console.error(`Error: components directory not found ${componentsDir}`)
+  process.exit(1)
 }
 
-// Process directories recursively
+// Recursively process directories
 function processDir(dirPath) {
-  const files = fs.readdirSync(dirPath);
+  const files = fs.readdirSync(dirPath)
 
   files.forEach(file => {
-    const filePath = path.join(dirPath, file);
-    const stats = fs.statSync(filePath);
+    const filePath = path.join(dirPath, file)
+    const stats = fs.statSync(filePath)
 
     if (stats.isDirectory()) {
-      processDir(filePath); // Process subdirectories recursively
+      processDir(filePath) // Recurse into nested directories
     } else if (file.endsWith('.tsx') || file.endsWith('.ts')) {
-      processFile(filePath);
+      processFile(filePath)
     }
-  });
+  })
 }
 
-// Process a single file
+// Process a single source file
 function processFile(filePath) {
-  processedFiles++;
-  console.log(`[Process] ${path.relative(process.cwd(), filePath)}`);
+  processedFiles++
+  console.log(`[Processing] ${path.relative(process.cwd(), filePath)}`)
 
-  let content = fs.readFileSync(filePath, 'utf8');
-  let originalContent = content;
+  let content = fs.readFileSync(filePath, 'utf8')
+  const originalContent = content
 
-  // 1. Handle hardcoded prefixes in cva and cn function calls
-  content = content.replace(/"([^"]+)"/g, '"$1"');
+  // 1) Normalize string literals used in cva/cn usage paths
+  content = content.replace(/"([^"]+)"/g, '"$1"')
 
-  // 2. Handle hardcoded prefix in className
+  // 2) Rewrite hardcoded prefixes in className attributes
   content = content.replace(/className="([^"]*?)"/g, (match, classNames) => {
-    // If the class name contains a prefix, wrap it with the pn function
-    if (classNames.includes('')) {
-      // Remove hardcoded prefixes
-      const cleanedClassNames = classNames.replace(//g, '');
-      return `className={pn("${cleanedClassNames}")}`;
+    // Wrap prefixed class strings with pn(...)
+    if (classNames.includes(prefix)) {
+      // Remove hardcoded prefix pattern
+      const cleanedClassNames = classNames.replace(/jg-/g, '')
+      return `className={pn("${cleanedClassNames}")}`
     }
-    return match;
-  });
+    return match
+  })
 
-  // 3. Process class names in VariantProps
+  // 3) Rewrite class names in VariantProps calls
   content = content.replace(/(\w+)Variants\("([^"]*?)"\)/g, (match, fnName, classNames) => {
-    if (classNames.includes('')) {
-      const cleanedClassNames = classNames.replace(//g, '');
-      return `${fnName}Variants(pn("${cleanedClassNames}"))`;
+    if (classNames.includes(prefix)) {
+      const cleanedClassNames = classNames.replace(/jg-/g, '')
+      return `${fnName}Variants(pn("${cleanedClassNames}"))`
     }
-    return match;
-  });
+    return match
+  })
 
-  // 4. Handle class names in cva functions
+  // 4) Rewrite class names in cva(...) invocations
   content = content.replace(/cva\(\s*"([^"]*?)"/g, (match, classNames) => {
-    if (classNames.includes('')) {
-      const cleanedClassNames = classNames.replace(//g, '');
-      return `cva(pn("${cleanedClassNames}")`;
+    if (classNames.includes(prefix)) {
+      const cleanedClassNames = classNames.replace(/jg-/g, '')
+      return `cva(pn("${cleanedClassNames}")`
     }
-    return match;
-  });
+    return match
+  })
 
-  // 5. Process class names in variant objects
-  content = content.replace(/:\s*"([^"]*?[^"]*?)"/g, (match, classNames) => {
-    const cleanedClassNames = classNames.replace(//g, '');
-    return `: pn("${cleanedClassNames}")`;
-  });
+  // 5) Rewrite class names inside variant object values
+  content = content.replace(/:\s*"([^"]*?[^\"]*?)"/g, (match, classNames) => {
+    const cleanedClassNames = classNames.replace(/jg-/g, '')
+    return `: pn("${cleanedClassNames}")`
+  })
 
-  // 6. Add pn import (if the pn function is used in the file and is not imported)
+  // 6) Add pn import when pn(...) is used but not imported
   if (content.includes('pn(') && !content.includes('import { pn }') && !content.includes('{ cn, pn }')) {
-    // Check if cn has been imported
+    // Extend existing cn import or insert a new pn import
     if (content.includes('import { cn }')) {
-      content = content.replace('import { cn }', 'import { cn, pn }');
+      content = content.replace('import { cn }', 'import { cn, pn }')
     } else {
-      // Add after the first import
-      content = content.replace(/^(import[^;]+;)(\s*)/m, '$1$2import { pn } from "@/lib/utils";$2');
+      // Insert pn import after the first import declaration
+      content = content.replace(/^(import[^;]+;)(\s*)/m, '$1$2import { pn } from "@/lib/utils";$2')
     }
   }
 
-  // If there are any changes, save the file
+  // Persist changes when file content is modified
   if (content !== originalContent) {
-    fs.writeFileSync(filePath, content, 'utf8');
-    console.log(`✅ Updated: ${path.relative(process.cwd(), filePath)}`);
-    modifiedFiles++;
+    fs.writeFileSync(filePath, content, 'utf8')
+    console.log(`✅ Updated: ${path.relative(process.cwd(), filePath)}`)
+    modifiedFiles++
   }
 }
 
-// Process the utils.ts file to ensure that the pn function is available
+// Ensure utils.ts contains the pn helper function
 function ensurePnFunction() {
-  const utilsPath = path.join(__dirname, '../src/lib/utils.ts');
+  const utilsPath = path.join(__dirname, '../src/lib/utils.ts')
 
   if (fs.existsSync(utilsPath)) {
-    let content = fs.readFileSync(utilsPath, 'utf8');
+    let content = fs.readFileSync(utilsPath, 'utf8')
 
-    // Check if pn function already exists
+    // Append pn helper only when missing
     if (!content.includes('export function pn')) {
-      console.log('[Add] pn function to utils.ts');
+      console.log('[Add] pn function to utils.ts')
 
-      // Add pn function
+      // Helper function source to append
       const pnFunction = `
 /**
- * Handle Tailwind class name prefix
- * @param classNames original class name string
- * @returns class name after adding prefix
+ * Prefix Tailwind class names
+ * @param classNames Raw class name string
+ * @returns Prefixed class name string
  */
 export function pn(classNames: string) {
   if (!classNames) return '';
@@ -130,33 +132,33 @@ export function pn(classNames: string) {
     .split(' ')
     .filter(Boolean)
     .map(className => {
-      // Skip class names that already have prefixes
+      // Keep class names that are already prefixed
       if (className.startsWith(prefix)) return className;
-      return \`\${prefix}\${className}\`;
+      return \`${prefix}\${className}\`;
     })
     .join(' ');
 }
 `;
 
-      // Add pn function at the end of the file
-      content += pnFunction;
-      fs.writeFileSync(utilsPath, content, 'utf8');
-      console.log('✅ Added pn function to utils.ts');
+      // Append helper at the end of utils.ts
+      content += pnFunction
+      fs.writeFileSync(utilsPath, content, 'utf8')
+      console.log('✅ Added pn function to utils.ts')
     } else {
-      console.log('✓ pn function already exists in utils.ts');
+      console.log('✓ utils.ts already contains pn function')
     }
   } else {
-    console.error(`Error: utils.ts file not found: ${utilsPath}`);
+    console.error(`Error: utils.ts file not found: ${utilsPath}`)
   }
 }
 
-// Execute processing
-console.log('Start processing the prefix problem in the component file...');
-ensurePnFunction();
-processDir(componentsDir);
+// Run processing
+console.log('Start processing prefix issues in component files...')
+ensurePnFunction()
+processDir(componentsDir)
 
-// Print statistics
-console.log('\n============ Processing Report ============');
-console.log(`Processed file count: ${processedFiles}`);
-console.log(`Modified file count: ${modifiedFiles}`);
-console.log('\nTip: After processing, please check if the components are working normally, and may need to manually adjust some complex class name processing');
+// Print summary
+console.log('\n============ Processing Report ============')
+console.log(`Processed files: ${processedFiles}`)
+console.log(`Modified files: ${modifiedFiles}`)
+console.log('\nTip: After processing, verify component behavior. Some complex class-name cases may still need manual adjustment.')

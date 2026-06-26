@@ -7,24 +7,24 @@
  * @LastEditors: zhanglei
  * @LastEditTime: 2026-02-03 22:50:47
  */
-import { WelcomeBackground, WelcomeSetupBtn } from '@/components'
-import { useAppStore } from '@/stores'
-import { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { WelcomeBackground, WelcomeSetupBtn } from '@/components';
+import { useAppStore } from '@/stores';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const SetupFileTransferPage: React.FC = () => {
-  const navigate = useNavigate()
-  const setFileTransfer = useAppStore(state => state.setFileTransfer)
-  const { t } = useTranslation('messages')
+  const navigate = useNavigate();
+  const setFileTransfer = useAppStore(state => state.setFileTransfer);
+  const { t } = useTranslation('messages');
   const handleAction = useCallback(() => {
-    setFileTransfer(true)
-    navigate('/welcome/setup-auto-update')
-  }, [setFileTransfer, navigate])
+    setFileTransfer(true);
+    navigate('/welcome/setup-auto-update');
+  }, [setFileTransfer, navigate]);
   const handleLater = useCallback(() => {
-    setFileTransfer(false)
-    navigate('/welcome/setup-auto-update')
-  }, [setFileTransfer, navigate])
+    setFileTransfer(false);
+    navigate('/welcome/setup-auto-update');
+  }, [setFileTransfer, navigate]);
   return (
     <WelcomeBackground
       title={t('welcome.fileTransfer.title')}
@@ -40,7 +40,7 @@ const SetupFileTransferPage: React.FC = () => {
         onLater={handleLater}
       ></WelcomeSetupBtn>
     </WelcomeBackground>
-  )
-}
+  );
+};
 
-export default SetupFileTransferPage
+export default SetupFileTransferPage;

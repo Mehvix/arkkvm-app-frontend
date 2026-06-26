@@ -101,18 +101,16 @@ export interface PageMeta {
  * Type guard to check if a value is a valid PageMeta object
  */
 export function isPageMeta(value: unknown): value is PageMeta {
-  if (typeof value !== 'object' || value === null) return false
+  if (typeof value !== 'object' || value === null) return false;
 
-  const meta = value as Partial<PageMeta>
+  const meta = value as Partial<PageMeta>;
 
   return (
     typeof meta.auth === 'boolean' &&
     typeof meta.title === 'string' &&
     typeof meta.path === 'string' &&
     (meta.cloudPath === undefined || typeof meta.cloudPath === 'string') &&
-    (meta.target === 'device' ||
-      meta.target === 'cloud' ||
-      meta.target === 'universal') &&
+    (meta.target === 'device' || meta.target === 'cloud' || meta.target === 'universal') &&
     (meta.isMenu === undefined || typeof meta.isMenu === 'boolean')
-  )
+  );
 }

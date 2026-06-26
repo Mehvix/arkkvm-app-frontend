@@ -7,17 +7,17 @@ body,
   color: var(--text-color);
   font-family: 'Funnel Sans';
 }
-/* Global hide scrollbar */
+/* Hide global scrollbars */
 html,
 body {
-  overflow: hidden; /* Prevent entire page scrolling */
+  overflow: hidden; /* Disable page-level scrolling */
   -ms-overflow-style: none; /* IE / Edge */
   scrollbar-width: none; /* Firefox */
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  display: none; /* Chrome / Safari / iPadOS */
+  display: none; /* Chrome / Safari / iPad */
 }
 @layer base {
   * {
@@ -52,7 +52,7 @@ video::-internal-media-controls-picture-in-picture-button {
   display: none !important;
 }
 
-/* Mobile specific styles */
+/* Mobile-specific styles */
 @media (max-width: 768px) {
   video {
     -webkit-touch-callout: none;
@@ -61,11 +61,11 @@ video::-internal-media-controls-picture-in-picture-button {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    pointer-events: auto; /* Mobile restore video element interaction, support simulated mouse events */
+    pointer-events: auto; /* Restore video interaction on mobile to support simulated mouse events */
     touch-action: none;
   }
 
-  /* Force hide mobile play controls */
+  /* Force-hide mobile playback controls */
   video::-webkit-media-controls-overlay-play-button {
     display: none !important;
     opacity: 0 !important;
@@ -102,10 +102,30 @@ video::-internal-media-controls-picture-in-picture-button {
   }
 }
 
-/* Desktop keep normal interaction */
+/* Fullscreen mode styles for app container fullscreen */
+[data-arkkvm-app="true"].fullscreen-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+}
+
+/* Hide elements in fullscreen mode via CSS */
+[data-arkkvm-app="true"].fullscreen-mode .fullscreen-hidden {
+  display: none !important;
+}
+
+/* Show only essential elements in fullscreen */
+[data-arkkvm-app="true"].fullscreen-mode .fullscreen-only {
+  display: flex !important;
+}
+
+/* Keep normal interaction on desktop */
 @media (min-width: 769px) {
   video {
-    pointer-events: auto; /* Desktop restore video element interaction */
+    pointer-events: auto; /* Restore video interaction on desktop */
   }
 }
 .border,
@@ -130,18 +150,18 @@ video::-internal-media-controls-picture-in-picture-button {
   /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); */
 }
 .setting-right-box {
-  height: calc(100% - 40px);
+  height: calc(100% - 80px);
   overflow-y: auto;
   overflow-x: hidden;
 }
-/* Project standard spacing tool class (16px) - Simplified class names to avoid conflicts with TailwindCSS */
+/* Project standard spacing utility classes (16px) - simplified names to avoid TailwindCSS conflicts */
 .m-all {
   margin: 16px;
 }
 .p-all {
   padding: 16px;
 }
-/* Standard 16px spacing class - Project约定的基础间距单位 */
+/* Standard 16px spacing classes - project baseline spacing unit */
 .main-m {
   margin: 16px;
 }
@@ -169,7 +189,7 @@ video::-internal-media-controls-picture-in-picture-button {
 .pb {
   padding-bottom: 16px;
 }
-/**滚动条样式*/
+/** Scrollbar styles */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -236,11 +256,11 @@ video::-internal-media-controls-picture-in-picture-button {
   text-overflow: ellipsis;
 }
 
-/* ISO Enter key style - Use pseudo-class to extend upwards */
+/* ISO Enter key style - extends upward using a pseudo-element */
 .iso-enter {
   position: relative;
   z-index: 10;
-  /* Keycap立体感 */
+  /* Keycap depth effect */
   background: linear-gradient(180deg, #4a4a4f 0%, #3a3a3f 100%);
   border: 1px solid #2a2a2d;
   box-shadow:
@@ -270,8 +290,15 @@ video::-internal-media-controls-picture-in-picture-button {
   border: 1px solid #2a2a2d;
   border-bottom: none;
   border-radius: 6px 6px 0 0;
-  /* 3D shadow */
+  /* Depth shadow */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset -1px 0 0 rgba(255, 255, 255, 0.03);
+}
+
+.h-screen{
+  height: 100dvh;
+    display: flex;
+
+  flex-direction: column;
 }

@@ -5,22 +5,19 @@
  * @Author: zhanglei
  * @Date: 2026-02-09 18:54:35
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-02-09 19:33:41
+ * @LastEditTime: 2026-04-09 18:10:53
  */
-import React from 'react'
-import FileManagerView from './FileManagerView'
-import TransferListView from './TransferListView'
-import type { VirtualUsbDriveProps } from './types'
-import { useVirtualUsbDrive } from './useVirtualUsbDrive'
+import React from 'react';
+import FileManagerView from './FileManagerView';
+import TransferListView from './TransferListView';
+import type { VirtualUsbDriveProps } from './types';
+import { useVirtualUsbDrive } from './useVirtualUsbDrive';
 
-const VirtualUsbDrive: React.FC<VirtualUsbDriveProps> = props => {
-  const state = useVirtualUsbDrive(props)
+const VirtualUsbDrive: React.FC<VirtualUsbDriveProps> = (props) => {
+  const state = useVirtualUsbDrive(props);
+  return state.listType === 'completed'
+    ? <FileManagerView {...state} />
+    : <TransferListView {...state} />;
+};
 
-  return state.listType === 'completed' ? (
-    <FileManagerView {...state} />
-  ) : (
-    <TransferListView {...state} />
-  )
-}
-
-export default VirtualUsbDrive
+export default VirtualUsbDrive;
