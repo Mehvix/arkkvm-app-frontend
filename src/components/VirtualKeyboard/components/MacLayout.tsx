@@ -2,158 +2,214 @@
  * Mac Keyboard Layout Component
  * Includes main keyboard area + arrow keys at the bottom right
  */
-import React from 'react';
-import Key from './Key';
-import type { KeyRow } from '../data/keyboard-types';
+import React, { memo } from 'react';
+import type { KeyboardLayout } from '../data/keyboard-types';
 import type { VirtualKeyboardModifierState } from '../utils/modifierStateManager';
+import { Keycap } from './Keycap';
 
-export interface MacLayoutProps {
-  keyRows: KeyRow[]
-  specialKeys: KeyRow
-  arrowKeys: KeyRow
-  safeModifierKeys: VirtualKeyboardModifierState
-  getDisplayLabel: (key: unknown) => string | string[] | undefined
-  checkKeyPressed: (keyCode: string) => boolean
-  handleModifierKeyDown: (keyCode: string, label?: string) => void
-  handleKeyDown: (keyCode: string, label?: string) => void
-  handleKeyUp: (keyCode: string, label?: string) => void
-  pressedKeyColor: string
+export interface MacLayoutProps extends VirtualKeyboardModifierState {
+  layout: KeyboardLayout;
+  checkKeyPressed: (keyCode: string) => boolean;
+  handleModifierKeyDown: (keyCode: string, label?: string) => void;
+  handleModifierKeyUp: (keyCode: string, label?: string) => void;
+  handleKeyDown: (keyCode: string, label?: string) => void;
+  handleKeyUp: (keyCode: string, label?: string) => void;
+  pressedKeyColor: string;
 }
 
 const MacLayout: React.FC<MacLayoutProps> = ({
-  keyRows,
-  specialKeys,
-  arrowKeys,
-  safeModifierKeys,
-  getDisplayLabel,
+  layout,
   checkKeyPressed,
   handleModifierKeyDown,
+  handleModifierKeyUp,
   handleKeyDown,
   handleKeyUp,
   pressedKeyColor,
+  CapsLock = false,
+  ShiftLeft = false,
+  ShiftRight = false,
+  ControlLeft = false,
+  ControlRight = false,
+  AltLeft = false,
+  AltRight = false,
+  AltGr = false,
+  MetaLeft = false,
+  MetaRight = false,
 }) => {
+  // Error handling: if layout doesn't exist, return null
+  if (!layout || !layout.rows || !Array.isArray(layout.rows)) {
+    return null;
+  }
+
+  const allRows = layout.rows;
+  const mainKeyboardRows = allRows.slice(0, -1); // All rows except the last one
+  const arrowKeysRow = allRows[allRows.length - 1]; // Last row for arrow keys
+
+  // Helper function to calculate key active state
+  const getKeyActiveState = (keyCode: string): boolean => {
+    if (keyCode === 'AltGr') {
+      return AltGr;
+    } else if (keyCode === 'CapsLock') {
+      return CapsLock;
+    } else if (
+      keyCode.startsWith('Shift') ||
+      keyCode.startsWith('Control') ||
+      keyCode.startsWith('Alt') ||
+      keyCode.startsWith('Meta')
+    ) {
+      const modifierStateMap = {
+        ShiftLeft,
+        ShiftRight,
+        ControlLeft,
+        ControlRight,
+        AltLeft,
+        AltRight,
+        MetaLeft,
+        MetaRight,
+      };
+      return modifierStateMap[keyCode as keyof typeof modifierStateMap] || false;
+    }
+    return false;
+  };
+
   return (
-    <div className="relative z-0 keyboard-container w-full flex flex-1 self-stretch">
-      <div className="flex-1 flex flex-col gap-[0]">
-        {/* Keyboard Rows */}
-        {keyRows.map((keys, i) => (
-          <div className="flex flex-wrap" key={`keyRow${i}`}>
-            {keys.map(key => {
-              const isModifier = key.isModifier;
-              const displayLabel = key.showDualState
-                ? key.label
-                : getDisplayLabel(key);
-              const globalKeyState = isModifier
-                ? safeModifierKeys[
-                    key.keyCode as keyof typeof safeModifierKeys
-                  ] || false
-                : false;
-              const isKeyPressed = checkKeyPressed(key.keyCode);
+    <div className="relative z-0 keyboard-container w-full flex flex-1 flex-col md:flex-row self-stretch">
+      {/* Main Keyboard Area */}
+      <div className="flex-1 flex flex-col gap-0">
+        {/* Main Keyboard Rows (excluding arrow keys row) */}
+        {mainKeyboardRows.map((keyRow, rowIndex) => (
+          <div className="flex flex-nowrap relative" key={`mainRow${rowIndex}`}>
+            {keyRow.map(keyDefinition => {
+              const isKeyPressed = checkKeyPressed(keyDefinition.keyCode);
+              const isActive = getKeyActiveState(keyDefinition.keyCode);
 
               return (
-                <Key
-                  key={key.keyCode}
-                  keyCode={key.keyCode}
-                  label={displayLabel}
-                  width={key.width}
-                  onKeyDown={isModifier ? handleModifierKeyDown : handleKeyDown}
-                  onKeyUp={isModifier ? undefined : handleKeyUp}
-                  isActive={globalKeyState}
+                <Keycap
+                  key={keyDefinition.keyCode}
+                  keyDef={keyDefinition}
+                  onKeyDown={keyDefinition.isModifier ? handleModifierKeyDown : handleKeyDown}
+                  onKeyUp={keyDefinition.isModifier ? handleModifierKeyUp : handleKeyUp}
+                  isActive={isActive}
                   isPressed={isKeyPressed}
                   pressedColor={pressedKeyColor}
+                  shiftActive={ShiftLeft || ShiftRight}
+                  capsLockActive={CapsLock}
+                  altGrActive={AltGr}
                 />
               );
             })}
           </div>
         ))}
 
-        {/* Bottom Row: Special Keys + Arrow Keys */}
-        <div className="flex flex-wrap w-full items-center">
-          {/* Special Keys (Fn, Ctrl, Alt, Cmd, Space, etc.) */}
-          {specialKeys.map(key => {
-            const isModifier = key.isModifier;
-            const displayLabel = getDisplayLabel(key);
-            const globalKeyState = isModifier
-              ? safeModifierKeys[
-                  key.keyCode as keyof typeof safeModifierKeys
-                ] || false
-              : false;
-            const isKeyPressed = checkKeyPressed(key.keyCode);
+        {/* Arrow Keys Row */}
+        <div className="flex flex-nowrap relative items-start">
+          {arrowKeysRow.map(keyDefinition => {
+            const isKeyPressed = checkKeyPressed(keyDefinition.keyCode);
+            const isActive = getKeyActiveState(keyDefinition.keyCode);
 
             return (
-              <Key
-                key={key.keyCode}
-                keyCode={key.keyCode}
-                label={displayLabel}
-                width={key.width}
-                className="p-0 mx-1"
-                onKeyDown={isModifier ? handleModifierKeyDown : handleKeyDown}
-                onKeyUp={isModifier ? undefined : handleKeyUp}
-                isActive={globalKeyState}
+              <Keycap
+                key={keyDefinition.keyCode}
+                keyDef={keyDefinition}
+                onKeyDown={keyDefinition.isModifier ? handleModifierKeyDown : handleKeyDown}
+                onKeyUp={keyDefinition.isModifier ? handleModifierKeyUp : handleKeyUp}
+                isActive={isActive}
                 isPressed={isKeyPressed}
                 pressedColor={pressedKeyColor}
+                shiftActive={ShiftLeft || ShiftRight}
+                capsLockActive={CapsLock}
+                altGrActive={AltGr}
               />
             );
           })}
 
-          {/* Arrow Keys in T-shape (Mac Style) */}
-          <div className="flex flex-col justify-center gap-0 w-1/5 h-10">
+          {/* T-Shaped Arrow Keys Layout */}
+          <div
+            className="flex-2 flex-col items-center justify-center  overflow-hidden gap-py-[4px] my-[2px]"
+            style={{ height: 'var(--keycap-height, 40px)' }}
+          >
             {/* Up Arrow */}
-            <div className="w-full grid grid-cols-3 items-center h-1/2">
-              <span></span>
-              {arrowKeys[0] && (
-                <Key
-                  keyCode={arrowKeys[0].keyCode}
-                  label={arrowKeys[0].appleLabel}
-                  onKeyDown={handleKeyDown}
-                  onKeyUp={handleKeyUp}
-                  className="p-0 mx-1 text-[10px]"
-                  compact
-                  isPressed={checkKeyPressed(arrowKeys[0].keyCode)}
-                  pressedColor={pressedKeyColor}
-                />
-              )}
-              <span></span>
+            <div className="flex-1 flex items-center justify-center h-1/2">
+              <Keycap className="h-[calc(100%-4px)]" />
+              <Keycap
+                key="ArrowUp"
+                keyDef={{
+                  keyCode: 'ArrowUp',
+                  legends: { base: '▴' },
+                  width: 1,
+                  role: 'navigation',
+                }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
+                isActive={false}
+                isPressed={checkKeyPressed('ArrowUp')}
+                pressedColor={pressedKeyColor}
+                shiftActive={ShiftLeft || ShiftRight}
+                capsLockActive={CapsLock}
+                altGrActive={AltGr}
+                className="h-[calc(100%-4px)]"
+              />
+              <Keycap className="h-[calc(100%-4px)]" />
             </div>
 
             {/* Left, Down, Right Arrows */}
-            <div className="w-full grid grid-cols-3 h-1/2">
-              {arrowKeys[1] && (
-                <Key
-                  keyCode={arrowKeys[1].keyCode}
-                  label={arrowKeys[1].appleLabel}
-                  onKeyDown={handleKeyDown}
-                  onKeyUp={handleKeyUp}
-                  className="p-0 mx-1 h-full"
-                  compact
-                  isPressed={checkKeyPressed(arrowKeys[1].keyCode)}
-                  pressedColor={pressedKeyColor}
-                />
-              )}
-              {arrowKeys[2] && (
-                <Key
-                  keyCode={arrowKeys[2].keyCode}
-                  label={arrowKeys[2].appleLabel}
-                  onKeyDown={handleKeyDown}
-                  onKeyUp={handleKeyUp}
-                  className="p-0 mx-1 h-full"
-                  compact
-                  isPressed={checkKeyPressed(arrowKeys[2].keyCode)}
-                  pressedColor={pressedKeyColor}
-                />
-              )}
-              {arrowKeys[3] && (
-                <Key
-                  keyCode={arrowKeys[3].keyCode}
-                  label={arrowKeys[3].appleLabel}
-                  onKeyDown={handleKeyDown}
-                  onKeyUp={handleKeyUp}
-                  className="p-0 mx-1 h-full"
-                  compact
-                  isPressed={checkKeyPressed(arrowKeys[3].keyCode)}
-                  pressedColor={pressedKeyColor}
-                />
-              )}
+            <div className="flex-1 flex items-center justify-center h-1/2">
+              <Keycap
+                key="ArrowLeft"
+                keyDef={{
+                  keyCode: 'ArrowLeft',
+                  legends: { base: '◂' },
+                  width: 1,
+                  role: 'navigation',
+                }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
+                isActive={false}
+                isPressed={checkKeyPressed('ArrowLeft')}
+                pressedColor={pressedKeyColor}
+                shiftActive={ShiftLeft || ShiftRight}
+                capsLockActive={CapsLock}
+                altGrActive={AltGr}
+                className="h-[calc(100%-4px)]"
+              />
+
+              <Keycap
+                key="ArrowDown"
+                keyDef={{
+                  keyCode: 'ArrowDown',
+                  legends: { base: '▾' },
+                  width: 1,
+                  role: 'navigation',
+                }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
+                isActive={false}
+                isPressed={checkKeyPressed('ArrowDown')}
+                pressedColor={pressedKeyColor}
+                shiftActive={ShiftLeft || ShiftRight}
+                capsLockActive={CapsLock}
+                altGrActive={AltGr}
+                className="h-[calc(100%-4px)]"
+              />
+
+              <Keycap
+                key="ArrowRight"
+                keyDef={{
+                  keyCode: 'ArrowRight',
+                  legends: { base: '▸' },
+                  width: 1,
+                  role: 'navigation',
+                }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
+                isActive={false}
+                isPressed={checkKeyPressed('ArrowRight')}
+                pressedColor={pressedKeyColor}
+                shiftActive={ShiftLeft || ShiftRight}
+                capsLockActive={CapsLock}
+                altGrActive={AltGr}
+                className="h-[calc(100%-4px)]"
+              />
             </div>
           </div>
         </div>
@@ -161,5 +217,4 @@ const MacLayout: React.FC<MacLayoutProps> = ({
     </div>
   );
 };
-
-export default MacLayout;
+export default memo(MacLayout);

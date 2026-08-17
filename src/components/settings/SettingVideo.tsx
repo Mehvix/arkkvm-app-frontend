@@ -38,12 +38,12 @@ const initialEdids = [
   {
     value:
       '00FFFFFFFFFFFF0010AC132045393639201E0103803C22782ACD25A3574B9F270D5054A54B00714F8180A9C0D1C00101010101010101023A801871382D40582C450056502100001E000000FF00335335475132330A2020202020000000FC0044454C4C204432373231480A20000000FD00384C1E5311000A202020202020018102031AB14F90050403020716010611121513141F65030C001000023A801871382D40582C450056502100001E011D8018711C1620582C250056502100009E011D007251D01E206E28550056502100001E8C0AD08A20E02D10103E960056502100001800000000000000000000000000000000000000000000000000000000004F',
-    label: 'DELL D2721H, 1920x1080',
+    label: 'DELL D2721H, 1920x1080, No Audio',
   },
   {
     value:
       '00ffffffffffff0010ac0100020000000111010380221bff0a00000000000000000000adce0781800101010101010101010101010101000000ff0030303030303030303030303030000000ff0030303030303030303030303030000000fd00384c1f530b000a000000000000000000fc0044454c4c2049445241430a2020000a',
-    label: 'DELL IDRAC EDID, 1280x1024',
+    label: 'DELL IDRAC EDID, 1280x1024, No Audio',
   },
   { value: 'custom', label: 'Custom' },
 ];
@@ -81,15 +81,21 @@ export default function SettingVideo() {
   const defaultEdid = storedDefaultEdid;
   const customEdidValue = storedCustomEdidValue;
   const edids = useMemo(() => {
-    const options = [...initialEdids];
-    if (defaultEdid) {
-      options[0] = {
-        ...options[0],
-        value: defaultEdid,
-      };
-    }
+    const options = initialEdids.map((o, i) => {
+      if (i === 0) {
+        return {
+          ...o,
+          value: defaultEdid || o.value,
+          label: t('settings:video.edid.default'),
+        };
+      }
+      if (o.value === 'custom') {
+        return { ...o, label: t('settings:video.edid.custom.title') };
+      }
+      return o;
+    });
     return options;
-  }, [defaultEdid]);
+  }, [defaultEdid, t]);
 
   // Stream quality state
   const streamQuality = String(videoStreamQuality || 1);
@@ -303,6 +309,31 @@ export default function SettingVideo() {
   const handleRestoreEnhancementToDefault = useCallback(() => {
     setEnhancement({...enhancement, brightness: 1, contrast: 1, saturation: 1, hueRotate: 0 });
   }, [enhancement, setEnhancement]);
+
+  const streamQualityOptionsMemo = useMemo(
+    () => STREAM_QUALITY_OPTIONS.map(o => ({
+      ...o,
+      label:
+        o.value === '1' ? t('settings:video.streamQuality.high') :
+        o.value === '0.5' ? t('settings:video.streamQuality.medium') :
+        t('settings:video.streamQuality.low'),
+    })),
+    [t]
+  );
+
+  const enhancementPresetsMemo = useMemo(
+    () => ENHANCEMENT_PRESETS.map(o => ({
+      ...o,
+      label:
+        o.value === 'none' ? t('settings:video.enhancement.standard') :
+        o.value === 'vivid' ? t('settings:video.enhancement.vivid') :
+        o.value === 'text' ? t('settings:video.enhancement.textFocus') :
+        o.value === 'warm' ? t('settings:video.enhancement.warm') :
+        t('settings:video.enhancement.custom'),
+    })),
+    [t]
+  );
+
   return (
     <SettingPageContainer
       title={t('settings:pages.video.title')}
@@ -317,7 +348,7 @@ export default function SettingVideo() {
             value={streamQuality}
             size="xs"
             onChange={handleStreamQualityChange}
-            options={STREAM_QUALITY_OPTIONS}
+            options={streamQualityOptionsMemo}
 
           />
         </SettingBlock.Right>
@@ -331,7 +362,7 @@ export default function SettingVideo() {
             value={enhancement.preset}
             size="xs"
             onChange={handleEnhancementPresetChange}
-            options={ENHANCEMENT_PRESETS}
+            options={enhancementPresetsMemo}
 
           />
         </SettingBlock.Right>

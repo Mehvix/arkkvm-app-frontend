@@ -81,6 +81,9 @@ export interface KeyDefinition {
   /** Whether to show multiple states (e.g. to display all inputs) */
   showLegends?: boolean
 
+  /** Whether to show dual state display (base + shift) */
+  showDualState?: boolean
+
   /** Style information */
   style?: KeyStyle
 }

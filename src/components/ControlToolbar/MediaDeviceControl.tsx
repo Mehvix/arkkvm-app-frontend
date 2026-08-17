@@ -30,6 +30,7 @@ import {
 import { env } from '@/utils/env';
 import { createLogger } from '@/utils/logger';
 import { memo, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const logger = createLogger('MediaDeviceControl');
 
@@ -45,6 +46,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
   variant = 'button',
   isCollapsed = false,
 }) => {
+  const { t } = useTranslation('common');
   const peerConnection = useRTCStore(s => s.peerConnection);
 
   // Media device state management
@@ -398,7 +400,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" align="start">
-                  {audioPlayback ? 'Audio Playback On' : 'Audio Playback Off'}
+                  {audioPlayback ? t('toolbar.audioPlaybackOn') : t('toolbar.audioPlaybackOff')}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -515,7 +517,7 @@ const MediaDeviceControl: React.FC<MediaDeviceControlProps> = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" align="start">
-              {audioPlayback ? 'Audio Playback On' : 'Audio Playback Off'}
+              {audioPlayback ? t('toolbar.audioPlaybackOn') : t('toolbar.audioPlaybackOff')}
             </TooltipContent>
           </Tooltip>
         )}

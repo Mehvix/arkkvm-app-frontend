@@ -73,7 +73,7 @@ export default function TopNavbar({
   const controlLayoutMode = useAppStore(s => s.ui.controlLayoutMode);
   const setControlLayoutMode = useAppStore(s => s.ui.setControlLayoutMode);
 
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const currentLang = (i18n.resolvedLanguage ?? i18n.language) as 'en' | 'zh';
   // USB state
   const { label: usbLabel } = getUsbStateVisual(usbState as USBStates, currentLang);
@@ -104,19 +104,21 @@ export default function TopNavbar({
     if (!isChannelReady) return;
     startLoading('reboot');
     setIsPopoverOpen(false);
-    // Immediately notify parent component to start restart process
-    onReconnect?.(25);
-    try {
-      await sendAsync({
+    void sendAsync(
+      {
         method: 'reboot',
         params: { force: false },
-      });
-    } catch {}
+      },
+      { timeout: 1000 }
+    );
+    window.setTimeout(() => {
+      onReconnect?.(25);
+    }, 0);
     // Stop button loading after 25 seconds
     setTimeout(() => {
       stopLoading('reboot');
     }, 25000);
-  }, [isChannelReady, sendAsync, onReconnect]);
+  }, [isChannelReady, sendAsync, onReconnect, startLoading, stopLoading]);
   // Fullscreen event
   const handleFullScreenClick = (event: MouseEvent<HTMLElement>) => {
     if (isChannelReady) {
@@ -130,7 +132,7 @@ export default function TopNavbar({
     }
   };
   return (
-    <div className="flex flex-row h-[60px] bg-secondary-bg justify-between border-b border-(--border-color) py-[10px] px-[18px]">
+    <div className="flex h-[52px] flex-row justify-between border-b border-(--border-color) bg-secondary-bg px-2 py-2 sm:h-[60px] sm:px-[18px] sm:py-[10px]">
       <div className="flex items-center">
         <BrandLogo type={brandLogoType} size={24} />
 
@@ -151,7 +153,7 @@ export default function TopNavbar({
           </div>
         )}
         {hostname && (
-          <span className="text-[18px]   truncate max-w-[120px] ml-[16px]">{hostname}</span>
+          <span className="ml-2 max-w-[90px] truncate text-[16px] sm:ml-[16px] sm:max-w-[120px] sm:text-[18px]">{hostname}</span>
         )}
       </div>
       <div className="flex items-center">
@@ -164,7 +166,7 @@ export default function TopNavbar({
               StatusIcon={IconApi}
               className="w-auto"
               slot={
-                <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       size="xs"
@@ -176,7 +178,7 @@ export default function TopNavbar({
                       {!isLoading('reboot') && (
                         <>
                           <RotateCcw className="size-[12px] text-text" />
-                          <span className="hidden sm:inline">Restart</span>
+                          <span className="hidden sm:inline">{t('reboot.button')}</span>
                         </>
                       )}
                     </Button>
@@ -187,13 +189,16 @@ export default function TopNavbar({
                     align="end"
                     onOpenAutoFocus={e => e.preventDefault()}
                   >
-                    <ul className="text-sm gap-[8px] flex flex-col">
+                    <ul className="text-sm gap-[4px] flex flex-col">
                       <li className="flex items-center gap-[8px] text-base">
-                        <IconWarning className="size-[16px]" /> Restart
+                        <IconWarning className="size-[16px]" /> {t('reboot.title')}
                       </li>
-                      <li>Restarting will stop all ongoing tasks.</li>
-                      <li>You can continue after the restart is complete.</li>
-                      <li className="flex justify-end mt-[24px]">
+                      {(t('reboot.desc', { returnObjects: true }) as string[]).map(
+                        (line, index) => (
+                          <li key={index}>{line}</li>
+                        )
+                      )}
+                      <li className="flex justify-end mt-[16px]">
                         <Button
                           variant="primary"
                           size="xs"
@@ -203,7 +208,7 @@ export default function TopNavbar({
                           disabled={isLoading('reboot')}
                           loading={isLoading('reboot')}
                         >
-                          Restart
+                          {t('reboot.confirm')}
                         </Button>
                       </li>
                     </ul>
@@ -269,7 +274,7 @@ export default function TopNavbar({
                     <IconDown></IconDown>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={logoutHandle}>Log out</DropdownMenuItem>
+                    <DropdownMenuItem onClick={logoutHandle}>{t('login.logout')}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

@@ -54,13 +54,13 @@ export type JsonRpcSend<M extends MethodName = MethodName> =
     : never
 
 export interface RpcErrorResult {
+  result: null
   success: false
   error: JsonRpcError
 }
 
-export type RpcSuccessResult<M extends MethodName> = JsonRpcSuccessResponse<
-  MethodResultMap[M]
-> & {
+export interface RpcSuccessResult<M extends MethodName> {
+  result: MethodResultMap[M]
   success: true
 }
 

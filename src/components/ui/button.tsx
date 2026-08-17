@@ -79,6 +79,11 @@ const buttonVariants = cva(
           'text-[var(--btn-primary-bg)] underline-offset-4 hover:underline',
           pressedOpacity,
         ].join(' '),
+        text: [
+          'bg-transparent border-transparent shadow-none text-[var(--text-color)]',
+          'hover:opacity-80',
+          'active:opacity-70',
+        ].join(' '),
       },
       // semantic status colors
       status: {

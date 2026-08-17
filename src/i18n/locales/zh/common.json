@@ -3,6 +3,10 @@
   "connect": "连接",
   "disconnect": "断开连接",
   "reconnect": "重新连接",
+  "restart": {
+    "title": "设备正在重启",
+    "desc": "将在 {{seconds}} 秒后重新连接..."
+  },
   "connected": "已连接",
   "disconnected": "未连接",
   "connecting": "正在连接...",
@@ -30,7 +34,7 @@
   "selectLanguage": "选择语言",
   "selectTheme": "选择主题",
   "theme": {
-    "dark": "暗示",
+    "dark": "深色",
     "light": "浅色"
   },
   "login.title": "登录到设备",
@@ -69,10 +73,10 @@
     "encryptedHint": "端到端加密。"
   },
   "cloudLoginDirect": {
-    "title": "Welcome to ArkKVM Cloud",
-    "description": "Access your devices from anywhere.",
-    "action": "Sign in with Google",
-    "encryptedHint": "End-to-end encrypted."
+    "title": "欢迎使用 ArkKVM Cloud",
+    "description": "随时随地访问您的设备。",
+    "action": "使用 Google 登录",
+    "encryptedHint": "端到端加密。"
   },
   "login.logout": "退出登录",
   "deviceCard.status.online": "在线",
@@ -152,6 +156,14 @@
     "settings": "设置",
     "settingsDesc": "打开设置面板",
     "atxPower": "ATX电源",
+    "fileTransfer": "虚拟 USB 驱动器",
+    "ocr": "OCR",
+    "ocrActive": "OCR 已激活",
+    "copyText": "复制文本",
+    "moreTextActions": "更多文本操作",
+    "media": "媒体",
+    "audioPlaybackOn": "音频播放已开启",
+    "audioPlaybackOff": "音频播放已关闭",
     "quickTools": "快速工具",
     "tools": "工具",
     "collapse": "收起",
@@ -169,14 +181,76 @@
     "disconnect": "断开连接",
     "disconnectDesc": "断开与设备的连接",
     "inputMethodLabel": "选择键盘语言：",
+    "targetSystemLabel": "目标系统",
+    "layoutNote": "此处更改布局仅影响本次粘贴任务，不会更新全局设置。",
+    "layoutWarning": "部分字符可能使用了其他语言布局，无法通过当前选择输入。",
+    "missingMappings": "未映射字符：{{unique}} 个唯一 / {{total}} 个总计",
+    "suggestedLayout": "建议布局：{{layout}}",
+    "switchToSuggestedLayout": "切换到建议布局",
+    "typingSpeed": "键入速度",
+    "typingSpeedSlow": "慢速",
+    "typingSpeedNormal": "正常",
+    "typingSpeedFast": "快速",
     "virtualUsbDrive": {
+      "title": "ArkKVM USB 驱动器",
+      "myFiles": "我的文件",
+      "createDir": "新建文件夹",
+      "mountToRemote": "挂载到远程",
+      "mountToBack": "取消挂载",
+      "availableStorage": "可用存储",
+      "download": "下载",
+      "delete": "删除",
+      "uploadFiles": "上传文件",
+      "uploadFormatsText": "支持格式：所有文件类型",
+      "cannotMountWhileTransfer": "文件传输进行中，无法挂载",
+      "tasks": "任务",
+      "upload": "上传",
+      "back": "返回",
+      "col": {
+        "name": "文件名",
+        "modifiedTime": "修改时间",
+        "fileSize": "文件大小",
+        "transferInfo": "传输信息",
+        "transferStatus": "传输状态",
+        "actions": "操作"
+      },
+      "transferState": {
+        "running": "传输中",
+        "paused": "已暂停",
+        "failed": "失败",
+        "pending": "等待中",
+        "completed": "已完成"
+      },
+      "transferAction": {
+        "pause": "暂停",
+        "continue": "继续上传",
+        "delete": "删除",
+        "pauseBeforeDelete": "请先暂停任务再删除"
+      },
+      "createDirDialog": {
+        "title": "输入文件夹名称",
+        "placeholder": "输入文件夹名称",
+        "confirm": "确定",
+        "cancel": "取消"
+      },
+      "empty": {
+        "notMountedTitle": "文件系统未挂载",
+        "notMountedDesc": "点击'挂载到远程'以访问远程计算机的文件系统并管理文件。",
+        "remoteUsbTitle": "无法显示文件",
+        "remoteUsbDesc": "点击'取消挂载'断开 ArkKVM 与远程计算机的连接，以便在本地计算机上查看、上传和下载文件。",
+        "noFilesTitle": "暂无文件",
+        "noFilesDesc": "使用下方按钮从本地上传文件，或点击'挂载到远程'将 ArkKVM 作为大容量存储设备连接到远程计算机并复制文件。",
+        "transferUnableTitle": "无法显示",
+        "transferUnableDesc": "点击'返回'回到虚拟 USB 驱动器，浏览、上传或下载文件。"
+      },
       "downloadDisabled": {
         "folder": "暂不支持下载文件夹",
         "ftcacheUploading": "对应上传任务进行中，无法下载该 .ftcache 文件"
       },
       "deleteDisabled": {
         "ftcacheUploading": "对应上传任务进行中，无法删除该 .ftcache 文件"
-      }
+      },
+      "resumeFallback": "请重新选择文件以继续上传"
     }
   },
   "wol": {
@@ -222,5 +296,35 @@
     "desc": "部分更改需要重启系统后才能生效。\n您可以立即重启或稍后再重启。",
     "confirm": "立即重启",
     "cancel": "稍后"
+  },
+  "reboot": {
+    "button": "重启",
+    "title": "重启",
+    "desc": [
+      "重启将停止所有正在进行的任务。",
+      "重启完成后您可以继续操作。"
+    ],
+    "confirm": "重启"
+  },
+  "ocr": {
+    "recognizing": "正在识别...",
+    "error": "无法识别文本",
+    "errorHint": "无法识别文本，请尝试选择更清晰的区域",
+    "dragHint": "拖动选择文本区域 · 按 Esc 取消",
+    "releaseHint": "释放鼠标以识别文本 · 按 Esc 取消",
+    "exit": "退出",
+    "reading": "正在读取选中区域...",
+    "success": "已识别文本",
+    "close": "关闭",
+    "viewFullText": "查看完整文本",
+    "copied": "已复制到剪贴板",
+    "copy": "复制",
+    "reselect": "重新选择",
+    "privacyNote": "文本识别在您的设备本地运行",
+    "recognizedText": "已识别文本"
+  },
+  "language": {
+    "zh": "中文",
+    "en": "English"
   }
 }

@@ -10,69 +10,86 @@ import { useAppStore, useRTCStore } from '@/stores';
 import { env } from '@/utils/env';
 import { createLogger } from '@/utils/logger';
 import { calculateTransferStats } from '@/utils/transfer';
+import {
+  deleteUploadTask,
+  getUploadTask,
+  isFileSystemAccessSupported,
+  restoreFileFromHandle,
+  saveUploadTask,
+  updateUploadTask,
+  validateFileForResume,
+  type FilePickerAcceptType,
+  type PersistedFileSystemFileHandle,
+  type PersistedUploadStatus,
+  type PersistedUploadTask,
+  UploadResumeError,
+} from '@/utils/uploadIndexedDb';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
-    CHUNK_SIZE,
-    CHUNKS_PER_TICK,
-    DEFAULT_HIGH_WATER_MARK,
-    DEFAULT_LOW_WATER_MARK,
-    FINALIZE_TIMEOUT,
+  CHUNK_SIZE,
+  CHUNKS_PER_TICK,
+  DEFAULT_HIGH_WATER_MARK,
+  getAckStallTimeout,
+  DEFAULT_LOW_WATER_MARK,
+  FINALIZE_TIMEOUT,
+  MAX_IN_FLIGHT_BYTES,
 } from './constants';
-import type {
-    UploadDetail,
-    UploadDropZoneProps,
-    UploadState
-} from './types';
+import type { UploadDetail, UploadDropZoneProps, UploadState } from './types';
 import { INITIAL_UPLOAD_DETAIL } from './types';
 import {
-    acquireUploadLock,
-    dequeueNextFile,
-    pausedFiles,
-    releaseUploadLock,
-    uploadQueue,
+  acquireUploadLock,
+  dequeueNextFile,
+  isUploadLocked,
+  pausedFiles,
+  releaseUploadLock,
+  uploadQueue,
 } from './uploadLock';
 
 const logger = createLogger('Upload');
 
 // ─── Type alias for the transfer snapshot (from @/utils/transfer) ────────
-type TransferSnapshot = Parameters<typeof calculateTransferStats>[1]
+type TransferSnapshot = Parameters<typeof calculateTransferStats>[1];
 
 /**
  * Return value of the useUpload hook.
  */
 export interface UseUploadReturn {
   /** Current upload state */
-  uploadState: UploadState
+  uploadState: UploadState;
   /** Real-time upload detail for progress display */
-  currentUploadDetail: UploadDetail
+  currentUploadDetail: UploadDetail;
   /** Current file name being uploaded */
-  fileName: string | null
+  fileName: string | null;
   /** Whether the component is in dragging state */
-  dragging: boolean
+  dragging: boolean;
   /** Ref for the hidden file input */
-  inputRef: React.RefObject<HTMLInputElement | null>
+  inputRef: React.RefObject<HTMLInputElement | null>;
   /** Ref for file picker guard */
-  pickingRef: React.MutableRefObject<boolean>
+  pickingRef: React.MutableRefObject<boolean>;
   /** Ref to the active WebRTC DataChannel (null when idle) */
-  rtcDataChannelRef: React.RefObject<RTCDataChannel | null>
+  rtcDataChannelRef: React.RefObject<RTCDataChannel | null>;
   /** Pause the current upload (closes DataChannel, emits onPause) */
-  pauseUpload: () => void
+  pauseUpload: () => void;
   /** Cancel the current upload (closes channel, releases lock, resets state) */
-  cancelUpload: () => void
+  cancelUpload: () => void;
   /** Start uploading a file */
-  handleUploadStart: (file: File) => void
+  handleUploadStart: (file: File) => void;
+  /** Resume a persisted upload task by id (File System Access API required) */
+  resumeUpload: (taskId: string) => Promise<void>;
+  /** Open the native file picker as a fallback when FSA resume is unavailable */
+  openFilePicker: () => void;
   /** Handle drag over */
-  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   /** Handle drag enter */
-  handleDragEnter: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragEnter: (e: React.DragEvent<HTMLDivElement>) => void;
   /** Handle drag leave */
-  handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   /** Handle drop */
-  handleDrop: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   /** Handle file selected from input */
-  handleFileSelected: (e: React.ChangeEvent<HTMLInputElement>) => void
+  handleFileSelected: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 /**
@@ -99,6 +116,9 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     onStateChange,
     startParams,
     onPause,
+    onResumeStart,
+    source,
+    path,
     lowWaterMark = DEFAULT_LOW_WATER_MARK,
     highWaterMark = DEFAULT_HIGH_WATER_MARK,
     maxFileSize,
@@ -155,6 +175,7 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
   const pendingFilesRef = useRef<File[]>([]);
   const currentUploadedRef = useRef(0);
   const speedTimerRef = useRef<number | undefined>(undefined);
+  const httpAbortRef = useRef(false);
 
   // ── Latest-ref for external callbacks (prevent stale closures) ──
   const onSuccessRef = useRef(onSuccess);
@@ -163,6 +184,8 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
   onErrorRef.current = onError;
   const onProgressRef = useRef(onProgress);
   onProgressRef.current = onProgress;
+  const onResumeStartRef = useRef(onResumeStart);
+  onResumeStartRef.current = onResumeStart;
 
   // ── Store actions ──────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,7 +214,6 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     }
   }, []);
 
-
   const runPreUploadGuard = useCallback(
     async (file: File) => {
       if (beforeUpload) {
@@ -205,11 +227,36 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         }
       }
 
-
-
       return true;
     },
     [beforeUpload]
+  );
+
+  // ── IndexedDB persistence helpers ─────────────────────────────
+  const persistUploadTask = useCallback(
+    async (
+      file: File,
+      status: PersistedUploadStatus,
+      fileHandle?: PersistedFileSystemFileHandle,
+      offset = 0
+    ) => {
+      await saveUploadTask({
+        taskId: file.name,
+        fileName: file.name,
+        fileSize: file.size,
+        lastModified: file.lastModified,
+        uploadedBytes: offset,
+        chunkSize: CHUNK_SIZE,
+        status,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        source: source as PersistedUploadTask['source'],
+        path: path || '/',
+        direction: 'upload',
+        fileHandle,
+      });
+    },
+    [source, path]
   );
 
   // ── Effects ────────────────────────────────────────────────
@@ -239,13 +286,10 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     const onMsg = (e: MessageEvent) => {
       try {
         const { AlreadyUploadedBytes } = JSON.parse(e.data) as {
-          AlreadyUploadedBytes: number
-          Size: number
+          AlreadyUploadedBytes: number;
+          Size: number;
         };
-        const safeUploaded = Math.max(
-          currentUploadedRef.current || 0,
-          AlreadyUploadedBytes || 0
-        );
+        const safeUploaded = Math.max(currentUploadedRef.current || 0, AlreadyUploadedBytes || 0);
 
         currentUploadedRef.current = safeUploaded;
       } catch {}
@@ -277,233 +321,321 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     }
   }, [uploadState]);
 
-  // ── HTTP Upload Handler ────────────────────────────────────
+  // ── HTTP Upload Handler (chunked) ─────────────────────────
+  // Each chunk: POST a 64MB slice as application/octet-stream.
+  // Before the 2nd+ chunk, re-call RPC to get the server-confirmed offset.
+  // 202 = chunk accepted, continue; 200 = upload complete.
+  const HTTP_CHUNK_SIZE = 500 * 1024 * 1024; // 500 MB — intentionally separate from WebRTC CHUNK_SIZE (4KB)
+
   const handleUploadHttp = useCallback(
     async (
       file: File,
-      alreadyUploadedBytes: number = 0,
-      dataChannel: RTCDataChannel | null = null
+      initialAlreadyUploadedBytes: number = 0,
+      initialDataChannel: RTCDataChannel | string | null = null,
+      rpcParams?: Record<string, unknown>
     ) => {
-      // Extract uploadId from dataChannel (can be string or object with label property)
-      const uploadId = dataChannel
-        ? (typeof dataChannel === 'string' ? dataChannel : dataChannel?.label || 'http')
-        : 'http';
-      const uploadUrl = `${env.apiBaseUrl}${httpUploadUrl}?uploadId=${encodeURIComponent(uploadId)}`;
+      setUploadState('uploading');
 
-      logger.info('HTTP upload URL', { uploadUrl, uploadId, dataChannel });
+      // Track the active XHR so pause/cancel can abort it mid-chunk
+      let activeXhr: XMLHttpRequest | null = null;
+      let userAborted = false;
+      httpAbortRef.current = false;
+      let committedBytes = initialAlreadyUploadedBytes;
+      let prevSmoothedSpeedBps = 0;
 
-      return new Promise<void>(resolve => {
-        try {
-          setUploadState('uploading');
-          const xhr = new XMLHttpRequest();
+      // Derive initial uploadId (will be refreshed per chunk via RPC)
+      const resolveUploadId = (dc: RTCDataChannel | string | null): string => {
+        if (!dc) return 'http';
+        if (typeof dc === 'string') return dc;
+        return (dc as RTCDataChannel).label || 'http';
+      };
+      let currentUploadId = resolveUploadId(initialDataChannel);
 
-          // Register controller for HTTP upload
-          setUploadController?.(file.name, {
-            pause: () => {
-              logger.info('Pause: aborting HTTP upload', {
-                file: file.name,
-                uploadedBytes: alreadyUploadedBytes,
-              });
-
-              // Abort XHR
-              try {
-                if (xhr.readyState !== XMLHttpRequest.UNSENT && xhr.readyState !== XMLHttpRequest.DONE) {
-                  xhr.abort();
-                }
-              } catch {}
-
-              // Release lock and process queue
-              releaseUploadLock();
-              stopSpeedMeter();
-
-              try {
-                removeUploadController?.(file.name);
-              } catch {}
-
-              setUploadState('idle');
-              onPause?.({
-                name: file.name,
-                transferredBytes: alreadyUploadedBytes,
-                totalBytes: file.size,
-              });
-
-              // Process next queued file
-              const nextFile = dequeueNextFile();
-              if (nextFile) {
-                setTimeout(() => {
-                  nextFile.onReady(
-                    nextFile.file,
-                    nextFile.channelLabel,
-                    nextFile.alreadyUploadedBytes,
-                    nextFile.dataChannel
-                  );
-                }, 100);
-              }
-            },
-            resume: () => logger.warn('HTTP upload resume not supported'),
-            cancel: () => {
-              try {
-                if (xhr.readyState !== XMLHttpRequest.UNSENT && xhr.readyState !== XMLHttpRequest.DONE) {
-                  xhr.abort();
-                }
-              } catch {}
-            },
-            getState: () => {
-              const isActive = xhr.readyState >= XMLHttpRequest.OPENED && xhr.readyState < XMLHttpRequest.DONE;
-              return { readyState: isActive ? 'open' : 'closed' };
-            },
+      // Register controller so UI can pause/cancel
+      setUploadController?.(file.name, {
+        pause: () => {
+          logger.info('Pause: aborting HTTP chunk upload', {
+            file: file.name,
+            committedBytes,
           });
+          userAborted = true;
+          httpAbortRef.current = true;
+          try {
+            activeXhr?.abort();
+          } catch {}
+          releaseUploadLock();
+          stopSpeedMeter();
+          try {
+            removeUploadController?.(file.name);
+          } catch {}
+          setUploadState('idle');
+          onPause?.({
+            name: file.name,
+            transferredBytes: committedBytes,
+            totalBytes: file.size,
+          });
+          try {
+            updateUploadTask(file.name, {
+              status: 'paused',
+              uploadedBytes: committedBytes,
+              updatedAt: Date.now(),
+            });
+          } catch {}
+          const nextFile = dequeueNextFile();
+          if (nextFile) {
+            setTimeout(
+              () =>
+                nextFile.onReady(
+                  nextFile.file,
+                  nextFile.channelLabel,
+                  nextFile.alreadyUploadedBytes,
+                  nextFile.dataChannel,
+                  nextFile.rpcParams
+                ),
+              1000
+            );
+          }
+        },
+        resume: () => logger.warn('HTTP upload resume not supported'),
+        cancel: () => {
+          userAborted = true;
+          try {
+            activeXhr?.abort();
+          } catch {}
+        },
+        getState: () => ({
+          readyState: userAborted ? 'closed' : 'open',
+        }),
+      });
 
+      // Helper: POST one chunk and return {status, responseText}
+      const postChunk = (uploadId: string, blob: Blob, chunkOffset: number): Promise<{ status: number; responseText: string }> =>
+        new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          activeXhr = xhr;
+
+          const uploadUrl = `${env.apiBaseUrl}${httpUploadUrl}?uploadId=${encodeURIComponent(uploadId)}`;
           xhr.open('POST', uploadUrl, true);
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.setRequestHeader('Content-Type', 'application/octet-stream');
           const csrfToken = sessionStorage.getItem('csrfToken') ?? '';
           if (csrfToken) {
             xhr.setRequestHeader('X-CSRF-Token', csrfToken);
           }
 
-          currentUploadedRef.current = alreadyUploadedBytes;
+          let lastProgressEmit = 0;
+          xhr.upload.onprogress = (event: ProgressEvent) => {
+            const now = Date.now();
+            if (now - lastProgressEmit < 200) return;
+            lastProgressEmit = now;
 
-          xhr.upload.onprogress = event => {
-            // Add alreadyUploadedBytes to show correct total progress
             const current: TransferSnapshot = {
-              transferredBytes: alreadyUploadedBytes + event.loaded,
+              transferredBytes: chunkOffset + event.loaded,
               totalBytes: file.size,
               timestampMs: event.timeStamp,
               direction: 'upload',
             };
-
-            const stats = calculateTransferStats(prev.current, current);
-
+            const stats = calculateTransferStats(prev.current, current, {
+              smoothingAlpha: 0.3,
+              prevSmoothedSpeedBps,
+            });
+            prevSmoothedSpeedBps = stats.speedBps;
+            currentUploadedRef.current = chunkOffset + event.loaded;
             onProgressRef.current?.({ name: file.name, ...stats });
-            setCurrentUploadDetail(prev => ({
-              ...prev,
-              ...stats,
-            }));
-
-            prev.current = current;
+            setCurrentUploadDetail(d => ({ ...d, ...stats }));
+            (prev as React.MutableRefObject<TransferSnapshot | null>).current = current;
           };
 
           xhr.onload = () => {
-            const responseCsrfToken = xhr.getResponseHeader('X-CSRF-Token') ||
-              xhr.getResponseHeader('x-csrf-token') ||
-              xhr.getResponseHeader('X-CSRF-Token');
+            const responseCsrfToken =
+              xhr.getResponseHeader('X-CSRF-Token') ||
+              xhr.getResponseHeader('x-csrf-token');
             if (responseCsrfToken) {
               sessionStorage.setItem('csrfToken', responseCsrfToken);
             }
-            if (xhr.status === 200) {
-              setUploadState('success');
-              onSuccessRef.current?.(file);
-
-              try {
-                unregisterUpload?.(file.name);
-              } catch {}
-              try {
-                removeUploadController?.(file.name);
-              } catch {}
-
-              stopSpeedMeter();
-              releaseUploadLock();
-
-              const nextFile = dequeueNextFile();
-              if (nextFile) {
-                setTimeout(() => nextFile.onReady(nextFile.file, nextFile.channelLabel, nextFile.alreadyUploadedBytes, nextFile.dataChannel), 100);
-              }
-
-              resolve();
-            } else {
-              logger.error('HTTP upload failed', {
-                status: xhr.status,
-                statusText: xhr.statusText,
-              });
-
-              toast.error(`Upload failed: ${xhr.status} ${xhr.statusText}`);
-
-              // Immediately cleanup for failed uploads (404, etc.) - don't set error state
-              stopSpeedMeter();
-              releaseUploadLock();
-
-              try {
-                removeUploadController?.(file.name);
-              } catch {}
-
-              // Immediately remove from UI for failed uploads
-              try {
-                unregisterUpload?.(file.name);
-              } catch {}
-
-              onErrorRef.current?.({ name: file.name, error: `${xhr.status} ${xhr.statusText}` });
-
-              const nextFail = dequeueNextFile();
-              if (nextFail) {
-                setTimeout(() => nextFail.onReady(nextFail.file, nextFail.channelLabel, nextFail.alreadyUploadedBytes, nextFail.dataChannel), 100);
-              }
-
-              resolve();
-            }
+            logger.info('[Upload] chunk response', {
+              status: xhr.status,
+              chunkOffset,
+              chunkSize: blob.size,
+              uploadId,
+            });
+            activeXhr = null;
+            resolve({ status: xhr.status, responseText: xhr.responseText });
           };
 
           xhr.onerror = () => {
-            logger.error('HTTP upload XHR error', {
-              status: xhr.statusText,
-              file: file.name,
-            });
-
-            toast.error(`Upload failed: ${xhr.statusText}`);
-
-            // Immediately cleanup for failed uploads - don't set error state
-            stopSpeedMeter();
-            releaseUploadLock();
-
-            try {
-              removeUploadController?.(file.name);
-            } catch {}
-
-            // Immediately remove from UI for failed uploads
-            try {
-              unregisterUpload?.(file.name);
-            } catch {}
-
-            onErrorRef.current?.({ name: file.name, error: xhr.statusText });
-
-            const nextXhrErr = dequeueNextFile();
-            if (nextXhrErr) {
-              setTimeout(() => nextXhrErr.onReady(nextXhrErr.file, nextXhrErr.channelLabel, nextXhrErr.alreadyUploadedBytes, nextXhrErr.dataChannel), 100);
+            activeXhr = null;
+            if (userAborted) {
+              resolve({ status: 0, responseText: '' });
+            } else {
+              reject(new Error(xhr.statusText || 'Network error'));
             }
-
-            resolve();
           };
 
-          // Continue sending from already uploaded offset
-          const blob = file.slice(alreadyUploadedBytes);
+          xhr.onabort = () => {
+            activeXhr = null;
+            resolve({ status: 0, responseText: '' });
+          };
+
           xhr.send(blob);
+        });
 
-        } catch (e: unknown) {
-          toast.error('Upload failed');
+      try {
+        currentUploadedRef.current = committedBytes;
 
-          // Immediately cleanup for failed uploads - don't set error state
-          stopSpeedMeter();
-          releaseUploadLock();
+        while (committedBytes < file.size) {
+          if (userAborted || httpAbortRef.current) break;
 
-          try {
-            removeUploadController?.(file.name);
-          } catch {}
+          if (committedBytes !== initialAlreadyUploadedBytes) {
+            const chunkRpcParams = rpcParams ?? {
+              filename: file.name,
+              size: file.size,
+            };
+            const rpcResp = await sendAsync<'startStorageFileUpload'>(
+              {
+                method: startMethod as 'startStorageFileUpload',
+                params: chunkRpcParams as {
+                  filename: string;
+                  size: number;
+                },
+              },
+              { showUnhandledErrorToast: false, timeout: 120000 }
+            );
+            if (userAborted || httpAbortRef.current) break;
 
-          // Immediately remove from UI for failed uploads
-          try {
-            unregisterUpload?.(file.name);
-          } catch {}
+            if (rpcResp.success === false) {
+              const rpcErr = rpcResp.error;
+              const errMsg =
+                (rpcErr?.data as string) ||
+                rpcErr?.message ||
+                'Upload init failed';
+              toast.error(errMsg);
+              stopSpeedMeter();
+              releaseUploadLock();
+              setUploadState('failed');
+              try {
+                removeUploadController?.(file.name);
+              } catch {}
+              try {
+                onErrorRef.current?.({ name: file.name, error: errMsg });
+              } catch {}
+              const nextFail = dequeueNextFile();
+              if (nextFail) {
+                setTimeout(
+                  () =>
+                    nextFail.onReady(
+                      nextFail.file,
+                      nextFail.channelLabel,
+                      nextFail.alreadyUploadedBytes,
+                      nextFail.dataChannel,
+                      nextFail.rpcParams
+                    ),
+                  1000
+                );
+              }
+              return;
+            }
 
-          onErrorRef.current?.({ name: file.name, error: e instanceof Error ? e.message : 'Unknown error' });
+            const {
+              alreadyUploadedBytes: serverOffset = committedBytes,
+              dataChannel: chunkDataChannel = null,
+            } = rpcResp.result || {};
+            committedBytes = serverOffset;
+            currentUploadedRef.current = committedBytes;
+            currentUploadId = resolveUploadId(chunkDataChannel);
 
-          const nextCatchErr = dequeueNextFile();
-          if (nextCatchErr) {
-            setTimeout(() => nextCatchErr.onReady(nextCatchErr.file, nextCatchErr.channelLabel, nextCatchErr.alreadyUploadedBytes, nextCatchErr.dataChannel), 100);
+            if (committedBytes >= file.size) break;
           }
 
-          resolve();
+          const chunkEnd = Math.min(committedBytes + HTTP_CHUNK_SIZE, file.size);
+          const blob = file.slice(committedBytes, chunkEnd);
+
+          logger.info('Posting chunk', {
+            file: file.name,
+            chunkStart: committedBytes,
+            chunkEnd,
+            uploadId: currentUploadId,
+          });
+
+          const { status, responseText } = await postChunk(currentUploadId, blob, committedBytes);
+
+          if (userAborted || httpAbortRef.current) break;
+
+          if (status === 200 || status === 202) {
+            // Advance offset: next chunk starts where this one ended
+            committedBytes = chunkEnd;
+            currentUploadedRef.current = committedBytes;
+
+            const justSentAll = committedBytes >= file.size;
+            if (justSentAll) {
+              setUploadState('success');
+              onSuccessRef.current?.(file);
+              try { unregisterUpload?.(file.name); } catch {}
+              try { removeUploadController?.(file.name); } catch {}
+              try { deleteUploadTask(file.name); } catch {}
+              stopSpeedMeter();
+              releaseUploadLock();
+              const nextFile = dequeueNextFile();
+              if (nextFile) setTimeout(() => nextFile.onReady(nextFile.file, nextFile.channelLabel, nextFile.alreadyUploadedBytes, nextFile.dataChannel, nextFile.rpcParams), 100);
+              return;
+            }
+            // Intermediate chunk accepted — continue with next slice
+            continue;
+          } else {
+            // Genuine failure
+            let deviceBrief = '';
+            try {
+              const body = JSON.parse(responseText);
+              deviceBrief = body?.error?.brief || body?.errors?.[0]?.brief || '';
+            } catch {}
+            const reason = deviceBrief ? `${status} — ${deviceBrief}` : `HTTP ${status}`;
+            logger.error('[Upload] chunk POST failed', { status, responseText, file: file.name, committedBytes });
+            toast.error(`Upload failed: ${reason}`);
+            stopSpeedMeter();
+            releaseUploadLock();
+            setUploadState('failed');
+            try { removeUploadController?.(file.name); } catch {}
+            try { onErrorRef.current?.({ name: file.name, error: reason }); } catch {}
+            const nextFail = dequeueNextFile();
+            if (nextFail) setTimeout(() => nextFail.onReady(nextFail.file, nextFail.channelLabel, nextFail.alreadyUploadedBytes, nextFail.dataChannel, nextFail.rpcParams), 1000);
+            return;
+          }
         }
-      });
+
+        // Loop exited normally (all bytes committed or server confirmed complete)
+        if (!userAborted && committedBytes >= file.size) {
+          setUploadState('success');
+          onSuccessRef.current?.(file);
+          try { unregisterUpload?.(file.name); } catch {}
+          try { removeUploadController?.(file.name); } catch {}
+          try { deleteUploadTask(file.name); } catch {}
+          stopSpeedMeter();
+          releaseUploadLock();
+          const nextFile = dequeueNextFile();
+          if (nextFile) setTimeout(() => nextFile.onReady(nextFile.file, nextFile.channelLabel, nextFile.alreadyUploadedBytes, nextFile.dataChannel, nextFile.rpcParams), 100);
+        }
+      } catch (e: unknown) {
+        if (userAborted) return;
+        const reason = e instanceof Error ? e.message : 'Unknown error';
+        logger.error('HTTP chunk upload error', { file: file.name, error: reason, committedBytes });
+        toast.error(`Upload failed: ${reason}`);
+        stopSpeedMeter();
+        releaseUploadLock();
+        setUploadState('failed');
+        try { removeUploadController?.(file.name); } catch {}
+        try { onErrorRef.current?.({ name: file.name, error: reason }); } catch {}
+        try {
+          updateUploadTask(file.name, {
+            status: 'failed',
+            uploadedBytes: committedBytes,
+            updatedAt: Date.now(),
+          });
+        } catch {}
+        const nextErr = dequeueNextFile();
+        if (nextErr) setTimeout(() => nextErr.onReady(nextErr.file, nextErr.channelLabel, nextErr.alreadyUploadedBytes, nextErr.dataChannel, nextErr.rpcParams), 1000);
+      }
     },
-    [sendAsync, stopSpeedMeter]
+    [sendAsync, startMethod, stopSpeedMeter, httpUploadUrl]
   );
 
   // ── WebRTC Upload Handler ──────────────────────────────────
@@ -541,10 +673,10 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
 
       // Refs shared across handlers
       const sentOffsetRef = { current: alreadyUploadedBytes } as {
-        current: number
+        current: number;
       };
       const lastAckBytesRef = { current: alreadyUploadedBytes } as {
-        current: number
+        current: number;
       };
 
       // ── Finish helpers ─────────────────────────────────────
@@ -554,6 +686,19 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         if (finalizeTimer) {
           clearTimeout(finalizeTimer);
           finalizeTimer = undefined;
+        }
+      };
+
+      // ACK-stall watchdog: armed while the frontend has unconfirmed bytes (blocked
+      // on the ACK window, or fully sent and waiting for the device). Re-armed on
+      // each advancing ACK, so it fires only if the device-confirmed
+      // AlreadyUploadedBytes stops growing for ACK_STALL_TIMEOUT — then we abort
+      // instead of hanging forever.
+      let ackStallTimer: number | undefined;
+      const clearAckStallTimer = () => {
+        if (ackStallTimer) {
+          clearTimeout(ackStallTimer);
+          ackStallTimer = undefined;
         }
       };
 
@@ -571,9 +716,23 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
             try {
               unregisterUpload?.(file.name);
             } catch {}
+            try {
+              deleteUploadTask(file.name);
+            } catch {}
             // Process next queued file
             const nextFile = dequeueNextFile();
-            if (nextFile) setTimeout(() => nextFile.onReady(nextFile.file, nextFile.channelLabel, nextFile.alreadyUploadedBytes, nextFile.dataChannel), 100);
+            if (nextFile)
+              setTimeout(
+                () =>
+                  nextFile.onReady(
+                    nextFile.file,
+                    nextFile.channelLabel,
+                    nextFile.alreadyUploadedBytes,
+                    nextFile.dataChannel,
+                    nextFile.rpcParams
+                  ),
+                1000
+              );
             return;
           }
           requestAnimationFrame(finishIfDrained);
@@ -581,13 +740,86 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         finishIfDrained();
       };
 
+      // ── Failure helper (used by ACK-stall watchdog / size mismatch) ──
+      const failUpload = (reason: string) => {
+        if (finishedRef.current) return;
+        finishedRef.current = true;
+        clearFinalizeTimer();
+        clearAckStallTimer();
+        sendNextChunkFn = null;
+        try {
+          rtcDataChannel.onmessage = null;
+          rtcDataChannel.onbufferedamountlow = null;
+          rtcDataChannel.onerror = null;
+          rtcDataChannel.onclose = null;
+          if (rtcDataChannel.readyState === 'open') rtcDataChannel.close();
+        } catch {}
+        rtcDataChannelRef.current = null;
+        stopSpeedMeter();
+        releaseUploadLock();
+        setUploadState('failed');
+        toast.error(reason);
+        onErrorRef.current?.({ name: file.name, error: reason });
+        try {
+          unregisterUpload?.(file.name);
+        } catch {}
+        try {
+          removeUploadController?.(file.name);
+        } catch {}
+        try {
+          updateUploadTask(file.name, {
+            status: 'failed',
+            uploadedBytes: lastAckBytesRef.current,
+            updatedAt: Date.now(),
+          });
+        } catch {}
+        const nextFail = dequeueNextFile();
+        if (nextFail)
+          setTimeout(
+            () =>
+              nextFail.onReady(
+                nextFail.file,
+                nextFail.channelLabel,
+                nextFail.alreadyUploadedBytes,
+                nextFail.dataChannel,
+                nextFail.rpcParams
+              ),
+            1000
+          );
+      };
+
       // Hoisted to outer scope so onmessage can access them
       let waitingForAck = false;
+      // True while the send loop is paused on DataChannel bufferedAmount backpressure;
+      // resumed by onbufferedamountlow.
+      let waitingForDrain = false;
       let sendNextChunkFn: (() => void) | null = null;
+
+      // Arm the ACK-stall watchdog against the ACK value observed when we start waiting.
+      const armAckStallTimer = () => {
+        clearAckStallTimer();
+        const ackAtArm = lastAckBytesRef.current;
+        const stallTimeoutMs = getAckStallTimeout(file.size);
+        ackStallTimer = window.setTimeout(() => {
+          if (finishedRef.current || userPauseRef.current) return;
+          // Only fail if we are still ahead of the device and it never advanced.
+          if (
+            lastAckBytesRef.current <= ackAtArm &&
+            sentOffsetRef.current > lastAckBytesRef.current
+          ) {
+            logger.error('[Upload] ACK stalled — device stopped confirming, aborting', {
+              file: file.name,
+              sentBytes: sentOffsetRef.current,
+              AlreadyUploadedBytes: lastAckBytesRef.current,
+              stallMs: stallTimeoutMs,
+            });
+            failUpload('Upload timed out: device stopped confirming');
+          }
+        }, stallTimeoutMs);
+      };
 
       // ── onopen: start chunked send loop ────────────────────
       rtcDataChannel.onopen = () => {
-
         logger.info('Upload channel opened', {
           label: rtcDataChannel.label,
           id: rtcDataChannel.id,
@@ -620,8 +852,9 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
               // 1) Mark as finished to prevent duplicate onclose handling
               finishedRef.current = true;
 
-              // 2) Clear finalize timer
+              // 2) Clear finalize / ACK-stall timers
               clearFinalizeTimer();
+              clearAckStallTimer();
 
               // 3) Stop send-loop reference
               sendNextChunkFn = null;
@@ -639,25 +872,48 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
               rtcDataChannelRef.current = null;
 
               // 6) Stop speed meter
-              try { stopSpeedMeter(); } catch {}
+              try {
+                stopSpeedMeter();
+              } catch {}
 
               // 7) Release lock
               releaseUploadLock();
 
               // 8) Remove controller from store (release channel reference)
-              try { removeUploadController?.(file.name); } catch {}
+              try {
+                removeUploadController?.(file.name);
+              } catch {}
 
               // 9) Notify parent layer
               setUploadState('idle');
+              const pausedOffset = lastAckBytesRef.current;
               onPause?.({
                 name: file.name,
-                transferredBytes: sentOffsetRef.current,
+                transferredBytes: pausedOffset,
                 totalBytes: file.size,
               });
+              try {
+                updateUploadTask(file.name, {
+                  status: 'paused',
+                  uploadedBytes: pausedOffset,
+                  updatedAt: Date.now(),
+                });
+              } catch {}
 
               // 10) Dequeue next waiting file (lock already released)
               const nextPaused = dequeueNextFile();
-              if (nextPaused) setTimeout(() => nextPaused.onReady(nextPaused.file, nextPaused.channelLabel, nextPaused.alreadyUploadedBytes, nextPaused.dataChannel), 100);
+              if (nextPaused)
+                setTimeout(
+                  () =>
+                    nextPaused.onReady(
+                      nextPaused.file,
+                      nextPaused.channelLabel,
+                      nextPaused.alreadyUploadedBytes,
+                      nextPaused.dataChannel,
+                      nextPaused.rpcParams
+                    ),
+                  1000
+                );
             },
             resume: () => {
               logger.warn('Resume not supported after channel close');
@@ -677,30 +933,22 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
 
         // ── Chunked send loop ────────────────────────────────
         const sendNextChunk = () => {
-          // All bytes sent
+          // All bytes sent by the frontend. This only means the local `offset`
+          // (sentBytes) reached file.size — it is NOT upload success. Success is
+          // decided solely by the device ACK (AlreadyUploadedBytes >= Size) in
+          // onmessage/onclose. We stay in `uploading` until then (i.e. "waiting
+          // for device confirmation").
           if (offset >= file.size) {
             sentOffsetRef.current = offset;
-            logger.info('All bytes sent, waiting for device to close channel', {
+            logger.info('All bytes sent, waiting for device confirmation (ACK)', {
               file: file.name,
               sentBytes: offset,
               fileSize: file.size,
+              AlreadyUploadedBytes: lastAckBytesRef.current,
               finishedRef: finishedRef.current,
-              hasFinalizeTimer: !!finalizeTimer,
             });
-
-            // if (!finalizeTimer) {
-            //      console.log('upload success', FINALIZE_TIMEOUT)
-            //   finalizeTimer = window.setTimeout(() => {
-            //     if (!finishedRef.current) {
-            //       logger.info('Finalize timeout, treating as success', {
-            //         file: file.name,
-            //         sentBytes: sentOffsetRef.current,
-            //         ackedBytes: lastAckBytesRef.current,
-            //       })
-            //       finishSuccess()
-            //     }
-            //   }, FINALIZE_TIMEOUT)
-            // }
+            // Guard against the device never sending a final ACK: watch for stall.
+            if (lastAckBytesRef.current < file.size) armAckStallTimer();
             return;
           }
 
@@ -719,60 +967,94 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           // Channel closed
           if (rtcDataChannel.readyState !== 'open') return;
 
+          // ── ACK sliding-window backpressure ──────────────────
+          // Keep the frontend offset (sentBytes) from racing too far ahead of the
+          // device-confirmed AlreadyUploadedBytes. When the gap reaches the window,
+          // pause; onmessage resumes the loop once the device ACK advances.
+          const inFlightBytes = offset - lastAckBytesRef.current;
+          if (inFlightBytes >= MAX_IN_FLIGHT_BYTES) {
+            waitingForAck = true;
+            logger.warn('[Upload] waiting for ACK window', {
+              file: file.name,
+              offset,
+              AlreadyUploadedBytes: lastAckBytesRef.current,
+              inFlight: inFlightBytes,
+              maxInFlight: MAX_IN_FLIGHT_BYTES,
+            });
+            armAckStallTimer();
+            return;
+          }
+
+          // ── DataChannel buffer backpressure (browser memory) ──
+          // If the send buffer is already high, wait for onbufferedamountlow to
+          // drain before pushing more into it.
+          if (rtcDataChannel.bufferedAmount >= highWaterMark) {
+            waitingForDrain = true;
+            logger.info('[Upload] buffer high, waiting for drain', {
+              file: file.name,
+              bufferedAmount: rtcDataChannel.bufferedAmount,
+              highWaterMark,
+            });
+            return;
+          }
+
           // Batch send
           let chunksThisTick = 0;
           const sendBatch = () => {
             const end = Math.min(offset + CHUNK_SIZE, file.size);
-            file.slice(offset, end).arrayBuffer().then(buffer => {
-              if (rtcDataChannel.readyState !== 'open') return;
+            file
+              .slice(offset, end)
+              .arrayBuffer()
+              .then(buffer => {
+                if (rtcDataChannel.readyState !== 'open') return;
 
-              try {
-                rtcDataChannel.send(buffer);
-              } catch {
-                logger.warn('send() buffer full, will retry after drain', {
-                  bufferedAmount: rtcDataChannel.bufferedAmount,
-                  readyState: rtcDataChannel.readyState,
-                  offset,
-                });
-                const retryCurrentChunk = () => {
-                  if (rtcDataChannel.readyState !== 'open') return;
-                  if (pausedFiles.has(file.name) || userPauseRef.current) return;
-                  try {
-                    rtcDataChannel.send(buffer);
-                  } catch {
-                    setTimeout(retryCurrentChunk, 50);  
-                    return;
-                  }
-                  offset = end;
-                  sentOffsetRef.current = offset;
-                  currentUploadedRef.current = offset;
-                  logger.info('[Upload] Retry succeeded, continuing', {
-                    file: file.name,
+                try {
+                  rtcDataChannel.send(buffer);
+                } catch {
+                  logger.warn('send() buffer full, will retry after drain', {
+                    bufferedAmount: rtcDataChannel.bufferedAmount,
+                    readyState: rtcDataChannel.readyState,
                     offset,
-                    fileSize: file.size,
-                    done: offset >= file.size,
                   });
+                  const retryCurrentChunk = () => {
+                    if (rtcDataChannel.readyState !== 'open') return;
+                    if (pausedFiles.has(file.name) || userPauseRef.current) return;
+                    try {
+                      rtcDataChannel.send(buffer);
+                    } catch {
+                      setTimeout(retryCurrentChunk, 50);
+                      return;
+                    }
+                    offset = end;
+                    sentOffsetRef.current = offset;
+                    currentUploadedRef.current = offset;
+                    logger.info('[Upload] Retry succeeded, continuing', {
+                      file: file.name,
+                      offset,
+                      fileSize: file.size,
+                      done: offset >= file.size,
+                    });
+                    setTimeout(sendNextChunk, 0);
+                  };
+                  setTimeout(retryCurrentChunk, 50);
+                  return;
+                }
+                offset = end;
+                sentOffsetRef.current = offset;
+                currentUploadedRef.current = offset;
+
+                if (offset >= file.size || pausedFiles.has(file.name) || userPauseRef.current) {
+                  sendNextChunk();
+                  return;
+                }
+
+                chunksThisTick++;
+                if (chunksThisTick < CHUNKS_PER_TICK) {
+                  sendBatch();
+                } else {
                   setTimeout(sendNextChunk, 0);
-                };
-                setTimeout(retryCurrentChunk, 50);
-                return;
-              }
-              offset = end;
-              sentOffsetRef.current = offset;
-              currentUploadedRef.current = offset;
-
-              if (offset >= file.size || pausedFiles.has(file.name) || userPauseRef.current) {
-                sendNextChunk();
-                return;
-              }
-
-              chunksThisTick++;
-              if (chunksThisTick < CHUNKS_PER_TICK) {
-                sendBatch();
-              } else {
-                setTimeout(sendNextChunk, 0);
-              }
-            });
+                }
+              });
           };
           sendBatch();
         };
@@ -782,10 +1064,29 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
       };
 
       // ── onmessage: device ACK ──────────────────────────────
+      // The device reports its confirmed write position via
+      // { AlreadyUploadedBytes, Size }. This is the source of truth for both
+      // progress and success — the frontend `offset`/sentBytes is only how far
+      // we have pushed into the channel, not what the device has accepted.
       rtcDataChannel.onmessage = e => {
         try {
-          const { AlreadyUploadedBytes: transferredBytes, Size: totalBytes } =
-            JSON.parse(e.data) as { AlreadyUploadedBytes: number; Size: number };
+          const { AlreadyUploadedBytes: transferredBytes, Size: totalBytes } = JSON.parse(
+            e.data
+          ) as { AlreadyUploadedBytes: number; Size: number };
+
+          // Size mismatch: device disagrees on the file size — abort rather than
+          // report a bogus completion. (Field names AlreadyUploadedBytes / Size
+          // are the backend protocol and left unchanged.)
+          if (totalBytes && file.size && totalBytes !== file.size) {
+            logger.error('[Upload] Size mismatch from device ACK, aborting', {
+              file: file.name,
+              deviceSize: totalBytes,
+              fileSize: file.size,
+              AlreadyUploadedBytes: transferredBytes,
+            });
+            failUpload('Upload aborted: device reported a different file size');
+            return;
+          }
 
           const current: TransferSnapshot = {
             transferredBytes,
@@ -798,32 +1099,57 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           prev.current = current;
           onProgressRef.current?.({ name: file.name, ...stats });
 
+          const ackAdvanced = transferredBytes > lastAckBytesRef.current;
           currentUploadedRef.current = transferredBytes;
           lastAckBytesRef.current = transferredBytes;
 
-          if (transferredBytes >= totalBytes) {
-            logger.info('[Upload] Finishing from ACK message', {
+          // Keep the stall watchdog honest: on each advancing ACK, re-arm it so it
+          // only ever fires when AlreadyUploadedBytes stops growing for too long.
+          // Clear it outright once the device has confirmed the whole file.
+          if (ackAdvanced) {
+            if (totalBytes > 0 && transferredBytes >= totalBytes) {
+              clearAckStallTimer();
+            } else {
+              armAckStallTimer();
+            }
+          }
+
+          // Upload success is decided here: only when the device-confirmed
+          // AlreadyUploadedBytes reaches Size. finishSuccess() still waits for the
+          // channel buffer to drain / device to close before flipping to success.
+          if (totalBytes > 0 && transferredBytes >= totalBytes) {
+            logger.info('[Upload] Device confirmed full receipt (AlreadyUploadedBytes >= Size)', {
               file: file.name,
-              transferredBytes,
-              totalBytes,
+              AlreadyUploadedBytes: transferredBytes,
+              Size: totalBytes,
               sentBytes: sentOffsetRef.current,
               fileSize: file.size,
             });
-            if(finalizeTimer) clearTimeout(finalizeTimer);
+            clearAckStallTimer();
+            if (finalizeTimer) clearTimeout(finalizeTimer);
 
             finalizeTimer = window.setTimeout(() => {
-                if (!finishedRef.current) {
-
-                  finishSuccess();
-                }
-              }, FINALIZE_TIMEOUT);
+              if (!finishedRef.current) {
+                finishSuccess();
+              }
+            }, FINALIZE_TIMEOUT);
           }
 
+          // Resume the send loop if it was blocked on the ACK window.
           if (waitingForAck) {
             waitingForAck = false;
-            if (!userPauseRef.current) sendNextChunkFn?.();
+            if (!userPauseRef.current && !pausedFiles.has(file.name)) sendNextChunkFn?.();
           }
         } catch {}
+      };
+
+      // ── onbufferedamountlow: resume after buffer drains ────
+      // Fires when bufferedAmount drops to/below bufferedAmountLowThreshold
+      // (lowWaterMark). Only resumes if the send loop paused on buffer backpressure.
+      rtcDataChannel.onbufferedamountlow = () => {
+        if (finishedRef.current || !waitingForDrain) return;
+        waitingForDrain = false;
+        if (!userPauseRef.current && !pausedFiles.has(file.name)) sendNextChunkFn?.();
       };
 
       // ── onclose ────────────────────────────────────────────
@@ -843,28 +1169,33 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         });
 
         clearFinalizeTimer();
+        clearAckStallTimer();
         stopSpeedMeter();
 
         if (finishedRef.current) return;
 
         const locallyDone = sentBytes >= totalSize && totalSize > 0;
+        // Success is decided by the device, not the frontend: only a device-confirmed
+        // AlreadyUploadedBytes >= Size counts. A clean close after full confirmation is
+        // the device's completion signal. sentBytes >= Size alone (locallyDone) only
+        // means the frontend finished pushing — if the device has not confirmed, the
+        // close is treated as an unexpected failure below, not success.
         const remotelyDone = ackedBytes >= totalSize && totalSize > 0;
 
-        if (locallyDone || remotelyDone) {
-          logger.info('[Upload] Finishing from onclose', {
+        if (remotelyDone) {
+          logger.info('[Upload] Success confirmed on close (AlreadyUploadedBytes >= Size)', {
             file: file.name,
             locallyDone,
             remotelyDone,
             sentBytes,
-            ackedBytes,
+            AlreadyUploadedBytes: ackedBytes,
             totalSize,
             fileSize: file.size,
           });
 
-          // If device closes channel early (remotelyDone but !locallyDone),
-          // delay success state by 500ms to leave time for final disk write
-          const delayMs = remotelyDone && !locallyDone ? 500 : 0;
-
+          // If device closed the channel as its completion signal, give the final
+          // disk write a brief moment before flipping UI to success.
+          const delayMs = 500;
 
           setTimeout(() => {
             releaseUploadLock();
@@ -874,7 +1205,18 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
               removeUploadController?.(file.name);
             } catch {}
             const nextOk = dequeueNextFile();
-            if (nextOk) setTimeout(() => nextOk.onReady(nextOk.file, nextOk.channelLabel, nextOk.alreadyUploadedBytes, nextOk.dataChannel), 100);
+            if (nextOk)
+              setTimeout(
+                () =>
+                  nextOk.onReady(
+                    nextOk.file,
+                    nextOk.channelLabel,
+                    nextOk.alreadyUploadedBytes,
+                    nextOk.dataChannel,
+                    nextOk.rpcParams
+                  ),
+                100
+              );
           }, delayMs);
           return;
         }
@@ -883,13 +1225,16 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           file: file.name,
           totalSize,
           sentBytes,
-          ackedBytes,
+          AlreadyUploadedBytes: ackedBytes,
           buffered,
+          // Common failure mode: frontend finished sending (locallyDone) but the
+          // device never confirmed the full Size — the close is NOT a success.
+          sentAllButUnconfirmed: locallyDone && !remotelyDone,
           progress: totalSize > 0 ? `${((ackedBytes / totalSize) * 100).toFixed(1)}%` : '0%',
         });
         releaseUploadLock();
         toast.error('Upload channel closed unexpectedly');
-        setUploadState('error');
+        setUploadState('failed');
         try {
           unregisterUpload?.(file.name);
         } catch {}
@@ -897,7 +1242,18 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           removeUploadController?.(file.name);
         } catch {}
         const nextClose = dequeueNextFile();
-        if (nextClose) setTimeout(() => nextClose.onReady(nextClose.file, nextClose.channelLabel, nextClose.alreadyUploadedBytes, nextClose.dataChannel), 100);
+        if (nextClose)
+          setTimeout(
+            () =>
+              nextClose.onReady(
+                nextClose.file,
+                nextClose.channelLabel,
+                nextClose.alreadyUploadedBytes,
+                nextClose.dataChannel,
+                nextClose.rpcParams
+              ),
+            1000
+          );
       };
 
       // ── onerror ────────────────────────────────────────────
@@ -912,8 +1268,10 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           channelState: rtcDataChannel.readyState,
         });
         toast.error(`Upload failed: ${rtcErr?.message || String(event)}`);
+        clearFinalizeTimer();
+        clearAckStallTimer();
         releaseUploadLock();
-        setUploadState('error');
+        setUploadState('failed');
         stopSpeedMeter();
         onErrorRef.current?.({ name: file.name, error: rtcErr?.message || String(event) });
         try {
@@ -923,27 +1281,42 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           removeUploadController?.(file.name);
         } catch {}
         const nextErr = dequeueNextFile();
-        if (nextErr) setTimeout(() => nextErr.onReady(nextErr.file, nextErr.channelLabel, nextErr.alreadyUploadedBytes, nextErr.dataChannel), 100);
+        if (nextErr)
+          setTimeout(
+            () =>
+              nextErr.onReady(
+                nextErr.file,
+                nextErr.channelLabel,
+                nextErr.alreadyUploadedBytes,
+                nextErr.dataChannel,
+                nextErr.rpcParams
+              ),
+            1000
+          );
       };
     },
-    [
-      sendAsync,
-      setUploadController,
-      removeUploadController,
-      lowWaterMark,
-      highWaterMark,
-    ]
+    [sendAsync, setUploadController, removeUploadController, lowWaterMark, highWaterMark]
   );
 
   // ── Start upload directly (skip RPC, used by queued items) ──
   const startUploadDirect = useCallback(
-    async (file: File, channelLabel: string, alreadyUploadedBytes: number, dataChannel: string | RTCDataChannel | null) => {
+    async (
+      file: File,
+      channelLabel: string,
+      alreadyUploadedBytes: number,
+      dataChannel: string | RTCDataChannel | null,
+      rpcParams?: Record<string, unknown>
+    ) => {
       try {
         if (!acquireUploadLock()) {
           // Edge case: lock was acquired by another upload first; requeue
           uploadQueue.push({
-            file, channelLabel, alreadyUploadedBytes, dataChannel,
-            onReady: (f, cl, ab, dc) => startUploadDirectRef.current?.(f, cl, ab, dc),
+            file,
+            channelLabel,
+            alreadyUploadedBytes,
+            dataChannel,
+            rpcParams,
+            onReady: (f, cl, ab, dc, rp) => startUploadDirectRef.current?.(f, cl, ab, dc, rp),
           });
           return;
         }
@@ -956,9 +1329,8 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
             startedAt: Date.now(),
           });
         } catch {}
-
         if (env.target === 'device' && httpUploadUrl) {
-          await handleUploadHttp(file, alreadyUploadedBytes, dataChannel);
+          await handleUploadHttp(file, alreadyUploadedBytes, dataChannel, rpcParams);
         } else {
           await handleUploadWebRTC(file, alreadyUploadedBytes, channelLabel);
         }
@@ -968,7 +1340,18 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         onErrorRef.current?.({ name: file.name, error: errMsg || 'Upload start failed' });
         releaseUploadLock();
         const next = dequeueNextFile();
-        if (next) setTimeout(() => next.onReady(next.file, next.channelLabel, next.alreadyUploadedBytes, next.dataChannel), 100);
+        if (next)
+          setTimeout(
+            () =>
+              next.onReady(
+                next.file,
+                next.channelLabel,
+                next.alreadyUploadedBytes,
+                next.dataChannel,
+                next.rpcParams
+              ),
+            1000
+          );
       }
     },
     [sendAsync]
@@ -981,7 +1364,7 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
   // First call RPC to obtain dataChannel.
   // Register/enqueue only when channel info is valid; otherwise reject directly.
   const handleUploadStart = useCallback(
-    async (file: File) => {
+    async (file: File, fileHandle?: PersistedFileSystemFileHandle) => {
       // Check if file already exists in upload task list
       const existingController = getUploadController?.(file.name);
       if (existingController) {
@@ -992,9 +1375,21 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
       // Clear pause marker for this file (avoid stale marker blocking same-name re-upload)
       pausedFiles.delete(file.name);
 
-      if (startingRef.current) {
-        pendingFilesRef.current.push(file);
-
+      if (startingRef.current || isUploadLocked()) {
+        onStart?.({
+          alreadyUploadedBytes: 0,
+          dataChannel: null,
+          filename: file.name,
+          size: file.size,
+        });
+        uploadQueue.push({
+          file,
+          channelLabel: '',
+          alreadyUploadedBytes: 0,
+          dataChannel: null,
+          onReady: queuedFile => handleUploadStartRef.current?.(queuedFile),
+        });
+        toast.info(`${file.name} queued, will start after current upload`);
         return;
       }
       startingRef.current = true;
@@ -1020,7 +1415,6 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         return;
       }
 
-
       try {
         // 1) Call RPC first to validate and obtain channel name
         const baseParams: Record<string, unknown> = { filename: file.name, size: file.size };
@@ -1036,18 +1430,31 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         }
 
         let params = extra || { ...baseParams };
-        logger.info('Starting upload RPC', { method: startMethod, filename: file.name, size: file.size });
+        logger.info('Starting upload RPC', {
+          method: startMethod,
+          filename: file.name,
+          size: file.size,
+        });
 
-        const resr = await sendAsync(
+        const startResp = await sendAsync(
           {
-            method: startMethod,
+            method: startMethod as 'startStorageFileUpload',
             params,
           },
-          { resultOnly: true, showUnhandledErrorToast: true, timeout: 120000 }
+          { showUnhandledErrorToast: false, timeout: 120000 }
         );
-        const { alreadyUploadedBytes: uploadedBytes, dataChannel = null, success, error } = resr||{};
+        if (startResp.success === false) {
+          const startErr = startResp.error;
+          const errMsg = (startErr?.data as string) || startErr?.message || 'Upload start failed';
+          toast.error(errMsg);
+          setUploadState('failed');
+          onErrorRef.current?.({ name: file.name, error: errMsg });
+          startingRef.current = false;
+          return;
+        }
+        const { alreadyUploadedBytes: uploadedBytes, dataChannel = null } =
+          startResp.result || {};
         const alreadyUploadedBytes = uploadedBytes ?? 0;
-        if(success===false&&error) return;
 
         // 2) No channel and not in HTTP mode -> reject
         const isHttpMode = env.target === 'device' && !!httpUploadUrl;
@@ -1057,11 +1464,11 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           return;
         }
 
-        const channelLabel = dataChannel
-          ? (typeof dataChannel === 'string'
-              ? dataChannel
-              : dataChannel?.label || 'upload')
-          : '';
+        const channelLabel: string | null = dataChannel
+          ? typeof dataChannel === 'string'
+            ? dataChannel
+            : (dataChannel as RTCDataChannel)?.label || 'upload'
+          : null;
 
         // 3) Notify UI to create task row
         setFileName(file.name);
@@ -1072,13 +1479,26 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
           size: file.size,
         });
 
+        // Persist task metadata (and file handle when available) so the upload
+        // can be resumed after a page refresh. Status is 'uploading' because the
+        // actual transfer starts below.
+        try {
+          await persistUploadTask(file, 'uploading', fileHandle, alreadyUploadedBytes);
+        } catch {
+          // Non-fatal: IndexedDB failures should not block the upload.
+        }
+
         // 4) Try to acquire lock:
         //    if another upload is in progress, enqueue and reuse RPC result later
 
         if (!acquireUploadLock()) {
           uploadQueue.push({
-            file, channelLabel, alreadyUploadedBytes, dataChannel,
-            onReady: (f, cl, ab, dc) => startUploadDirectRef.current?.(f, cl, ab, dc),
+            file,
+            channelLabel: channelLabel || '',
+            alreadyUploadedBytes,
+            dataChannel,
+            rpcParams: params as Record<string, unknown>,
+            onReady: (f, cl, ab, dc, rp) => startUploadDirectRef.current?.(f, cl, ab, dc, rp),
           });
           toast.info(`${file.name} queued, will start after current upload`);
           // Release startingRef so pending files can continue RPC initialization
@@ -1091,7 +1511,7 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         }
 
         // 5) No active task -> start upload immediately
-        uploadChannelLabelRef.current = channelLabel;
+        uploadChannelLabelRef.current = channelLabel || '';
         try {
           registerUpload?.(file.name, {
             filename: file.name,
@@ -1107,9 +1527,8 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         if (nextPending) {
           setTimeout(() => handleUploadStartRef.current?.(nextPending), 50);
         }
-
         if (env.target === 'device' && httpUploadUrl) {
-          await handleUploadHttp(file, alreadyUploadedBytes, dataChannel);
+          await handleUploadHttp(file, alreadyUploadedBytes, dataChannel, params as Record<string, unknown>);
         } else {
           await handleUploadWebRTC(file, alreadyUploadedBytes, channelLabel);
         }
@@ -1120,7 +1539,18 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         // Ensure lock is released on exception to avoid deadlock
         releaseUploadLock();
         const nextErr = dequeueNextFile();
-        if (nextErr) setTimeout(() => nextErr.onReady(nextErr.file, nextErr.channelLabel, nextErr.alreadyUploadedBytes, nextErr.dataChannel), 100);
+        if (nextErr)
+          setTimeout(
+            () =>
+              nextErr.onReady(
+                nextErr.file,
+                nextErr.channelLabel,
+                nextErr.alreadyUploadedBytes,
+                nextErr.dataChannel,
+                nextErr.rpcParams
+              ),
+            1000
+          );
       } finally {
         // Fallback: always release startingRef (catch path or unexpected exception)
         if (startingRef.current) {
@@ -1132,19 +1562,151 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
         }
       }
     },
-    [
-      beforeUpload,
-      maxFileSize,
-      sendAsync,
-      startMethod,
-      onStart,
-      startParams,
-      runPreUploadGuard,
-    ]
+    [beforeUpload, maxFileSize, sendAsync, startMethod, onStart, startParams, runPreUploadGuard]
   );
 
   // Keep a stable ref so completion handlers inside closures can call the latest version
   handleUploadStartRef.current = handleUploadStart;
+
+  // ── Resume Upload from Persisted Task ────────────────────────
+  // After a page refresh, retrieve the persisted file handle and task info,
+  // re-request read permission within the user gesture, validate the file, and
+  // resume the upload starting from the device-reported AlreadyUploadedBytes.
+  const resumeUpload = useCallback(
+    async (taskId: string) => {
+      if (startingRef.current) {
+        toast.info('Another upload is starting, please wait');
+        return;
+      }
+      if (!isFileSystemAccessSupported()) {
+        throw new UploadResumeError(
+          'not-supported',
+          'File System Access API is not available in this browser'
+        );
+      }
+
+      const task = await getUploadTask(taskId);
+      if (!task || !task.fileHandle) {
+        throw new UploadResumeError(
+          'file-missing',
+          'Persisted upload task or file handle not found'
+        );
+      }
+
+      // Guard against concurrent uploads for the same task.
+      if (getUploadController?.(taskId)) {
+        toast.info('This upload is already active');
+        return;
+      }
+
+      startingRef.current = true;
+      try {
+        const file = await restoreFileFromHandle(task);
+        const validation = validateFileForResume(task, file);
+        if (!validation.valid) {
+          throw new UploadResumeError(validation.reason, validation.message);
+        }
+
+        const passedPreUploadGuard = await runPreUploadGuard(file);
+        if (!passedPreUploadGuard) {
+          return;
+        }
+
+        // Use the same RPC entry point as an initial upload: the device is the
+        // source of truth for the resume offset.
+        const baseParams: Record<string, unknown> = {
+          filename: file.name,
+          size: file.size,
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let extra: any = null;
+        if (typeof startParams === 'function') {
+          try {
+            extra = await Promise.resolve(startParams(file));
+          } catch (error) {
+            logger.warn('startParams threw error', error);
+          }
+        }
+        const params = extra || baseParams;
+        const startResp = await sendAsync(
+          { method: startMethod as 'startStorageFileUpload', params },
+          { showUnhandledErrorToast: false, timeout: 120000 }
+        );
+        if (startResp.success === false) {
+          const errMsg =
+            (startResp.error?.data as string) ||
+            startResp.error?.message ||
+            'Upload resume failed';
+          throw new UploadResumeError('device-task-missing', errMsg);
+        }
+
+        const { alreadyUploadedBytes: uploadedBytes = 0, dataChannel = null } =
+          startResp.result || {};
+        const alreadyUploadedBytes = uploadedBytes ?? 0;
+        if (alreadyUploadedBytes > file.size) {
+          throw new UploadResumeError(
+            'offset-invalid',
+            'Device reported an offset larger than the file size'
+          );
+        }
+
+        const channelLabel: string | null = dataChannel
+          ? typeof dataChannel === 'string'
+            ? dataChannel
+            : (dataChannel as RTCDataChannel)?.label || 'upload'
+          : null;
+        const isHttpMode = env.target === 'device' && !!httpUploadUrl;
+        if (!dataChannel && !isHttpMode) {
+          throw new UploadResumeError(
+            'unknown',
+            'No upload channel returned from device'
+          );
+        }
+
+        setFileName(file.name);
+        onResumeStartRef.current?.({
+          alreadyUploadedBytes,
+          dataChannel,
+          filename: file.name,
+          size: file.size,
+          taskId,
+        });
+
+        await updateUploadTask(taskId, {
+          status: 'uploading',
+          uploadedBytes: alreadyUploadedBytes,
+          updatedAt: Date.now(),
+        });
+
+        // Reuse the existing chunked transfer engine, starting from the
+        // device-confirmed offset.
+        await startUploadDirectRef.current?.(
+          file,
+          channelLabel || '',
+          alreadyUploadedBytes,
+          dataChannel,
+          params as Record<string, unknown>
+        );
+      } catch (err: unknown) {
+        if (err instanceof UploadResumeError) {
+          throw err;
+        }
+        throw new UploadResumeError(
+          'unknown',
+          err instanceof Error ? err.message : String(err)
+        );
+      } finally {
+        startingRef.current = false;
+      }
+    },
+    [
+      sendAsync,
+      startMethod,
+      startParams,
+      httpUploadUrl,
+      runPreUploadGuard,
+    ]
+  );
 
   // ── Drag & Drop Handlers ───────────────────────────────────
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -1192,8 +1754,7 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     onDrop?.(e);
   };
 
-  const dragging =
-    typeof isDragging === 'boolean' ? isDragging : internalDragging;
+  const dragging = typeof isDragging === 'boolean' ? isDragging : internalDragging;
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -1243,8 +1804,12 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     stopSpeedMeter();
     setUploadState('idle');
     if (fileName) {
-      try { unregisterUpload?.(fileName); } catch {}
-      try { removeUploadController?.(fileName); } catch {}
+      try {
+        unregisterUpload?.(fileName);
+      } catch {}
+      try {
+        removeUploadController?.(fileName);
+      } catch {}
     }
   }, [fileName, stopSpeedMeter, unregisterUpload, removeUploadController]);
 
@@ -1259,6 +1824,76 @@ export function useUpload(props: UploadDropZoneProps): UseUploadReturn {
     pauseUpload,
     cancelUpload,
     handleUploadStart,
+    resumeUpload,
+    openFilePicker: () => {
+      if (disabled) return;
+      if (pickingRef.current) return;
+
+      const buildPickerTypes = (): FilePickerAcceptType[] => {
+        if (!accept || accept === '*') return [];
+        const types: FilePickerAcceptType[] = [];
+        const extensions: string[] = [];
+        const mimeTypes: string[] = [];
+        accept.split(',').forEach(token => {
+          const t = token.trim().toLowerCase();
+          if (!t) return;
+          if (t.startsWith('.')) {
+            extensions.push(t);
+          } else if (t.includes('/')) {
+            mimeTypes.push(t);
+          }
+        });
+        if (extensions.length) {
+          types.push({
+            description: 'Allowed files',
+            accept: { 'application/octet-stream': extensions },
+          });
+        }
+        mimeTypes.forEach(mime => {
+          types.push({ description: 'Allowed files', accept: { [mime]: [] } });
+        });
+        return types;
+      };
+
+      if (!isFileSystemAccessSupported()) {
+        pickingRef.current = true;
+        inputRef.current?.click();
+        return;
+      }
+
+      pickingRef.current = true;
+      void (async () => {
+        try {
+          const showPicker = (
+            window as unknown as {
+              showOpenFilePicker?: (
+                options?: Record<string, unknown>
+              ) => Promise<FileSystemFileHandle[]>;
+            }
+          ).showOpenFilePicker;
+          if (!showPicker) throw new Error('showOpenFilePicker not available');
+          const handles = await showPicker({
+            multiple: true,
+            types: buildPickerTypes(),
+          });
+          pickingRef.current = false;
+          for (const handle of handles) {
+            const file = await handle.getFile();
+            await handleUploadStart(
+              file,
+              handle as unknown as PersistedFileSystemFileHandle
+            );
+          }
+        } catch (e: unknown) {
+          if (e instanceof DOMException && e.name === 'AbortError') {
+            pickingRef.current = false;
+            return;
+          }
+          logger.warn('FSA picker failed, falling back to input', e);
+          inputRef.current?.click();
+        }
+      })();
+    },
     handleDragOver,
     handleDragEnter,
     handleDragLeave,

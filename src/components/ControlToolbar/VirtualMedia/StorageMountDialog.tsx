@@ -1,12 +1,11 @@
 import { IconCd } from '@/assets/icons';
-import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
+import type { StorageFileInfo } from '@/api/rpc/methods';
 import { useLoadingMap } from '@/hooks/useLoading';
 import { useAppStore } from '@/stores';
-import { env } from '@/utils';
 import { humanSize } from '@/utils/format';
 import { mergeUploadLists } from '@/utils/transfer';
 import { Plus } from 'lucide-react';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Dialog } from '../../Dialog';
@@ -14,39 +13,51 @@ import StorageUsage from '../../StorageUsage';
 import TransferList from '../../TransferList';
 import { Button } from '../../ui/button';
 import { useConfirmDialog } from '../../ui/confirm-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { LoadingOverlay } from '../../ui/LoadingOverlay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import UploadDropZone from '../../Upload';
+import { type UploadDropZoneRef } from '../../Upload/UploadDropZone';
 import { pausedFiles, releaseUploadLock, removeFromQueue } from '../../Upload/uploadLock';
 import SelectMountAs from './SelectMountAs';
 import StorageFileItem from './StorageFileItem';
 import { inferMountAsByUrlSuffix } from './utils';
+import { env } from '@/utils';
+import {
+  deleteUploadTask,
+  UploadResumeError,
+  type UploadResumeErrorCode,
+} from '@/utils/uploadIndexedDb';
 
-export type StorageMountAs = 'CDROM' | 'Disk'
+export type StorageMountAs = 'CDROM' | 'Disk';
 
 interface StorageFileItem {
-  filename: string
-  size: number
-  modifiedAt?: number
-  incomplete?: boolean
-  state?: string
-  showFileName?: string
-  showUploader?: boolean
-  showPause?: boolean
-  totalBytes?: number
+  filename: string;
+  size: number;
+  modifiedAt?: number;
+  incomplete?: boolean;
+  state?: string;
+  showFileName?: string;
+  showUploader?: boolean;
+  showPause?: boolean;
+  totalBytes?: number;
 }
 
 interface StorageSpaceInfo {
-  total: number // bytes
-  used: number // bytes
+  total: number; // bytes
+  used: number; // bytes
 }
 
 interface StorageMountDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onBack: () => void
-  onMounted?: (payload: { filename: string; mountAs: StorageMountAs }) => void
-  rpc?: JsonRpcHandle
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onBack: () => void;
+  onMounted?: (payload: { filename: string; mountAs: StorageMountAs }) => void;
+  rpc: [
+    (call: unknown) => number | undefined,
+    boolean,
+    (call: unknown, opts?: unknown) => Promise<unknown>,
+  ]; // [send, isReady, sendAsync]
 }
 
 const normalizeSpace = (raw: unknown): StorageSpaceInfo | null => {
@@ -65,10 +76,7 @@ const normalizeSpace = (raw: unknown): StorageSpaceInfo | null => {
 
   const total = hasBytesUF
     ? (bytesUsed as number) + (bytesFree as number)
-    : (toNum(r.total) ??
-      toNum(r.totalBytes) ??
-      toNum(r.capacity) ??
-      toNum(r.size));
+    : (toNum(r.total) ?? toNum(r.totalBytes) ?? toNum(r.capacity) ?? toNum(r.size));
   const used = hasBytesUF
     ? (bytesUsed as number)
     : (toNum(r.used) ??
@@ -93,14 +101,26 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
   rpc,
 }: StorageMountDialogProps) => {
   const { t } = useTranslation('virtualMedia');
-  const [storageTab, setStorageTab] = useState<'Available' | 'Uploading'>(
-    'Available'
+  const [storageTab, setStorageTab] = useState<'Available' | 'Uploading'>('Available');
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getUploadController = useAppStore(
+    (s: any) =>
+      s.getUploadController as
+        | ((name: string) =>
+            | {
+                pause?: () => void;
+                cancel?: () => void;
+                resume?: () => void;
+                channel?: { close: () => void };
+              }
+            | undefined)
+        | undefined
   );
-   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getUploadController = useAppStore((s: any) => s.getUploadController as ((name: string) => { pause?: () => void; cancel?: () => void; resume?: () => void; channel?: { close: () => void } } | undefined) | undefined);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const unregisterUpload = useAppStore((s: any) => s.unregisterUpload as ((name: string) => void) | undefined);
+  const unregisterUpload = useAppStore(
+    (s: any) => s.unregisterUpload as ((name: string) => void) | undefined
+  );
   const removeUploadController = useAppStore(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (s: any) => s.removeUploadController as ((name: string) => void) | undefined
@@ -110,10 +130,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
 
   const [send, isReady, sendAsync] = rpc;
   // --- Upload session persistence (restore progress after refresh) ---
-  const getBaseName = useCallback(
-    (name: string) => name.replace(/\.incomplete$/, ''),
-    []
-  );
+  const getBaseName = useCallback((name: string) => name.replace(/\.incomplete$/, ''), []);
 
   const { is, start, stop, wrap } = useLoadingMap([
     'loadList',
@@ -123,13 +140,18 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
     'getStorageSpace',
   ]);
   const [files, setFiles] = useState<StorageFileItem[]>([]);
+  // const [incompleteFiles, setIncompleteFiles] = useState<StorageFileItem[]>([]); // TODO: use for upload list management
+
   const [space, setSpace] = useState<StorageSpaceInfo | null>(null);
   const [selected, setSelected] = useState<StorageFileItem | null>(null);
   const [mountAs, setMountAs] = useState<StorageMountAs>('CDROM');
   const uploadMap = useAppStore(s => s.fileTransferList.byId);
-  const uploadingList = Object.values(uploadMap).filter(
-    it => it.source === 'storage'
-  );
+  // Computed list that merges runtime upload tasks with persisted incomplete files
+  const uploadingList = useMemo(() => {
+    const runtimeUploads = Object.values(uploadMap).filter(it => it.source === 'storage');
+
+    return runtimeUploads;
+  }, [uploadMap]);
 
   const { confirm } = useConfirmDialog();
 
@@ -139,38 +161,44 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
       'getStorageSpace',
       sendAsync({ method: 'getStorageSpace' }, { resultOnly: true })
     );
-
     setSpace(normalizeSpace(rawSpace));
   }, [sendAsync, isReady]);
   const listStorageFilesAsync = useCallback(async () => {
     if (!isReady) return;
-    const list = await wrap(
+    const { success, result } = (await wrap(
       'listStorageFiles',
-      sendAsync({ method: 'listStorageFiles' }, { resultOnly: true })
-    );
+      sendAsync({ method: 'listStorageFiles' }, { resultOnly: false })
+    )) as { success: boolean; result: { files: StorageFileInfo[] } };
     const normalFiles: StorageFileItem[] = [];
-    const incomplete: StorageFileItem[] = []
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(list?.files || []).forEach((it: any) => {
-      const fname = String(it.filename ?? it.name ?? '');
+    const incomplete: StorageFileItem[] = [];
+    if (!success) return;
+    (result.files || []).forEach((it: StorageFileInfo) => {
+      const { size, totalBytes } = it;
+      const fname = String(it.filename ?? '');
       const newFname = getBaseName(fname);
       it.filename = newFname;
-      if (/\.incomplete$/.test(fname)) {
+      const isIncompleteFile = /\.incomplete$/.test(fname);
+      const isUploading = totalBytes > size;
+      if (isIncompleteFile || isUploading) {
         incomplete.push(it);
       } else {
         normalFiles.push(it);
       }
     });
-    setIncompleteFiles(incomplete);
-
     setFiles(normalFiles);
     setSelected(normalFiles?.[0] || null);
-
-    // Merge device-reported .incomplete files with current upload list
-    // to build a unified upload-task view
-    const mergedUploadList = mergeUploadLists(incomplete, uploadingList);
-    // Persist merged result to local storage
-    // (using the same key as fileTransferListSlice)
+    const pendingFiles: {
+      createdAt: string;
+      filename: string;
+      size: number;
+      totalBytes: number;
+    }[] = incomplete.map(item => ({
+      createdAt: (item as StorageFileInfo).createdAt || new Date().toISOString(),
+      filename: item.filename,
+      size: item.size,
+      totalBytes: item.totalBytes || item.size,
+    }));
+    const mergedUploadList = mergeUploadLists(pendingFiles, uploadingList);
     try {
       const persistPayload = mergedUploadList.map(item => ({
         id: item.id,
@@ -188,7 +216,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
       }));
       localStorage.setItem('transfer:list', JSON.stringify(persistPayload));
       // Re-hydrate upload list after overwrite to keep UI in sync
-      useAppStore.getState().fileTransferList.hydrate();
+      useAppStore.getState().fileTransferList.hydrate('storage');
     } catch {
       // Silent fallback on persistence failure
     }
@@ -196,7 +224,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
   const load = useCallback(async () => {
     setStorageTab('Available');
     await Promise.all([listStorageFilesAsync(), fetchStorageSpace()]);
-  }, [listStorageFilesAsync, fetchStorageSpace,setStorageTab]);
+  }, [listStorageFilesAsync, fetchStorageSpace, setStorageTab]);
   useEffect(() => {
     if (isReady) {
       // syncGetFileTransferState(true)
@@ -218,7 +246,8 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
       // Handle download tasks
       Object.values(fileDownloadList.byId).forEach(download => {
         if (download.state === 'running') {
-          fileDownloadList.setState(download.id, 'paused');
+          // fileDownloadList has no setState method, skip for now
+          // fileDownloadList.setState(download.id, 'paused');
         }
       });
     }
@@ -243,8 +272,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
       const errObj = err as { code?: number; message?: string; data?: unknown };
       const code = errObj?.code ?? (errObj?.data as { code?: number } | undefined)?.code;
       const msg = String(errObj?.message || errObj?.data || '');
-      const alreadyMounted =
-        code === -32603 && /already mounted/i.test(msg || '');
+      const alreadyMounted = code === -32603 && /already mounted/i.test(msg || '');
       if (alreadyMounted) {
         try {
           // auto unmount then retry
@@ -287,7 +315,10 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
             const ctrls = [
               getUploadController?.(rawFileName),
               baseName ? getUploadController?.(baseName) : undefined,
-            ].filter((c): c is NonNullable<ReturnType<NonNullable<typeof getUploadController>>> => c != null);
+            ].filter(
+              (c): c is NonNullable<ReturnType<NonNullable<typeof getUploadController>>> =>
+                c != null
+            );
 
             ctrls.forEach(c => {
               try {
@@ -325,15 +356,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
         },
       });
     },
-    [
-      send,
-      load,
-      confirm,
-      getUploadController,
-      unregisterUpload,
-      removeUploadController,
-      t,
-    ]
+    [send, load, confirm, getUploadController, unregisterUpload, removeUploadController, t]
   );
 
   // Bridge storage uploads with global upload list (fileTransferListSlice)
@@ -381,9 +404,13 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
             ].filter(Boolean);
             ctrls.forEach(c => {
               // Call cancel method if exists (will abort XHR and close DataChannel)
-              try { c?.cancel?.(); } catch {}
+              try {
+                c?.cancel?.();
+              } catch {}
               // Fallback: manually close channel
-              try { c?.channel?.close(); } catch {}
+              try {
+                c?.channel?.close();
+              } catch {}
             });
             unregisterUpload?.(rawFileName);
             unregisterUpload?.(displayName);
@@ -409,16 +436,31 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
             },
           });
 
-          // Remove this row from upload task list
-          try { removeRow?.(id); } catch {}
+          // Remove this row from upload task list and IndexedDB persistence
+          try {
+            removeRow?.(id);
+          } catch {}
+          try {
+            deleteUploadTask(id);
+          } catch {}
         },
       });
     },
-    [uploadingList, confirm, t, send, load, removeRow, getUploadController, unregisterUpload, removeUploadController]
+    [
+      uploadingList,
+      confirm,
+      t,
+      send,
+      load,
+      removeRow,
+      getUploadController,
+      unregisterUpload,
+      removeUploadController,
+    ]
   );
 
   const onContinueUpload = useCallback(
-    (fileName: string, index: number) => {
+    (index: number) => {
       const file = files[index];
       if (!file) return;
       // Prefer direct resume via upload controller
@@ -428,9 +470,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
         const baseName = getBaseName(rawName);
         const displayName = file.showFileName || baseName || rawName;
         const candidates = [displayName, rawName, baseName].filter(Boolean);
-        const ctrl = candidates
-          .map(k => getUploadController?.(k))
-          .find(Boolean);
+        const ctrl = candidates.map(k => getUploadController?.(k)).find(Boolean);
         if (ctrl && typeof ctrl.resume === 'function') {
           ctrl.resume();
           setFiles(prev => {
@@ -470,7 +510,6 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
   );
 
   const onSelectImage = useCallback((file: StorageFileItem) => {
-
     setSelected(file);
     const getMountAs = inferMountAsByUrlSuffix(file.filename || 'CDROM');
     setMountAs(getMountAs);
@@ -489,8 +528,6 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
         removeRow(file?.name);
       }, 2000);
 
-
-
       // getCompletedList(currentPath)
       // getFtFileSystemInfo()
 
@@ -505,24 +542,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
       const { filename, size, dataChannel } = payload || ({} as any);
       if (!filename || !size || !createUploadRow) return;
 
-      const label =
-        typeof dataChannel === 'string'
-          ? dataChannel
-          : dataChannel?.label || 'upload';
-
-      // const id = createUploadRow({
-      //   // Current Mount Storage uploads are image files under root path.
-      //   // Path support can be extended in future.
-      //   path: '/',
-      //   name: filename,
-      //   fileSize: size,
-      //   dataChannel: label,
-      //   lastModified: Date.now(),
-      //   initialOffset: 0,
-      //   initialState: 'running',
-      //   source: 'storage',
-      //   deviceId: 'current-device',
-      // })
+      const label = typeof dataChannel === 'string' ? dataChannel : dataChannel?.label || 'upload';
       const id = createUploadRow({
         path: '/',
         name: filename,
@@ -541,8 +561,6 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
   const onProgressUpload = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
-      //id: string, offset: number, speedBps?: number
-
       const { name } = data;
       if (!name) return;
       updateProgress(name, data);
@@ -563,22 +581,82 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
 
   const onError = useCallback(
     (data: { name: string; error: string }) => {
-      const { name } = data || {};
+      const { name, error } = data || {};
 
-      // Find and remove the failed upload task from UI
+      // Keep the failed upload in the list: mark it as `failed` (existing
+      // TransferState) instead of removing it, so the user can retry or delete.
       const uploadId = uploadRowIdRef.current[name];
-      if (uploadId && removeRow) {
+      if (uploadId && setUploadRowState) {
         try {
-          removeRow(uploadId);
-          delete uploadRowIdRef.current[name];
+          setUploadRowState(uploadId, 'failed', error);
         } catch (e) {
-          logger.error('Failed to remove upload row on error', e);
+          console.error('Failed to mark upload row as failed', e);
+        }
+      }
+    },
+    [setUploadRowState]
+  );
+
+  const onResumeStart = useCallback(
+    (payload: { filename: string; taskId?: string }) => {
+      const { filename, taskId } = payload || {};
+      const id = taskId || uploadRowIdRef.current[filename];
+      if (filename && id) {
+        uploadRowIdRef.current[filename] = id;
+      }
+      if (id && setUploadRowState) {
+        try {
+          setUploadRowState(id, 'running');
+        } catch (e) {
+          console.error('Failed to mark upload row as running on resume', e);
+        }
+      }
+    },
+    [setUploadRowState]
+  );
+
+  const handleResumeUpload = useCallback(
+    async (row: { id: string; name: string }) => {
+      // 1) Prefer an in-session upload controller (pause/continue in same tab).
+      const ctrl = getUploadController?.(row.name) || getUploadController?.(row.id);
+      if (ctrl && typeof ctrl.resume === 'function') {
+        try {
+          ctrl.resume();
+          setUploadRowState?.(row.id, 'running');
+          return;
+        } catch {
+          // Fall through to persisted resume or fallback picker.
         }
       }
 
-      toast.error(t('storageDialog.uploadFailed'));
+      // 2) Try persisted File System Access resume.
+      try {
+        await uploadDropZoneRef.current?.resumeUpload(row.id);
+        return;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        // 3) If the persisted task/handle cannot be used, let the user
+        //    re-select the original file and resume from the device offset.
+        const recoverableCodes = new Set<UploadResumeErrorCode>([
+          'file-missing',
+          'not-supported',
+          'permission-denied',
+        ]);
+        const isRecoverable = err instanceof UploadResumeError && recoverableCodes.has(err.code);
+
+        if (isRecoverable) {
+          uploadDropZoneRef.current?.openFilePicker();
+          return;
+        }
+        toast.error(message || 'Resume upload failed');
+        if (setUploadRowState) {
+          try {
+            setUploadRowState(row.id, 'failed', message);
+          } catch {}
+        }
+      }
     },
-    [t, removeRow]
+    [getUploadController, setUploadRowState]
   );
 
   return (
@@ -593,11 +671,11 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
           ? t('storageDialog.descAvailable')
           : t('storageDialog.descUploading')
       }
-      contentClassName="z-[200] pb-0"
-      width="720px"
+      contentClassName="z-[200] top-[calc(env(safe-area-inset-top)+72px)] max-h-[calc(100dvh-env(safe-area-inset-top)-88px)] translate-y-0 gap-3 p-4 pb-0 sm:top-[50%] sm:max-h-[85vh] sm:translate-y-[-50%] sm:gap-4 sm:p-6 sm:pb-0"
+      width="min(720px, calc(100vw - 24px))"
       open={open}
+      onOpenChange={onOpenChange}
       onCancel={() => onOpenChange(false)}
-      preventOutsideClose
       footerSlot={<></>}
     >
       <Tabs
@@ -606,10 +684,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
         className="w-full"
         size="sm"
       >
-        <TabsList
-          className="m-auto h-[32px] bg-[var(--bg-secondary)]"
-          size="sm"
-        >
+        <TabsList className="m-auto h-[32px] bg-(--bg-secondary)">
           <TabsTrigger value="Available" className="h-[28px]">
             {t('storageDialog.tabAvailable')}
           </TabsTrigger>
@@ -625,30 +700,43 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
             layout="col"
           />
 
-          <div className="space-y-4">
-            <div className="min-h-[236px] max-h-[350px] overflow-y-auto rounded-md border border-[var(--border-color)]">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="min-h-[180px] max-h-[260px] overflow-y-auto rounded-md border border-(--border-color) sm:min-h-[236px] sm:max-h-[350px]">
               {files.length ? (
-                files.map((file, _index) => (
-                  <StorageFileItem
-                    key={file.filename}
-                    file={file}
-                    selected={selected?.filename === file.filename}
-                    onSelect={onSelectImage}
-                    onContinueUpload={onContinueUpload}
-                    onDelete={handleDeleteFile}
-                    incomplete={file.incomplete}
-                  />
-                ))
+                files.map((file, _index) => {
+                  try {
+                    // Only pass the fields that StorageFileItem expects
+                    const fileForItem = {
+                      filename: file.filename,
+                      size: file.size,
+                      incomplete: file.incomplete,
+                      state: file.state,
+                    };
+                    return (
+                      <StorageFileItem
+                        key={file.filename}
+                        file={fileForItem}
+                        selected={selected?.filename === file.filename}
+                        onSelect={onSelectImage}
+                        onContinueUpload={filename => onContinueUpload(filename, 0)}
+                        onDelete={handleDeleteFile}
+                      />
+                    );
+                  } catch (e) {
+                    console.error('StorageFileItem render error for file:', file, e);
+                    return (
+                      <div key={file.filename} className="p-2 border-b border-red-500 text-red-500">
+                        Error rendering {file.filename}: {String(e)}
+                      </div>
+                    );
+                  }
+                })
               ) : (
-                <div className="p-4 min-h-[236px] max-h-[350px] text-sm flex items-center justify-center gap-2">
+                <div className="flex min-h-[180px] max-h-[260px] items-center justify-center gap-2 p-4 text-sm sm:min-h-[236px] sm:max-h-[350px]">
                   <div className="flex flex-col items-center">
                     <IconCd className="size-8 opacity-80" />
-                    <span className="text-[var(--text-secondary)]">
-                      {t('storageDialog.noFiles')}
-                    </span>
-                    <p className="text-[var(--text-color)]">
-                      {t('storageDialog.noFilesDesc')}
-                    </p>
+                    <span className="text-(--text-secondary)">{t('storageDialog.noFiles')}</span>
+                    <p className="text-text">{t('storageDialog.noFilesDesc')}</p>
                   </div>
                 </div>
               )}
@@ -659,35 +747,41 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
               value={mountAs}
               onChange={setMountAs}
               rightSlot={
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                   <UploadDropZone
                     showProgress={false}
                     startMethod="startStorageFileUpload"
-                    httpUploadUrl={
-                      env.target === 'device' ? '/storage/upload' : ''
-                    }
+                    httpUploadUrl={env.target === 'device' ? '/storage/upload' : ''}
                     step="overview"
-                    className="mb-0 border-dashed"
+                    className="mb-0 min-w-0 flex-1 border-dashed sm:flex-none"
+                    uploaderContainerClassName="cursor-pointer"
                     resumeFileName=""
+                    source="storage"
+                    path="/"
                     customUploadTrigger={
-                      <Button
-                        size="sm"
-
-                        className="btn-primary"
-                      >
-                         <Plus className="size-[16px] mr-0" />Upload Image
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            className="btn-primary min-w-0 flex-1 cursor-pointer whitespace-nowrap sm:flex-none"
+                          >
+                            <Plus className="size-[16px] mr-0" />
+                            {t('storageDialog.uploadImageButton')}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {t('storageDialog.uploadImageTooltip')}
+                        </TooltipContent>
+                      </Tooltip>
                     }
                     formatsText={
                       <>
-                        <span className="font-medium">
-                          {t('storageDialog.formatsTypes')}
-                        </span>
+                        <span className="font-medium">{t('storageDialog.formatsTypes')}</span>
                       </>
                     }
                     idleText={
                       <div className="flex flex-col items-center ">
-                        <Button className="rounded-[50%] w-[40px] h-[40px] mb-[10px] ">
+                        <Button className="rounded-[50%] w-[40px] h-[40px] mb-[10px] cursor-pointer">
                           <Plus className="size-5 opacity-60" />
                         </Button>
 
@@ -697,6 +791,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
                     draggingText={t('storageDialog.draggingText')}
                     onSuccess={onSuccessUpload}
                     onStart={onStartUpload}
+                    onResumeStart={onResumeStart}
                     onProgress={onProgressUpload}
                     onStateChange={onStateChange}
                     rpc={rpc}
@@ -706,10 +801,13 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
                       {t('storageDialog.uploadNewImage')}
                     </Button>
                   </UploadDropZone>
-                  <Button   size="sm"  onClick={onBack}>{t('storageDialog.back')}</Button>
+                  <Button size="sm" className="min-w-[72px] flex-1 sm:flex-none" onClick={onBack}>
+                    {t('storageDialog.back')}
+                  </Button>
                   <Button
                     size="sm"
                     variant="primary"
+                    className="min-w-[72px] flex-1 sm:flex-none"
                     loading={is('mount')}
                     disabled={!selected || selected.incomplete}
                     onClick={handleMount}
@@ -720,21 +818,19 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
               }
             ></SelectMountAs>
             {/* Storage usage */}
-
-
           </div>
-           <StorageUsage
-                total={space?.total || 0}
-                used={space?.used || 0}
-                free={space ? Math.max(space.total - space.used, 0) : 0}
-                loading={is('ftFileSystemInfo')}
-                title={t('storageDialog.availableStorage')}
-                rightText={(pct) => t('storageDialog.usedPct', { pct })}
-                usedText={(used) => t('storageDialog.usedText', { used: humanSize(used) })}
-                freeText={(free) => t('storageDialog.freeText', { free: humanSize(free) })}
-                mountKey={storageTab}
-                className="mt-2"
-              />
+          <StorageUsage
+            total={space?.total || 0}
+            used={space?.used || 0}
+            free={space ? Math.max(space.total - space.used, 0) : 0}
+            loading={is('ftFileSystemInfo')}
+            title={t('storageDialog.availableStorage')}
+            rightText={pct => t('storageDialog.usedPct', { pct })}
+            usedText={used => t('storageDialog.usedText', { used: humanSize(used) })}
+            freeText={free => t('storageDialog.freeText', { free: humanSize(free) })}
+            mountKey={storageTab}
+            className="mt-2"
+          />
         </TabsContent>
 
         <TabsContent value="Uploading">
@@ -754,8 +850,9 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
           {/*   onPause={env.target !== 'device' ? handlePauseUpload : undefined} */}
           <TransferList
             list={uploadingList}
-          onPause={handlePauseUpload}
+            onPause={handlePauseUpload}
             onRemove={handleDeleteUploadingRow}
+            onResume={handleResumeUpload}
             // showActions={false}
             emptyProps={{
               icon: <IconCd className="size-8 opacity-80" />,
@@ -764,7 +861,7 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
               className: 'pt-14',
             }}
           />
-          <div className="flex items-center justify-end gap-2  py-[var(--spacing-base)]">
+          <div className="flex items-center justify-end gap-2  py-(--spacing-base)">
             <Button onClick={onBack}>{t('storageDialog.back')}</Button>
           </div>
           <UploadDropZone
@@ -773,18 +870,18 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
             startMethod="startStorageFileUpload"
             httpUploadUrl={env.target === 'device' ? '/storage/upload' : ''}
             step="overview"
-            className="mb-0 m-0 border-dashed"
+            className="mb-0 m-0 border-dashed cursor-pointer"
             resumeFileName=""
+            source="storage"
+            path="/"
             formatsText={
               <>
-                <span className="font-medium">
-                  {t('storageDialog.formatsTypes')}
-                </span>
+                <span className="font-medium">{t('storageDialog.formatsTypes')}</span>
               </>
             }
             idleText={
-              <div className="flex flex-col items-center ">
-                <Button className="rounded-[50%] w-[40px] h-[40px] mb-[10px] ">
+              <div className="flex flex-col items-center">
+                <Button className="rounded-[50%] w-[40px] h-[40px] mb-[10px] cursor-pointer">
                   <Plus className="size-5 opacity-60" />
                 </Button>
 
@@ -794,12 +891,13 @@ const StorageMountDialog: React.FC<StorageMountDialogProps> = ({
             draggingText={t('storageDialog.draggingText')}
             onSuccess={onSuccessUpload}
             onStart={onStartUpload}
+            onResumeStart={onResumeStart}
             onProgress={onProgressUpload}
             onStateChange={onStateChange}
             onError={onError}
             rpc={rpc}
           >
-            <Button className="w-full">
+            <Button className="w-full cursor-pointer">
               {/*  onClick={() => setStorageTab('Uploading')} */}
               {t('storageDialog.uploadNewImage')}
             </Button>

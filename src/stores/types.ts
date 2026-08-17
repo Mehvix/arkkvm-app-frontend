@@ -8,6 +8,7 @@ import type { WebRTCState } from './slices/rtcSlice';
 import type { SettingsSlice } from './slices/settingsSlice';
 import type { SetupSlice } from './slices/setupSlice';
 import type { UISlice } from './slices/uiSlice';
+import type { VirtualMediaSlice } from './slices/virtualMediaSlice';
 import type { UpdateSlice } from './slices/updateSlice';
 import type { UploadSlice } from './slices/uploadSlice';
 import type { UserSlice } from './slices/userSlice';
@@ -23,6 +24,7 @@ export type RootState =
   SetupSlice &
   UpdateSlice &
   SettingsSlice &
+  VirtualMediaSlice &
   {
     fileTransferList: TransferListSlice
     fileDownloadList: DownloadListSlice

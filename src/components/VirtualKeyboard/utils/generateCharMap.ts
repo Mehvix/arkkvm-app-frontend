@@ -9,7 +9,8 @@
 export interface CharMapEntry {
   code: string
   mod?: string[]
-  accentKey?: { code: string; mod?: string[] }
+  deadKey?: { code: string; mod?: string[] }
+  macDeadKey?: { code: string; mod?: string[] }
 }
 
 /**
@@ -34,18 +35,26 @@ export interface KeyboardLayoutData {
  * Generate character mapping table from keyboard layout data.
  *
  * @param layout - Keyboard layout data (includes rows and optional rightPanel)
+ * @param existingMap - Optional existing map to extend (for multi-key combinations like á)
  * @returns Character-to-keycode mapping table
  *
  * @example
  * const charMap = generateCharMapFromLayout(csLayout)
  * // charMap['z'] = { code: 'KeyY' }
  * // charMap['Z'] = { code: 'KeyY', mod: ['ShiftLeft'] }
+ *
+ * @example with existing map for multi-key characters:
+ * const existingMap = { 'á': { code: 'KeyA', mod: ['ShiftLeft'], accentKey: { code: 'Quote', mod: [] } } };
+ * const charMap = generateCharMapFromLayout(csLayout, existingMap)
  */
 export function generateCharMapFromLayout(
-  layout: KeyboardLayoutData
+  layout: KeyboardLayoutData,
+  existingMap?: LayoutChars
 ): LayoutChars {
   const map: LayoutChars = {
     ' ': { code: 'Space' },
+    '\u00a0': { code: 'Space' }, // Non-breaking space
+    '\r': { code: 'Space' },
     '\n': { code: 'Enter' },
     '\t': { code: 'Tab' },
     ',': { code: 'Comma' },
@@ -54,8 +63,10 @@ export function generateCharMapFromLayout(
     ':': { code: 'Period', mod: ['ShiftLeft'] },
     '-': { code: 'Slash' },
     _: { code: 'Slash', mod: ['ShiftLeft'] },
+    ...(existingMap || {})
   };
   const layoutRows = layout.rows;
+
 
   if (layoutRows && Array.isArray(layoutRows)) {
     for (const row of layoutRows) {
@@ -90,10 +101,8 @@ function processKeyDefinition(
   if (!key || !key.keyCode || !key.legends) return;
 
   const { keyCode, legends } = key;
-
   for (const [modState, char] of Object.entries(legends)) {
     if (!char) continue;
-
     const entry: CharMapEntry = { code: keyCode };
 
     switch (modState) {

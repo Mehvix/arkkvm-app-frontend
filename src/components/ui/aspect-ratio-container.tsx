@@ -20,7 +20,7 @@ const CROSS_PATTERN = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/
 const BACKGROUND_STYLES = {
   backgroundImage: CROSS_PATTERN,
   backgroundRepeat: 'repeat' as const,
-  backgroundSize: '32px 56px',
+  backgroundSize: '36px 56px',
 } as const;
 
 interface AspectRatioContainerProps {

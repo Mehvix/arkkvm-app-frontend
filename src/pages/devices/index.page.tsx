@@ -47,23 +47,16 @@ import {
   SlidePanel,
   StreamAnalytics,
   SystemUpdateDialog,
+  VlanPendingConfirmDialog,
   XtermTerminal,
 } from '@/components';
 import TopNavbar from '@/components/TopNavbar/TopNavbar';
-import ControlToolbar, {
-  type FullScreenData,
-} from '@/components/ControlToolbar';
+import ControlToolbar, { type FullScreenData } from '@/components/ControlToolbar';
 import { DefaultLoadingOverlay } from '@/components/DefaultLoadingOverlay';
 import { type RemoteScreenHandle } from '@/components/kvm/RemoteScreen';
-import {
-  ConfirmDialogProvider,
-  useConfirmDialog,
-} from '@/components/ui/confirm-dialog';
+import { ConfirmDialogProvider, useConfirmDialog } from '@/components/ui/confirm-dialog';
 import VirtualKeyboard from '@/components/VirtualKeyboard/index.tsx';
-import {
-  externalModifierMask,
-  toHidReport,
-} from '@/components/VirtualKeyboard/utils';
+import { externalModifierMask, toHidReport } from '@/components/VirtualKeyboard/utils';
 import {
   createInitialModifierState,
   HID_MODIFIERS,
@@ -84,12 +77,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 // ============================================================================
 // Internal Dependencies - State Management
 // ============================================================================
-import {
-  isAnyUiPanelOpen,
-  useAppStore,
-  useRTCStore,
-  useUiStore,
-} from '@/stores';
+import { isAnyUiPanelOpen, useAppStore, useRTCStore, useUiStore } from '@/stores';
 
 // ============================================================================
 // Internal Dependencies - Utils & Assets
@@ -107,6 +95,7 @@ import {
   useActiveDeviceSelect,
   useSettingsStore,
   type UsbDeviceConfig,
+  defaultUsbDeviceConfig,
 } from '@/stores/devicesStore';
 import type { PageMeta } from '@/types/page-meta';
 import { cn } from '@/utils';
@@ -125,14 +114,14 @@ export const meta: PageMeta = {
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
-type _KeyboardDisplayMode = 'docked' | 'floating'
-type _TransceiverMode = 'recvonly' | 'sendrecv'
+type _KeyboardDisplayMode = 'docked' | 'floating';
+type _TransceiverMode = 'recvonly' | 'sendrecv';
 
 interface _DeviceConnectionState {
-  isChannelReady: boolean
-  peerState: string | undefined
-  usbState: string | undefined
-  hdmiConnectionState: string | undefined
+  isChannelReady: boolean;
+  peerState: string | undefined;
+  usbState: string | undefined;
+  hdmiConnectionState: string | undefined;
 }
 
 // ============================================================================
@@ -151,9 +140,7 @@ interface _DeviceConnectionState {
  */
 const KVMControlPage = () => {
   const { target, signalingUrl } = env;
-  const [keyboardDisplayMode, setKeyboardDisplayMode] = useState<
-    'docked' | 'floating'
-  >('docked');
+  const [keyboardDisplayMode, setKeyboardDisplayMode] = useState<'docked' | 'floating'>('docked');
   const { id: deviceId } = useParams();
   const location = useLocation();
 
@@ -163,9 +150,7 @@ const KVMControlPage = () => {
     return params.get('deviceName');
   }, [location.search]);
 
-  const [deviceName, _setDeviceName] = useState<string>(
-    deviceNameFromQuery || ''
-  );
+  const [deviceName, _setDeviceName] = useState<string>(deviceNameFromQuery || '');
 
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -179,8 +164,7 @@ const KVMControlPage = () => {
   // Local state for pressed keys (better performance than global state)
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-  const [showSessionConflictDialog, setShowSessionConflictDialog] =
-    useState(false);
+  const [showSessionConflictDialog, setShowSessionConflictDialog] = useState(false);
   const showStatusBar = useAppStore(s => s.showStatusBar);
 
   const keyboardHeight = useUiStore(s => s.keyboardHeight);
@@ -220,8 +204,8 @@ const KVMControlPage = () => {
       ? `${signalingUrl}?id=${deviceId}&token=${token}`
       : `${signalingUrl}${csrfToken ? `?csrf-token=${csrfToken}` : ''}`;
   const isPasteTextOpen = useUiStore(s => s.isPasteTextOpen);
-  const keyboardLanguage =
-    useAppStore(s => s.keyboardLanguage) || 'en-US-qwerty';
+  const keyboardLanguage = useAppStore(s => s.keyboardLanguage) || 'en-US-qwerty';
+  const currentLang = useAppStore(s => s.currentLang);
   const oobeAutoUpdate = useAppStore(state => state.auto_update);
   const setOobeAutoUpdate = useAppStore(state => state.setAutoUpdate);
   const toggleMain = useUiStore(s => s.toggleMain);
@@ -239,6 +223,7 @@ const KVMControlPage = () => {
   const setSerialChannel = useAppStore.getState().rtc.setSerialChannel;
   const setDiskChannel = useAppStore.getState().rtc.setDiskChannel;
   const setRtcField = useAppStore.getState().rtc.setRtcField;
+  const resetRTC = useAppStore.getState().rtc.resetRTC;
   const resetHID = useAppStore.getState().resetHID;
   const setContainerSize = useAppStore.getState().setContainerSize;
   const setMouseMove = useAppStore.getState().setMouseMove;
@@ -248,19 +233,13 @@ const KVMControlPage = () => {
   const terminalChannel = useRTCStore(s => s.terminalChannel);
   const usbState = useAppStore(s => s.usbState);
 
-
   const setHidUsbState =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (useAppStore.getState() as any).setHidUsbState ??
-    useAppStore.getState().setUsbState;
+    (useAppStore.getState() as any).setHidUsbState ?? useAppStore.getState().setUsbState;
   const peerConnection = useAppStore(s => s.rtc?.peerConnection);
-  const peerState = useAppStore(
-    s => s.rtc?.peerConnectionState ?? 'disconnected'
-  );
+  const peerState = useAppStore(s => s.rtc?.peerConnectionState ?? 'disconnected');
 
-  const [_transceiverMode, _setTransceiverMode] = useState<
-    'recvonly' | 'sendrecv'
-  >('recvonly');
+  const [_transceiverMode, _setTransceiverMode] = useState<'recvonly' | 'sendrecv'>('recvonly');
   const remoteScreenRef = useRef<RemoteScreenHandle>(null);
   const mouseVideoRef = useRef<HTMLVideoElement | null>(null);
   const snapshotVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -270,17 +249,16 @@ const KVMControlPage = () => {
   const [keyboardEnabled, setKeyboardEnabled] = useState<boolean>(false);
   const [terminalEnabled, _setTerminalEnabled] = useState<boolean>(false);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
-    null
-  );
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [_scaleMode, _setScaleMode] = useState<'fit' | 'actual'>('fit');
   const [iceServers, setIceServers] = useState<RTCIceServer[] | undefined>(undefined);
   // Memoize rtcConfig so RemoteScreen / useDesktopRtc don't see a new object
   // identity every render, which would otherwise rebuild the PeerConnection.
   const rtcConfigMemo = useMemo(() => ({ iceServers }), [iceServers]);
   const [terminalOverlay, setTerminalOverlay] = useState<boolean>(false);
-  const [allowWebSocketConnection, setAllowWebSocketConnection] =
-    useState<boolean>(false);
+  const [terminalMountKey, setTerminalMountKey] = useState<number>(0);
+  const terminalChannelRef = useRef<RTCDataChannel | null>(null);
+  const [allowWebSocketConnection, setAllowWebSocketConnection] = useState<boolean>(false);
   const [_isMdUp, setIsMdUp] = useState<boolean>(true);
   const [ocrEnabled, setOcrEnabled] = useState<boolean>(false); // OCR feature toggle
   const [isRestarting, setIsRestarting] = useState<boolean>(false);
@@ -292,19 +270,17 @@ const KVMControlPage = () => {
     x: 20,
     y: 20,
   });
-  const [_fsPanelPos, setFsPanelPos] = useState<{ x: number; y: number } | null>(
-    null
-  );
+  const [_fsPanelPos, setFsPanelPos] = useState<{ x: number; y: number } | null>(null);
   const fsBtnDragRef = useRef<{
-    dragging: boolean
-    moved: boolean
-    offsetX: number
-    offsetY: number
+    dragging: boolean;
+    moved: boolean;
+    offsetX: number;
+    offsetY: number;
   }>({ dragging: false, moved: false, offsetX: 0, offsetY: 0 });
   const fsPanelDragRef = useRef<{
-    dragging: boolean
-    offsetX: number
-    offsetY: number
+    dragging: boolean;
+    offsetX: number;
+    offsetY: number;
   }>({ dragging: false, offsetX: 0, offsetY: 0 });
 
   const visibleTerminal = useUiStore(s => s.visible.terminal);
@@ -315,7 +291,7 @@ const KVMControlPage = () => {
     | 'settings'
     | 'connectionStats'
     | 'extension'
-    | 'virtualKeyboard'
+    | 'virtualKeyboard';
 
   const activeSidebarPanel = useMemo<SidebarActivePanel | undefined>(() => {
     if (visibleTerminal) return 'terminal';
@@ -338,19 +314,17 @@ const KVMControlPage = () => {
   const setModalView = useAppStore.getState().update.setModalView;
   const resetOtaState = useAppStore.getState().update.resetOtaState;
   const closeOtaDialog = useAppStore.getState().update.closeDialog;
-  const showReconnectOverlay =
-    useAppStore.getState().update.showReconnectOverlay;
-  const hideReconnectOverlay =
-    useAppStore.getState().update.hideReconnectOverlay;
-  const isReconnectOverlayVisible = useAppStore(
-    s => s.update.isReconnectOverlayVisible
-  );
+  const showReconnectOverlay = useAppStore.getState().update.showReconnectOverlay;
+  const hideReconnectOverlay = useAppStore.getState().update.hideReconnectOverlay;
+  const isReconnectOverlayVisible = useAppStore(s => s.update.isReconnectOverlayVisible);
   const { getUpdateStatus } = useUpdateCheck();
 
   // Track the previous value of isReconnectOverlayVisible
   const prevReconnectOverlayVisibleRef = useRef(isReconnectOverlayVisible);
 
-  const reconnectWithGuardRef = useRef<(options?: { delayMs?: number; onAfterEnable?: () => void }) => Promise<void>>(async () => {});
+  const reconnectWithGuardRef = useRef<
+    (options?: { delayMs?: number; onAfterEnable?: () => void }) => Promise<void>
+  >(async () => {});
 
   const reconnectWithGuard = useCallback(
     async (options?: { delayMs?: number; onAfterEnable?: () => void }) => {
@@ -362,13 +336,14 @@ const KVMControlPage = () => {
       }
 
       remoteScreenRef.current?.disconnect?.();
+      resetRTC();
       setAllowWebSocketConnection(false);
       window.setTimeout(() => {
         setAllowWebSocketConnection(true);
         options?.onAfterEnable?.();
       }, options?.delayMs ?? 100);
     },
-    [target, deviceId, checkLocalDeviceSetup]
+    [target, deviceId, checkLocalDeviceSetup, resetRTC]
   );
 
   // Keep ref in sync with latest reconnectWithGuard
@@ -420,101 +395,92 @@ const KVMControlPage = () => {
   const jiggler = useActiveDeviceSelect(state => state.jiggler);
 
   const inputChannel = useInputChannel();
-  const {
-    sendKeyboardReport,
-    sendRelMouseReport,
-    sendAbsMouseReport,
-    sendWheelReport,
-  } = inputChannel;
-
-
+  const { sendKeyboardReport, sendRelMouseReport, sendAbsMouseReport, sendWheelReport } =
+    inputChannel;
 
   const setKeysDownState =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (useAppStore.getState() as any).setHidKeysDownState ??
-    useAppStore.getState().setKeysDownState;
+    (useAppStore.getState() as any).setHidKeysDownState ?? useAppStore.getState().setKeysDownState;
   const controlLayoutMode = useAppStore(s => s.ui.controlLayoutMode);
-  const [send, isChannelReady, sendAsync] = useJsonRpc(
-    (request: JsonRpcRequest<MethodName>) => {
-      const { method, params } = request;
-      switch (method) {
-        case 'otherSessionConnected': {
-          // Close all panels, popovers, dialogs and overlays before showing the conflict dialog
-          useAppStore.getState().ui.closeAllPanels();
-          useAppStore.getState().ui.setIsPasteTextOpen(false);
-          closeToolbarPopoversRef.current?.();
-          // Close system update dialog and reset OTA state
-          closeOtaDialog();
+  const [send, isChannelReady, sendAsync] = useJsonRpc((request: JsonRpcRequest<MethodName>) => {
+    const { method, params } = request;
+    switch (method) {
+      case 'otherSessionConnected': {
+        // Close all panels, popovers, dialogs and overlays before showing the conflict dialog
+        useAppStore.getState().ui.closeAllPanels();
+        useAppStore.getState().ui.setIsPasteTextOpen(false);
+        closeToolbarPopoversRef.current?.();
+        // Close system update dialog and reset OTA state
+        closeOtaDialog();
+        resetOtaState();
+        // Hide reconnect overlay if visible
+        hideReconnectOverlay();
+        // Close all confirm dialogs (DHCP renew, network settings, etc.)
+        closeAllConfirmDialogs();
+        setShowSessionConflictDialog(true);
+        remoteScreenRef.current?.disconnect?.();
+        break;
+      }
+      case 'usbState': {
+        if (typeof params === 'string') {
+          setHidUsbState(params);
+        }
+        break;
+      }
+      case 'otaState': {
+        // Prioritize error handling
+        if (params?.error) {
           resetOtaState();
-          // Hide reconnect overlay if visible
-          hideReconnectOverlay();
-          // Close all confirm dialogs (DHCP renew, network settings, etc.)
-          closeAllConfirmDialogs();
-          setShowSessionConflictDialog(true);
-          remoteScreenRef.current?.disconnect?.();
-          break;
+          setModalView('error');
+          return;
         }
-        case 'usbState': {
-          if (typeof params === 'string') {
-            setHidUsbState(params);
-          }
-          break;
-        }
-        case 'otaState': {
-          // Prioritize error handling
-          if (params?.error) {
+        const {
+          systemDownloadProgress = 0,
+          systemVerificationProgress = 0,
+          systemUpdateProgress = 0,
+          byUser,
+        } = params ?? {};
+        setOtaState(prev => ({ ...prev, ...params }));
+        const determineModalView = (): void => {
+          if (systemUpdateProgress === 100) {
             resetOtaState();
-            setModalView('error');
-            return;
+            showReconnectOverlay();
+          } else if (systemUpdateProgress > 0) {
+            setModalView('preparing');
+          } else if (systemVerificationProgress > 0) {
+            setModalView('verify');
+          } else if (systemDownloadProgress > 0 && byUser) {
+            setModalView('download');
           }
-          const {
-            systemDownloadProgress = 0,
-            systemVerificationProgress = 0,
-            systemUpdateProgress = 0,
-            byUser,
-          } = params ?? {};
-          setOtaState(prev => ({ ...prev, ...params }));
-          const determineModalView = (): void => {
-            if (systemUpdateProgress === 100) {
-              resetOtaState();
-              showReconnectOverlay();
-            } else if (systemUpdateProgress > 0) {
-              setModalView('preparing');
-            } else if (systemVerificationProgress > 0) {
-              setModalView('verify');
-            } else if (systemDownloadProgress > 0 && byUser) {
-              setModalView('download');
-            }
-          };
+        };
 
-          determineModalView();
-          break;
-        }
-        case 'videoInputState': {
-          setVideoResolution(params.width, params.height);
+        determineModalView();
+        break;
+      }
+      case 'videoInputState': {
+        setVideoResolution(params.width, params.height);
 
-          setHdmiConnectionState(params);
-          break;
+        setHdmiConnectionState(params);
+        break;
+      }
+      case 'keyboardLedState': {
+        if (params && typeof params === 'object') {
+          setKeyboardLedState(params as Parameters<typeof setKeyboardLedState>[0]);
         }
-        case 'keyboardLedState': {
-          if (params && typeof params === 'object') {
-            setKeyboardLedState(params as Parameters<typeof setKeyboardLedState>[0]);
-          }
-          break;
-        }
-        case 'keysDownState': {
-          break;
-        }
-        case 'atxState': {
-          setAtxState(params);
-          break;
-        }
-        case 'networkState': {
-          break;
-        }
+        break;
+      }
+      case 'keysDownState': {
+        break;
+      }
+      case 'atxState': {
+        setAtxState(params);
+        break;
+      }
+      case 'networkState': {
+        break;
       }
     }
-  );
+  });
 
   // Cache rpc tuple to prevent unnecessary re-renders in child components
   const rpc = useMemo(
@@ -547,8 +513,7 @@ const KVMControlPage = () => {
   useEffect(() => {
     // Calculate actual channel ready state: force false when disconnected
     const disconnectedStates = ['closed', 'failed', 'disconnected'];
-    const actualChannelReady =
-      isChannelReady && !disconnectedStates.includes(peerState || '');
+    const actualChannelReady = isChannelReady && !disconnectedStates.includes(peerState || '');
     window.__arkkvm_pc__ = peerConnection;
     window.__arkkvm_rpc__ = {
       send: call => {
@@ -574,7 +539,9 @@ const KVMControlPage = () => {
   useEffect(() => {
     const disconnectedStates = ['closed', 'failed', 'disconnected'];
     if (peerState && disconnectedStates.includes(peerState)) {
-      setHdmiConnectionState({ ready: false, error: 'no_signal' } as Parameters<typeof setHdmiConnectionState>[0]);
+      setHdmiConnectionState({ ready: false, error: 'no_signal' } as Parameters<
+        typeof setHdmiConnectionState
+      >[0]);
     }
   }, [peerState, setHdmiConnectionState]);
 
@@ -615,11 +582,7 @@ const KVMControlPage = () => {
 
     if (iceResp.iceServers) {
       // Use only server-returned ICE config to avoid duplicate STUN servers
-      setIceServers(
-        Array.isArray(iceResp.iceServers)
-          ? iceResp.iceServers
-          : [iceResp.iceServers]
-      );
+      setIceServers(Array.isArray(iceResp.iceServers) ? iceResp.iceServers : [iceResp.iceServers]);
       setAllowWebSocketConnection(!!iceResp.iceServers);
     }
   };
@@ -670,10 +633,8 @@ const KVMControlPage = () => {
   // Use getState() for setter functions to avoid re-renders
   const setActiveDevice = useSettingsStore.getState().setActiveDevice;
   const _setDeviceSettingById = useSettingsStore.getState().setDeviceSettingById;
-  const setNestedDeviceSettingById =
-    useSettingsStore.getState().setNestedDeviceSettingById;
-  const setNestedDeviceSetting =
-    useSettingsStore.getState().setNestedDeviceSetting;
+  const setNestedDeviceSettingById = useSettingsStore.getState().setNestedDeviceSettingById;
+  const setNestedDeviceSetting = useSettingsStore.getState().setNestedDeviceSetting;
   const _createDevice = useSettingsStore.getState().createDevice;
   const authMode = useActiveDeviceSelect(state => state.authMode);
   const hostname = useActiveDeviceSelect(state => state.network?.hostname);
@@ -716,26 +677,18 @@ const KVMControlPage = () => {
       uiSwitchResult,
       audioPlaybackResult,
       usbDevicesResult,
-    ]: [unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown] =
-      await Promise.all([
-        sendAsync({ method: 'getCameraEmulation' }, { resultOnly: true }).catch(
-          e => e
-        ),
-        sendAsync(
-          { method: 'getMicrophoneEmulation' },
-          { resultOnly: true }
-        ).catch(e => e),
+    ]: [unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown] = await Promise.all(
+      [
+        sendAsync({ method: 'getCameraEmulation' }, { resultOnly: true }).catch(e => e),
+        sendAsync({ method: 'getMicrophoneEmulation' }, { resultOnly: true }).catch(e => e),
         sendAsync({ method: 'getFileTransfer' }, { resultOnly: true }),
-        sendAsync(
-          { method: 'getCurrentVersion', params: { showUI: true } },
-          { resultOnly: true }
-        ),
+        sendAsync({ method: 'getCurrentVersion', params: { showUI: true } }, { resultOnly: true }),
         sendAsync({ method: 'getAutoUpdateState' }, { resultOnly: true }),
         sendAsync({ method: 'getUiSwitch' }, { resultOnly: true }),
         sendAsync({ method: 'getAudioPlayback' }, { resultOnly: true }),
         sendAsync({ method: 'getUsbDevices' }, { resultOnly: true }),
-      ]);
-
+      ]
+    );
     setNestedDeviceSetting(prev => ({
       ...prev,
       microphoneEmulation: microphoneEmulation as boolean,
@@ -745,7 +698,9 @@ const KVMControlPage = () => {
       ...(systemVersionResult || {}),
       audioPlayback: audioPlaybackResult,
       showAudioPlaybackUI: uiSwitchResult?.hdmi_audio,
-      usbDeviceConfig: usbDevicesResult as unknown as UsbDeviceConfig | undefined,
+      usbDeviceConfig: usbDevicesResult
+        ? ({ ...defaultUsbDeviceConfig, ...(usbDevicesResult as object) } as UsbDeviceConfig)
+        : undefined,
     }));
   }, [sendAsync, isChannelReady]);
   const getVideoStateAsyn = useCallback(async () => {
@@ -804,14 +759,16 @@ const KVMControlPage = () => {
         } catch {}
         // Fetch device settings and write to store
         try {
-          const partial = await fetchDeviceSettings(sendAsync as Parameters<typeof fetchDeviceSettings>[0]);
+          const partial = await fetchDeviceSettings(
+            sendAsync as Parameters<typeof fetchDeviceSettings>[0]
+          );
           setNestedDeviceSettingById(id, prev => ({
             ...prev,
             ...partial,
             autoUpdate:
               typeof prev.autoUpdate === 'boolean'
                 ? prev.autoUpdate
-                : partial.autoUpdate ?? false,
+                : (partial.autoUpdate ?? false),
             network: { ...prev.network, ...partial.network },
           }));
         } catch {}
@@ -823,20 +780,67 @@ const KVMControlPage = () => {
   };
 
   // Fullscreen control
-  const onFullScreenClick = async (
-    _event: MouseEvent<SVGSVGElement>,
-    _data?: FullScreenData
-  ) => {
+  const onFullScreenClick = async (_event: MouseEvent<SVGSVGElement>, _data?: FullScreenData) => {
     // Use the app container as fullscreen target for better keyboard API support
     const fsTarget =
-      appContainerRef.current ??
-      (remoteScreenRef.current?.videoElement as HTMLElement | undefined);
+      appContainerRef.current ?? (remoteScreenRef.current?.videoElement as HTMLElement | undefined);
     if (!fsTarget) return;
     try {
       await fsTarget.requestFullscreen({
         navigationUI: 'show',
       });
       setIsFullScreen(true);
+
+      // Lock keys immediately after fullscreen, within the same user gesture.
+      // On Windows Chrome, keyboard.lock() must be called in the same call stack
+      // as requestFullscreen(), otherwise Alt+Tab and Win key are not captured.
+      const keyboardApi = (
+        navigator as Navigator & {
+          keyboard?: { lock?: (keyCodes?: string[]) => Promise<void> };
+        }
+      ).keyboard;
+      // Keyboard Lock API requires HTTPS (Secure Context).
+      // On HTTP (e.g. http://192.168.x.x), the API is unavailable and
+      // system shortcuts like Alt+Tab cannot be captured on Windows.
+      await keyboardApi
+        ?.lock?.([
+          'Escape',
+          'Tab',
+          'AltLeft',
+          'AltRight',
+          'ControlLeft',
+          'ControlRight',
+          'ShiftLeft',
+          'ShiftRight',
+          'MetaLeft',
+          'MetaRight',
+          'F1',
+          'F2',
+          'F3',
+          'F4',
+          'F5',
+          'F6',
+          'F7',
+          'F8',
+          'F9',
+          'F10',
+          'F11',
+          'F12',
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight',
+          'Backspace',
+          'Delete',
+          'Home',
+          'End',
+          'PageUp',
+          'PageDown',
+          'Insert',
+        ])
+        .catch(() => {
+          // Silently ignore: either non-HTTPS or unsupported browser
+        });
     } catch (error) {
       console.error('Fullscreen request failed:', error);
     }
@@ -868,7 +872,24 @@ const KVMControlPage = () => {
       }
     };
 
+    // Track key press timing
+    const keyPressTimes = new Map<string, number>();
+    // let lastKeyUpTime = 0;
+    // let isFirstKeyDown = true;
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Record key down time first
+      const key = event.code;
+      keyPressTimes.set(key, Date.now());
+
+      // Calculate time between last key up and current key down
+      // if (isFirstKeyDown) {
+      //   console.log(`down:${key}`, 0);
+      //   isFirstKeyDown = false;
+      // } else if (lastKeyUpTime > 0) {
+      //   const interval = Date.now() - lastKeyUpTime;
+      //   console.log(`down:${key}`, interval);
+      // }
       // When any popup/panel is open, don't forward keyboard to remote
       const isAnyUiPanelOpenState = isAnyUiPanelOpen();
 
@@ -912,21 +933,44 @@ const KVMControlPage = () => {
         }
       }
 
-      event.preventDefault();
-      event.stopPropagation();
+      // Prevent Ctrl+A from selecting all content in the local browser;
+      // it should only be forwarded to the remote device.
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      // In fullscreen mode, prevent browser from intercepting keys that should be
+      // forwarded to the remote device (Tab, F-keys, arrow keys, etc.).
+      if (document.fullscreenElement) {
+        const { code } = event;
+        if (
+          code === 'Tab' ||
+          code === 'Escape' ||
+          code === 'Backspace' ||
+          code === 'Delete' ||
+          code === 'Insert' ||
+          code === 'Home' ||
+          code === 'End' ||
+          code === 'PageUp' ||
+          code === 'PageDown' ||
+          code === 'ArrowUp' ||
+          code === 'ArrowDown' ||
+          code === 'ArrowLeft' ||
+          code === 'ArrowRight' ||
+          (code.startsWith('F') && code.length <= 3 && !isNaN(Number(code.slice(1))))
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
 
       const modifiersForReport = {
         ...virtualKeyboardModifierState,
-        ControlLeft: Boolean(
-          virtualKeyboardModifierState.ControlLeft || event.ctrlKey
-        ),
-        ShiftLeft: Boolean(
-          virtualKeyboardModifierState.ShiftLeft || event.shiftKey
-        ),
+        ControlLeft: Boolean(virtualKeyboardModifierState.ControlLeft || event.ctrlKey),
+        ShiftLeft: Boolean(virtualKeyboardModifierState.ShiftLeft || event.shiftKey),
         AltLeft: Boolean(virtualKeyboardModifierState.AltLeft || event.altKey),
-        MetaLeft: Boolean(
-          virtualKeyboardModifierState.MetaLeft || event.metaKey
-        ),
+        MetaLeft: Boolean(virtualKeyboardModifierState.MetaLeft || event.metaKey),
         AltRight: Boolean(
           (virtualKeyboardModifierState as Record<string, boolean>).AltGr ||
           virtualKeyboardModifierState.AltRight
@@ -969,7 +1013,6 @@ const KVMControlPage = () => {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      // Use composedPath for capture phase to check event path
       const path = event.composedPath();
       for (const el of path) {
         if (!(el instanceof HTMLElement)) continue;
@@ -1032,9 +1075,9 @@ const KVMControlPage = () => {
       }
       if (modifierReleaseMode === 'auto') {
         setVirtualKeyboardModifierState(s => {
-          const hasPhysicalModifier = Object.values(
-            virtualKeyboardModifierState
-          ).some(value => value === true);
+          const hasPhysicalModifier = Object.values(virtualKeyboardModifierState).some(
+            value => value === true
+          );
           if (!hasPhysicalModifier) return createInitialModifierState();
           return s;
         });
@@ -1112,9 +1155,9 @@ const KVMControlPage = () => {
     const keyboardApi = (
       navigator as Navigator & {
         keyboard?: {
-          lock?: (keyCodes?: string[]) => Promise<void>
-          unlock?: () => void
-        }
+          lock?: (keyCodes?: string[]) => Promise<void>;
+          unlock?: () => void;
+        };
       }
     ).keyboard;
 
@@ -1125,9 +1168,45 @@ const KVMControlPage = () => {
       return;
     }
 
-    void keyboardApi.lock?.(['Escape']).catch(() => {
-      // Keyboard Lock may be unavailable depending on browser/security context.
-    });
+    void keyboardApi
+      .lock?.([
+        'Escape',
+        'Tab',
+        'AltLeft',
+        'AltRight',
+        'ControlLeft',
+        'ControlRight',
+        'ShiftLeft',
+        'ShiftRight',
+        'MetaLeft',
+        'MetaRight',
+        'F1',
+        'F2',
+        'F3',
+        'F4',
+        'F5',
+        'F6',
+        'F7',
+        'F8',
+        'F9',
+        'F10',
+        'F11',
+        'F12',
+        'ArrowUp',
+        'ArrowDown',
+        'ArrowLeft',
+        'ArrowRight',
+        'Backspace',
+        'Delete',
+        'Home',
+        'End',
+        'PageUp',
+        'PageDown',
+        'Insert',
+      ])
+      .catch(() => {
+        // Keyboard Lock may be unavailable depending on browser/security context.
+      });
 
     return () => {
       keyboardApi.unlock?.();
@@ -1155,20 +1234,17 @@ const KVMControlPage = () => {
   }, []);
 
   // Drag handlers for the floating paste button (pointer events for mouse + touch)
-  const _onFsBtnPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLButtonElement>) => {
-      const target = e.currentTarget;
-      const rect = target.getBoundingClientRect();
-      fsBtnDragRef.current = {
-        dragging: true,
-        moved: false,
-        offsetX: e.clientX - rect.left,
-        offsetY: e.clientY - rect.top,
-      };
-      target.setPointerCapture(e.pointerId);
-    },
-    []
-  );
+  const _onFsBtnPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    fsBtnDragRef.current = {
+      dragging: true,
+      moved: false,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+    };
+    target.setPointerCapture(e.pointerId);
+  }, []);
 
   const _onFsBtnPointerMove = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -1181,14 +1257,11 @@ const KVMControlPage = () => {
       const baseY = parentRect?.top ?? 0;
       const nextX = e.clientX - baseX - drag.offsetX;
       const nextY = e.clientY - baseY - drag.offsetY;
-      const maxX =
-        (parent?.clientWidth ?? window.innerWidth) - target.offsetWidth;
-      const maxY =
-        (parent?.clientHeight ?? window.innerHeight) - target.offsetHeight;
+      const maxX = (parent?.clientWidth ?? window.innerWidth) - target.offsetWidth;
+      const maxY = (parent?.clientHeight ?? window.innerHeight) - target.offsetHeight;
       const clampedX = Math.max(0, Math.min(nextX, maxX));
       const clampedY = Math.max(0, Math.min(nextY, maxY));
-      drag.moved =
-        drag.moved || Math.hypot(nextX - fsBtnPos.x, nextY - fsBtnPos.y) > 3;
+      drag.moved = drag.moved || Math.hypot(nextX - fsBtnPos.x, nextY - fsBtnPos.y) > 3;
       setFsBtnPos({ x: clampedX, y: clampedY });
     },
     [fsBtnPos.x, fsBtnPos.y]
@@ -1212,53 +1285,42 @@ const KVMControlPage = () => {
   );
 
   // Drag handlers for the floating paste panel (drag by its header handle)
-  const _onFsPanelPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      const panel = e.currentTarget.parentElement as HTMLElement | null;
-      if (!panel) return;
-      const rect = panel.getBoundingClientRect();
-      fsPanelDragRef.current = {
-        dragging: true,
-        offsetX: e.clientX - rect.left,
-        offsetY: e.clientY - rect.top,
-      };
-      e.currentTarget.setPointerCapture(e.pointerId);
-    },
-    []
-  );
+  const _onFsPanelPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const panel = e.currentTarget.parentElement as HTMLElement | null;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    fsPanelDragRef.current = {
+      dragging: true,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
 
-  const _onFsPanelPointerMove = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      const drag = fsPanelDragRef.current;
-      if (!drag.dragging) return;
-      const panel = e.currentTarget.parentElement as HTMLElement | null;
-      if (!panel) return;
-      const parent = panel.offsetParent as HTMLElement | null;
-      const parentRect = parent?.getBoundingClientRect();
-      const baseX = parentRect?.left ?? 0;
-      const baseY = parentRect?.top ?? 0;
-      const nextX = e.clientX - baseX - drag.offsetX;
-      const nextY = e.clientY - baseY - drag.offsetY;
-      const maxX =
-        (parent?.clientWidth ?? window.innerWidth) - panel.offsetWidth;
-      const maxY =
-        (parent?.clientHeight ?? window.innerHeight) - panel.offsetHeight;
-      const clampedX = Math.max(0, Math.min(nextX, maxX));
-      const clampedY = Math.max(0, Math.min(nextY, maxY));
-      setFsPanelPos({ x: clampedX, y: clampedY });
-    },
-    []
-  );
+  const _onFsPanelPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = fsPanelDragRef.current;
+    if (!drag.dragging) return;
+    const panel = e.currentTarget.parentElement as HTMLElement | null;
+    if (!panel) return;
+    const parent = panel.offsetParent as HTMLElement | null;
+    const parentRect = parent?.getBoundingClientRect();
+    const baseX = parentRect?.left ?? 0;
+    const baseY = parentRect?.top ?? 0;
+    const nextX = e.clientX - baseX - drag.offsetX;
+    const nextY = e.clientY - baseY - drag.offsetY;
+    const maxX = (parent?.clientWidth ?? window.innerWidth) - panel.offsetWidth;
+    const maxY = (parent?.clientHeight ?? window.innerHeight) - panel.offsetHeight;
+    const clampedX = Math.max(0, Math.min(nextX, maxX));
+    const clampedY = Math.max(0, Math.min(nextY, maxY));
+    setFsPanelPos({ x: clampedX, y: clampedY });
+  }, []);
 
-  const _onFsPanelPointerUp = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      fsPanelDragRef.current.dragging = false;
-      try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch {}
-    },
-    []
-  );
+  const _onFsPanelPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    fsPanelDragRef.current.dragging = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+  }, []);
 
   // Handle virtual keyboard key press
   const handleVirtualKeyDown = useCallback(
@@ -1276,9 +1338,7 @@ const KVMControlPage = () => {
       if (modifierReleaseMode === 'auto') {
         // In auto mode, release all modifiers when a normal key is released
         setVirtualKeyboardModifierState(s => {
-          const hasActiveModifier = Object.values(s).some(
-            value => value === true
-          );
+          const hasActiveModifier = Object.values(s).some(value => value === true);
           if (hasActiveModifier) {
             return createInitialModifierState();
           }
@@ -1291,26 +1351,23 @@ const KVMControlPage = () => {
 
   // Handle modifier key state changes (Shift, Ctrl, Alt, etc.)
   // This callback is used only for virtual-keyboard modifier clicks
-  const handleModifierKeyChange = useCallback(
-    (keyCode: string, isActive: boolean) => {
-      if (!isActive) {
-        //sendKeyboardReport
-        sendKeyboardReport({
-          keys: [0, 0, 0, 0, 0, 0],
-          modifier: (HID_MODIFIERS as Record<string, number>)[keyCode] || 0,
-        });
-        sendKeyboardReport({
-          keys: [0, 0, 0, 0, 0, 0],
-          modifier: 0,
-        });
-      }
-      setVirtualKeyboardModifierState(prev => ({
-        ...prev,
-        [keyCode]: isActive,
-      }));
-    },
-    []
-  );
+  const handleModifierKeyChange = useCallback((keyCode: string, isActive: boolean) => {
+    if (!isActive) {
+      //sendKeyboardReport
+      sendKeyboardReport({
+        keys: [0, 0, 0, 0, 0, 0],
+        modifier: (HID_MODIFIERS as Record<string, number>)[keyCode] || 0,
+      });
+      sendKeyboardReport({
+        keys: [0, 0, 0, 0, 0, 0],
+        modifier: 0,
+      });
+    }
+    setVirtualKeyboardModifierState(prev => ({
+      ...prev,
+      [keyCode]: isActive,
+    }));
+  }, []);
 
   // Hide virtual keyboard
   const handleHideKeyboard = useCallback(() => {
@@ -1323,10 +1380,7 @@ const KVMControlPage = () => {
   }, []);
 
   // Memoize VirtualKeyboard props to prevent unnecessary re-renders
-  const keyboardStyle = useMemo(
-    () => ({ height: `${keyboardHeight}px` }),
-    [keyboardHeight]
-  );
+  const keyboardStyle = useMemo(() => ({ height: `${keyboardHeight}px` }), [keyboardHeight]);
 
   const keyboardLeftSlotDocked = useMemo(
     () => (
@@ -1385,10 +1439,7 @@ const KVMControlPage = () => {
   const handleAbsMove = useCallback(
     (x: number, y: number, buttons: number) => {
       const { peerState, usbState } = stateRef.current;
-      if (
-        peerState !== 'connected' ||
-        (usbState !== 'configured' && usbState !== 'suspended')
-      ) {
+      if (peerState !== 'connected' || (usbState !== 'configured' && usbState !== 'suspended')) {
         return;
       }
       sendAbsMouseReport({ x, y, buttons });
@@ -1397,12 +1448,21 @@ const KVMControlPage = () => {
   );
 
   const handleRelMove = useCallback(
-    ({ dx, dy, buttons, y, x }: { dx: number; dy: number; buttons: number; x: number; y: number }) => {
+    ({
+      dx,
+      dy,
+      buttons,
+      y,
+      x,
+    }: {
+      dx: number;
+      dy: number;
+      buttons: number;
+      x: number;
+      y: number;
+    }) => {
       const { peerState, usbState } = stateRef.current;
-      if (
-        peerState !== 'connected' ||
-        (usbState !== 'configured' && usbState !== 'suspended')
-      )
+      if (peerState !== 'connected' || (usbState !== 'configured' && usbState !== 'suspended'))
         return;
 
       const sdx = Number.isFinite(dx) ? Math.round(dx) : 0;
@@ -1414,15 +1474,13 @@ const KVMControlPage = () => {
   );
 
   const handleWheel = useCallback(
-    (data: { deltaX: number; deltaY: number; wheelY: number }) => {
+    (data: { deltaX: number; deltaY: number; wheelX: number; wheelY: number }) => {
       const { peerState, usbState } = stateRef.current;
-      if (
-        peerState !== 'connected' ||
-        (usbState !== 'configured' && usbState !== 'suspended')
-      )
+
+      if (peerState !== 'connected' || (usbState !== 'configured' && usbState !== 'suspended'))
         return;
-      const { wheelY } = data;
-      sendWheelReport({ wheelY });
+      const { wheelX, wheelY } = data;
+      sendWheelReport({ wheelX, wheelY });
     },
     [sendWheelReport]
   );
@@ -1452,9 +1510,7 @@ const KVMControlPage = () => {
 
       try {
         const fallbackPos =
-          typeof x === 'number' && typeof y === 'number'
-            ? { x, y }
-            : { x: 16383, y: 16383 };
+          typeof x === 'number' && typeof y === 'number' ? { x, y } : { x: 16383, y: 16383 };
         const currentPos = fallbackPos;
 
         // First click
@@ -1479,8 +1535,7 @@ const KVMControlPage = () => {
     [sendAbsMouseReport]
   );
 
-  const mouseEventsEnabled =
-    (isChannelReady || peerState === 'connected') && !ocrEnabled;
+  const mouseEventsEnabled = (isChannelReady || peerState === 'connected') && !ocrEnabled;
   useMouseEvents({
     videoRef: mouseVideoRef,
     videoWidth,
@@ -1488,6 +1543,7 @@ const KVMControlPage = () => {
     enabled: mouseEventsEnabled,
     mode: mouseInputMode,
     scrollThrottling,
+    invertScroll: false,
     jiggler,
     onAbsMove: handleAbsMove,
     onRelMove: handleRelMove,
@@ -1530,6 +1586,11 @@ const KVMControlPage = () => {
                   // Start restart process and display countdown
                   setIsRestarting(true);
                   setRestartCountdown(countdown);
+                  window.setTimeout(() => {
+                    remoteScreenRef.current?.disconnect?.();
+                    resetRTC();
+                    setAllowWebSocketConnection(false);
+                  }, 300);
                 } else {
                   // Reconnect immediately
                   void reconnectWithGuardRef.current({
@@ -1553,9 +1614,7 @@ const KVMControlPage = () => {
                 className={cn('fullscreen-hidden', isFullScreen && 'hidden')}
               >
                 <ControlToolbar
-                  onKeyboardLayoutClick={() =>
-                    setKeyboardEnabled(!keyboardEnabled)
-                  }
+                  onKeyboardLayoutClick={() => setKeyboardEnabled(!keyboardEnabled)}
                   keyboardEnabled={false}
                   inputEventsEnabled={true}
                   terminalEnabled={terminalEnabled}
@@ -1593,10 +1652,7 @@ const KVMControlPage = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className={cn(
-                      'fullscreen-hidden',
-                      isFullScreen && 'hidden'
-                    )}
+                    className={cn('fullscreen-hidden', isFullScreen && 'hidden')}
                   >
                     <ControlSidebar
                       rpc={rpc}
@@ -1623,10 +1679,10 @@ const KVMControlPage = () => {
                   <SlidePanel
                     open={true}
                     side="left"
-                    width={visibleConnectionStats ? 450 : 0}
+                    width={visibleConnectionStats ? 'min(450px, calc(100vw - 48px))' : 0}
                     duration={300}
                     position="inline"
-                    contentClassName="h-full shrink-0"
+                    contentClassName="h-full shrink-0 min-w-0"
                   >
                     {visibleConnectionStats && (
                       <StreamAnalytics
@@ -1640,9 +1696,7 @@ const KVMControlPage = () => {
                   <SlidePanel
                     open={true}
                     side="left"
-                    width={
-                      visibleSettings ? 'min(700px,  calc(100vw - 40px))' : 0
-                    }
+                    width={visibleSettings ? 'min(700px,  calc(100vw - 40px))' : 0}
                     duration={300}
                     position="inline"
                     contentClassName="h-full shrink-0"
@@ -1664,7 +1718,7 @@ const KVMControlPage = () => {
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
                   <div className="flex flex-col items-center gap-4 text-center p-8">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                    <h2 className="text-xl font-semibold text-white">
+                    <h2 className="text-xl font-semibold text-text">
                       {t('restart.title', {
                         defaultValue: 'Device Restarting',
                       })}
@@ -1676,7 +1730,7 @@ const KVMControlPage = () => {
                       })}
                     </p>
                     <button
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-text rounded-md transition-colors"
                       onClick={() => {
                         void reconnectWithGuard({
                           delayMs: 200,
@@ -1692,9 +1746,7 @@ const KVMControlPage = () => {
               {/* xddd    isFullScreen ? 'fixed inset-0 z-[9998] h-screen w-screen' : 'h-full'*/}
               {serverUrl && allowWebSocketConnection && iceServers ? (
                 <div
-                  className={cn(
-                    'flex-1 min-w-0 relative overflow-hidden bg-(--bg-primary) h-full'
-                  )}
+                  className={cn('flex-1 min-w-0 relative overflow-hidden bg-(--bg-primary) h-full')}
                 >
                   {/* Fullscreen Floating Toolbar - Only shown in fullscreen mode */}
 
@@ -1703,8 +1755,7 @@ const KVMControlPage = () => {
                     className="w-full overflow-hidden transition-[height] duration-300 ease-in-out"
                     style={{
                       height: `calc(100% - ${
-                        (keyboardDisplayMode === 'docked' &&
-                        visibleVirtualKeyboard
+                        (keyboardDisplayMode === 'docked' && visibleVirtualKeyboard
                           ? keyboardHeight
                           : 0) + (visibleTerminal && !terminalOverlay ? 344 : 0)
                       }px)`,
@@ -1713,9 +1764,7 @@ const KVMControlPage = () => {
                     <AspectRatioContainer
                       className={cn(
                         'w-full overflow-hidden transition-all duration-300 ease-in-out',
-                        isFullScreen
-                          ? 'h-full w-full'
-                          : 'h-(--dynamic-height)'
+                        isFullScreen ? 'h-full w-full' : 'h-(--dynamic-height)'
                       )}
                       fillParent={false}
                     >
@@ -1735,20 +1784,31 @@ const KVMControlPage = () => {
                         captureAudio={true}
                         onPeerConnection={pc => {
                           clearUploads();
+                          terminalChannelRef.current = null;
+                          setTerminalMountKey(key => key + 1);
+                          setTerminalChannel(null);
+                          setRpcDataChannel(null);
+                          setSerialChannel(null);
+                          setDiskChannel(null);
+                          setRtcField('inputChannel', null);
+                          setRtcField('inputUnstableChannel', null);
                           setRtcField('peerConnection', pc);
                         }}
                         onDataChannels={channels => {
+                          if (terminalChannelRef.current !== channels.terminal) {
+                            terminalChannelRef.current = channels.terminal;
+                            setTerminalMountKey(key => key + 1);
+                          }
                           setTerminalChannel(channels.terminal);
                           setRpcDataChannel(channels.rpc);
                           setSerialChannel(channels.serial);
                           setDiskChannel(channels.disk);
                           setRtcField('inputChannel', channels.input);
+                          setRtcField('inputUnstableChannel', channels.inputUnstable);
                         }}
                         onPeerConnectionStateChange={state => {
                           setRtcField('peerConnectionState', state);
-                          if (
-                            ['disconnected', 'failed', 'closed'].includes(state)
-                          ) {
+                          if (['disconnected', 'failed', 'closed'].includes(state)) {
                             resetHID();
                             // Dismiss update dialog upon device disconnection
                             resetOtaState();
@@ -1774,83 +1834,83 @@ const KVMControlPage = () => {
                     style={
                       {
                         '--keyboard-height': `${
-                          (keyboardDisplayMode === 'docked' &&
-                          visibleVirtualKeyboard
+                          (keyboardDisplayMode === 'docked' && visibleVirtualKeyboard
                             ? keyboardHeight
-                            : 0) +
-                          (visibleTerminal && !terminalOverlay ? 344 : 0)
+                            : 0) + (visibleTerminal && !terminalOverlay ? 344 : 0)
                         }px`,
                       } as React.CSSProperties
                     }
                   >
                     <div className="h-(--keyboard-height)" />
                     {/* Docked Virtual Keyboard */}
-                    {visibleVirtualKeyboard &&
-                      keyboardDisplayMode === 'docked' && (
-                        <VirtualKeyboard
-                          className="shrink-0 bg-(--bg-secondary)"
-                          style={keyboardStyle}
-                          onKeyDown={handleVirtualKeyDown}
-                          onKeyUp={handleVirtualKeyUp}
-                          onModifierKeyChange={handleModifierKeyChange}
-                          onHide={handleHideKeyboard}
-                          onLanguageChange={handleLanguageChange}
-                          simulateEvents={false}
-                          leftSlot={keyboardLeftSlotDocked}
-                          defaultLanguage={keyboardLanguage}
-                          {...virtualKeyboardModifierState}
-                          CapsLock={keyboardLedState?.caps_lock}
-                          modifierReleaseMode={modifierReleaseMode}
-                        />
-                      )}
+                    {visibleVirtualKeyboard && keyboardDisplayMode === 'docked' && (
+                      <VirtualKeyboard
+                        className="shrink-0 bg-(--bg-secondary)"
+                        style={keyboardStyle}
+                        onKeyDown={handleVirtualKeyDown}
+                        onKeyUp={handleVirtualKeyUp}
+                        onModifierKeyChange={handleModifierKeyChange}
+                        onHide={handleHideKeyboard}
+                        onLanguageChange={handleLanguageChange}
+                        simulateEvents={false}
+                        leftSlot={keyboardLeftSlotDocked}
+                        defaultLanguage={keyboardLanguage}
+                        locale={currentLang}
+                        {...virtualKeyboardModifierState}
+                        CapsLock={keyboardLedState?.caps_lock}
+                        modifierReleaseMode={modifierReleaseMode}
+                      />
+                    )}
 
                     {/* Terminal - always mounted in the same position.
                     When isOverlay=true the component itself switches to
                     position:fixed covering the viewport, so there is no
                     remount and xterm scrollback is preserved across toggles.
                     Content only clears on Hide. */}
-                    {visibleTerminal && (
+                    {visibleTerminal && remoteScreenRef.current && (
                       <XtermTerminal
+                        key={terminalMountKey}
                         title="Web Terminal"
                         dataChannel={terminalChannel}
                         type="terminal"
                         isOverlay={terminalOverlay}
-                        onToggleOverlay={() =>
-                          setTerminalOverlay(prev => !prev)
-                        }
+                        onToggleOverlay={() => setTerminalOverlay(prev => !prev)}
+                        onReconnectRequest={() => {
+                          remoteScreenRef.current?.reconnect?.(true);
+                        }}
                         rpc={rpc}
                       />
                     )}
                   </div>
 
                   {/* Floating Virtual Keyboard */}
-                  {keyboardDisplayMode === 'floating' &&
-                    visibleVirtualKeyboard && (
-                      <DraggablePanel
-                        title=""
-                        isOpen={true}
-                        onClose={() => setKeyboardDisplayMode('docked')}
-                        defaultPosition={{ x: 100, y: 100 }}
-                        showHeader={false}
-                        width="auto"
-                      >
-                        <VirtualKeyboard
-                          className="w-[1000px] pb-[0] bg-(--bg-secondary)"
-                          draggable={true}
-                          onKeyDown={handleVirtualKeyDown}
-                          onKeyUp={handleVirtualKeyUp}
-                          onModifierKeyChange={handleModifierKeyChange}
-                          onHide={handleHideKeyboard}
-                          onLanguageChange={handleLanguageChange}
-                          simulateEvents={false}
-                          leftSlot={keyboardLeftSlotFloating}
-                          defaultLanguage={keyboardLanguage}
-                          {...virtualKeyboardModifierState}
-                          CapsLock={keyboardLedState?.caps_lock}
-                          modifierReleaseMode={modifierReleaseMode}
-                        />
-                      </DraggablePanel>
-                    )}
+                  {keyboardDisplayMode === 'floating' && visibleVirtualKeyboard && (
+                    <DraggablePanel
+                      title=""
+                      isOpen={true}
+                      onClose={() => setKeyboardDisplayMode('docked')}
+                      defaultPosition={{ x: 100, y: 100 }}
+                      showHeader={false}
+                      width="auto"
+                    >
+                      <VirtualKeyboard
+                        className="w-[1000px] pb-[0] bg-(--bg-secondary)"
+                        draggable={true}
+                        onKeyDown={handleVirtualKeyDown}
+                        onKeyUp={handleVirtualKeyUp}
+                        onModifierKeyChange={handleModifierKeyChange}
+                        onHide={handleHideKeyboard}
+                        onLanguageChange={handleLanguageChange}
+                        simulateEvents={false}
+                        leftSlot={keyboardLeftSlotFloating}
+                        defaultLanguage={keyboardLanguage}
+                        locale={currentLang}
+                        {...virtualKeyboardModifierState}
+                        CapsLock={keyboardLedState?.caps_lock}
+                        modifierReleaseMode={modifierReleaseMode}
+                      />
+                    </DraggablePanel>
+                  )}
 
                   {/* Fullscreen-only: draggable paste button + on-demand paste panel */}
                   {/* {isFullScreen && !fsPasteOpen && (
@@ -1953,10 +2013,10 @@ const KVMControlPage = () => {
                   <SlidePanel
                     open={true}
                     side="right"
-                    width={visibleConnectionStats ? 450 : 0}
+                    width={visibleConnectionStats ? 'min(450px, 100vw)' : 0}
                     duration={300}
                     position="inline"
-                    contentClassName="h-full shrink-0"
+                    contentClassName="h-full shrink-0 min-w-0"
                   >
                     {visibleConnectionStats && (
                       <StreamAnalytics
@@ -1986,11 +2046,8 @@ const KVMControlPage = () => {
               )}
             </div>
           </motion.div>
-          {showStatusBar&&!isFullScreen && (
-            <SessionStatusBar
-              videoRef={mouseVideoRef}
-              peerState={peerState}
-            />
+          {showStatusBar && !isFullScreen && (
+            <SessionStatusBar videoRef={mouseVideoRef} peerState={peerState} />
           )}
 
           {/* Session Conflict Dialog */}
@@ -2012,7 +2069,7 @@ const KVMControlPage = () => {
           <SystemUpdateDialog />
           {/* Post-update reconnection overlay */}
           <ReconnectOverlay />
-          {/* <VlanPendingConfirmDialog /> */}
+          {!showSessionConflictDialog && isChannelReady && <VlanPendingConfirmDialog />}
         </ConfirmDialogProvider>
       </FullscreenPortalProvider>
     </div>

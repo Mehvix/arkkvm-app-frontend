@@ -19,7 +19,8 @@ export interface OcrSelection {
 
 export interface UseOcrCaptureOptions {
   videoRef: React.RefObject<HTMLVideoElement>
-  language?: string // Recognition language, default 'eng+chi_sim' (English + Simplified Chinese)
+  /** Recognition language. Default covers English, Simplified Chinese, Vietnamese, Spanish, Czech, Portuguese, German, Dutch and French. */
+  language?: string
   onTextRecognized?: (text: string) => void
 }
 
@@ -39,7 +40,7 @@ export interface UseOcrCaptureReturn {
 
 export function useOcrCapture({
   videoRef,
-  language = 'eng+chi_sim',
+  language = 'eng+chi_sim+vie+spa+ces+por+deu+nld+fra',
   onTextRecognized,
 }: UseOcrCaptureOptions): UseOcrCaptureReturn {
   const [isSelecting, setIsSelecting] = useState(false);

@@ -1,7 +1,12 @@
+import { IconDelete1, IconReplayMusic } from '@/assets/icons';
+import { ReactComponent as IconPaused } from '@/assets/icons/Paused.svg';
 import type { TransferRow } from '@/stores/slices/fileTransferListSlice';
-import { CirclePause, Loader2, Trash2 } from 'lucide-react';
+import type { TFunction } from 'i18next';
+import { CirclePause, Loader2 } from 'lucide-react';
 import React, { useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import DataTable, { DataTableColumn } from './ui/data-table';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** Formats remaining time using transfer speed and remaining bytes. */
 function formatRemainingTime(record: TransferRow): string {
@@ -25,29 +30,33 @@ function formatRemainingTime(record: TransferRow): string {
 
 export interface TransferListProps {
   /** Transfer task rows. */
-  list: TransferRow[]
+  list: TransferRow[];
   /** Pause action callback. */
-  onPause?: (row: TransferRow) => void
+  onPause?: (row: TransferRow) => void;
   /** Remove action callback. */
-  onRemove?: (id: string) => void
+  onRemove?: (id: string) => void;
+  /** Resume action callback for paused/failed uploads. */
+  onResume?: (row: TransferRow) => void;
   /** Whether to show the actions column. */
-  showActions?: boolean
+  showActions?: boolean;
   /** Empty-state display config. */
   emptyProps?: {
-    icon?: React.ReactNode
-    title?: string
-    description?: string
-    className?: string
-  }
+    icon?: React.ReactNode;
+    title?: string;
+    description?: string;
+    className?: string;
+  };
   /** Optional custom class name. */
-  className?: string
+  className?: string;
 }
 
 /** Renders action buttons for a transfer row. */
 const renderActions = (
   record: TransferRow,
+  t: TFunction,
   onPause?: (row: TransferRow) => void,
   onRemove?: (id: string) => void,
+  onResume?: (row: TransferRow) => void,
   pausingIds?: Set<string>,
   markPausingId?: (id: string) => void
 ) => {
@@ -63,7 +72,7 @@ const renderActions = (
                 ? 'opacity-50 cursor-not-allowed'
                 : 'hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
-            title="pause"
+            title={t('toolbar.virtualUsbDrive.transferAction.pause')}
             onClick={() => {
               if (isPausing) return;
               markPausingId?.(record.id);
@@ -81,11 +90,11 @@ const renderActions = (
         {onRemove && (
           <button
             type="button"
-            className="p-1 rounded transition-colors text-red-500 opacity-50 cursor-not-allowed"
-            title="Please pause the task before deleting"
+            className="p-1 rounded transition-colors opacity-50 cursor-not-allowed"
+            title={t('toolbar.virtualUsbDrive.transferAction.pauseBeforeDelete')}
             disabled={true}
           >
-            <Trash2 className="w-4 h-4" />
+            <IconDelete1 className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -93,14 +102,37 @@ const renderActions = (
   }
   if (record.state === 'paused' || record.state === 'failed' || record.state === 'pending') {
     return (
-      <button
-        type="button"
-        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-red-500"
-        title="delete"
-        onClick={() => onRemove?.(record.id)}
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+      <div className="flex items-center gap-1">
+        {onResume && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className={`p-1 rounded transition-colors ${
+                  record.state === 'pending'
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => onResume(record)}
+                disabled={record.state === 'pending'}
+              >
+                <IconReplayMusic className="w-4 h-4 cursor-pointer" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className='z-9999'>{t('virtualMedia:storageDialog.resumeFallback')}</TooltipContent>
+          </Tooltip>
+        )}
+        {onRemove && (
+          <button
+            type="button"
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            onClick={() => onRemove(record.id)}
+          >
+            <IconDelete1 className="w-4 h-4 cursor-pointer" />
+          </button>
+
+        )}
+      </div>
     );
   }
   return null;
@@ -108,14 +140,16 @@ const renderActions = (
 
 /** Builds table column definitions. */
 const getColumns = (
+  t: TFunction,
   onPause?: (row: TransferRow) => void,
   onRemove?: (id: string) => void,
+  onResume?: (row: TransferRow) => void,
   showActions: boolean = true,
   pausingIds?: Set<string>,
   markPausingId?: (id: string) => void
 ): DataTableColumn<TransferRow>[] => [
   {
-    title: 'Name',
+    title: t('toolbar.virtualUsbDrive.col.name'),
     dataIndex: 'name',
     width: '50%',
     className: 'max-w-0',
@@ -126,16 +160,17 @@ const getColumns = (
     ),
   },
   {
-    title: 'Transfer Info',
+    title: t('toolbar.virtualUsbDrive.col.transferInfo'),
     dataIndex: 'transferredFormatted',
     width: '50%',
-    render: (v, record) => {
+    render: (_v, record) => {
       const pct = record.progress ?? 0;
       const { state } = record;
       const hasProgress = pct > 0 || record.transferredFormatted;
+      const stateLabel = t(`toolbar.virtualUsbDrive.transferState.${state}`, state);
 
       // No progress data at all — show placeholder + state
-      if (!hasProgress) return `- - - / - - - · ${state}`;
+      if (!hasProgress) return `- - - / - - - · ${stateLabel}`;
 
       // Progress bar color by state
       const barColor =
@@ -153,7 +188,7 @@ const getColumns = (
         const parts = [transferred, record.speedFormatted].filter(Boolean).join(' · ');
         detail = eta ? `${parts} · ${eta}` : `${parts}`;
       } else {
-        detail = `${transferred} · ${state}`;
+        detail = `${transferred} · ${stateLabel}`;
       }
       return (
         <div className="flex flex-col gap-1">
@@ -164,9 +199,13 @@ const getColumns = (
                 style={{ '--transfer-width': `${Math.min(pct, 100)}%` } as React.CSSProperties}
               />
             </div>
-            <span className="text-[11px] tabular-nums whitespace-nowrap opacity-70">{record.progressFormatted || '0%'}</span>
+            <span className="text-[11px] tabular-nums whitespace-nowrap opacity-70">
+              {record.progressFormatted || '0%'}
+            </span>
           </div>
-          <span className="text-[11px] opacity-80 truncate" title={detail}>{detail}</span>
+          <span className="text-[11px] opacity-80 truncate" title={detail}>
+            {detail}
+          </span>
         </div>
       );
     },
@@ -175,11 +214,11 @@ const getColumns = (
   ...(showActions
     ? [
         {
-          title: 'Actions',
-          dataIndex: 'actions',
+          key: 'actions',
+          title: t('toolbar.virtualUsbDrive.col.actions'),
           align: 'left' as const,
-          render: (v: unknown, record: TransferRow) =>
-            renderActions(record, onPause, onRemove, pausingIds, markPausingId),
+          render: (_v: unknown, record: TransferRow) =>
+            renderActions(record, t, onPause, onRemove, onResume, pausingIds, markPausingId),
         },
       ]
     : []),
@@ -190,10 +229,13 @@ const TransferList: React.FC<TransferListProps> = ({
   list,
   onPause,
   onRemove,
+  onResume,
   showActions = true,
   emptyProps,
   className = '',
 }) => {
+  const { t } = useTranslation(['common', 'virtualMedia']);
+
   // Keep pausing IDs in a ref so list refreshes do not reset in-flight pause state.
   const pausingIdsRef = useRef<Set<string>>(new Set());
 
@@ -211,14 +253,8 @@ const TransferList: React.FC<TransferListProps> = ({
 
   const columns = useMemo(
     () =>
-      getColumns(
-        onPause,
-        onRemove,
-        showActions,
-        pausingIdsRef.current,
-        markPausingId
-      ),
-    [onPause, onRemove, showActions, list]
+      getColumns(t, onPause, onRemove, onResume, showActions, pausingIdsRef.current, markPausingId),
+    [t, onPause, onRemove, onResume, showActions, list]
   );
 
   return (

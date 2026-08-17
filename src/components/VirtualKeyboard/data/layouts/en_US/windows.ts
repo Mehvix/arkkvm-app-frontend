@@ -1,3 +1,4 @@
+import type { KeyboardLayout, KeyLegends } from '../../keyboard-types';
 /**
  * @Purpose:
  * @Descripttion:
@@ -9,24 +10,38 @@
  */
 import { createKeyDef } from '../../merge';
 import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
-export const US_WIN_LAYOUT = {
+const KEY_LEGENDS: Record<string, KeyLegends> = {
+  Backquote: { fn: 'F1' },
+  Digit1: { fn: 'F2' },
+  Digit2: { fn: 'F3' },
+  Digit3: { fn: 'F4' },
+  Digit4: { fn: 'F5' },
+  Digit5: { fn: 'F6' },
+  Digit6: { fn: 'F7' },
+  Digit7: { fn: 'F8' },
+  Digit8: { fn: 'F9' },
+  Digit9: { fn: 'F10' },
+  Digit0: { fn: 'F11' },
+  Minus: { fn: 'F12' },
+};
+export const US_WIN_LAYOUT: KeyboardLayout = {
   id: 'us-win',
   name: 'English (US)',
   rows: [
     FUNCTION_KEYS_ROW,
     [
-      createKeyDef('Backquote', { fn: 'F1' }),
-      createKeyDef('Digit1', { fn: 'F2' }),
-      createKeyDef('Digit2', { fn: 'F3' }),
-      createKeyDef('Digit3', { fn: 'F4' }),
-      createKeyDef('Digit4', { fn: 'F5' }),
-      createKeyDef('Digit5', { fn: 'F6' }),
-      createKeyDef('Digit6', { fn: 'F7' }),
-      createKeyDef('Digit7', { fn: 'F8' }),
-      createKeyDef('Digit8', { fn: 'F9' }),
-      createKeyDef('Digit9', { fn: 'F10' }),
-      createKeyDef('Digit0', { fn: 'F11' }),
-      createKeyDef('Minus', { fn: 'F12' }),
+      createKeyDef('Backquote', KEY_LEGENDS.Backquote),
+      createKeyDef('Digit1', KEY_LEGENDS.Digit1),
+      createKeyDef('Digit2', KEY_LEGENDS.Digit2),
+      createKeyDef('Digit3', KEY_LEGENDS.Digit3),
+      createKeyDef('Digit4', KEY_LEGENDS.Digit4),
+      createKeyDef('Digit5', KEY_LEGENDS.Digit5),
+      createKeyDef('Digit6', KEY_LEGENDS.Digit6),
+      createKeyDef('Digit7', KEY_LEGENDS.Digit7),
+      createKeyDef('Digit8', KEY_LEGENDS.Digit8),
+      createKeyDef('Digit9', KEY_LEGENDS.Digit9),
+      createKeyDef('Digit0', KEY_LEGENDS.Digit0),
+      createKeyDef('Minus', KEY_LEGENDS.Minus),
       createKeyDef('Equal'),
       createKeyDef('Backspace', undefined, { width: 1.5 }),
     ],

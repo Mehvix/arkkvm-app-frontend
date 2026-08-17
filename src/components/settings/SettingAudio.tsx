@@ -7,7 +7,7 @@ import {
 } from '@/stores/devicesStore';
 import { isBoolean } from '@/utils/is';
 import { createLogger } from '@/utils/logger';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select } from '../ui/select';
@@ -124,16 +124,16 @@ export default function SettingAudio() {
 
           toast.success(
             enabled
-              ? 'Microphone emulation enabled'
-              : 'Microphone emulation disabled'
+              ? t('settings:audio.microphoneEmulation.toast.enabled')
+              : t('settings:audio.microphoneEmulation.toast.disabled')
           );
         } else {
           logger.warn('Failed to update microphone emulation:', response);
-          toast.error('Failed to update microphone emulation');
+          toast.error(t('settings:audio.microphoneEmulation.toast.failed'));
         }
       } catch (error) {
         logger.error('Error toggling microphone emulation:', error);
-        toast.error('Failed to update microphone emulation');
+        toast.error(t('settings:audio.microphoneEmulation.toast.failed'));
       } finally {
         stop('microphoneEmulation');
       }
@@ -153,14 +153,14 @@ export default function SettingAudio() {
           setStreamQuality(quality);
           setDeviceSetting('streamQuality', quality);
           logger.info('Audio quality updated:', quality);
-          toast.success('Audio quality updated successfully');
+          toast.success(t('settings:audio.streamQuality.toast.updated'));
         } else {
           logger.warn('Failed to update audio quality:', response);
-          toast.error('Failed to update audio quality');
+          toast.error(t('settings:audio.streamQuality.toast.failed'));
         }
       } catch (error) {
         logger.error('Error changing audio quality:', error);
-        toast.error('Failed to update audio quality');
+        toast.error(t('settings:audio.streamQuality.toast.failed'));
       }
     },
     [sendAsync, setDeviceSetting]
@@ -189,21 +189,33 @@ export default function SettingAudio() {
           setDeviceSetting('showAudioPlaybackUI', enabled);
           logger.info('Audio playback updated:', enabled);
           toast.success(
-            enabled ? 'Audio playback enabled' : 'Audio playback disabled'
+            enabled ? t('settings:audio.playback.toast.enabled') : t('settings:audio.playback.toast.disabled')
           );
         } else {
           logger.warn('Failed to update audio playback:', response);
-          toast.error('Failed to update audio playback');
+          toast.error(t('settings:audio.playback.toast.failed'));
         }
       } catch (error) {
         logger.error('Error toggling audio playback:', error);
-        toast.error('Failed to update audio playback');
+        toast.error(t('settings:audio.playback.toast.failed'));
       } finally {
         stop('showAudioPlaybackUI');
       }
     },
     [sendAsync, setDeviceSetting, start, stop]
   );
+  const streamQualityOptionsMemo = useMemo(
+    () => streamQualityOptions.map(o => ({
+      ...o,
+      value: String(o.value),
+      label:
+        o.value === 1 ? t('settings:audio.streamQuality.high') :
+        o.value === 0.5 ? t('settings:audio.streamQuality.medium') :
+        t('settings:audio.streamQuality.low'),
+    })),
+    [t]
+  );
+
   return (
     <SettingPageContainer
       title={t('settings:pages.audio.title')}
@@ -231,7 +243,7 @@ export default function SettingAudio() {
             size="xs"
             value={String(streamQuality)}
             onChange={changeStreamQuality}
-            options={streamQualityOptions}
+            options={streamQualityOptionsMemo}
 
           />
         </SettingBlock.Right>

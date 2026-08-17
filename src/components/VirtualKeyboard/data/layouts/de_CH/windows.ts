@@ -1,5 +1,7 @@
+import type { KeyboardLayout, KeyLegends } from '../../keyboard-types';
 import { createKeyDef } from '../../merge';
-import { FUNCTION_KEYS_ROW, RIGHT_PANEL_ROWS } from '../../rows';
+import { FUNCTION_KEYS_ROW } from '../../rows';
+import { deCHMeta as LAYOUT_META } from '../meta';
 
 /**
  * Swiss German dead key definitions (for diacritic character combinations)
@@ -14,140 +16,205 @@ const DEAD_KEY_ACUTE = { code: 'Quote' }; // ´ acute accent
  * Swiss German AltGr character mapping
  * Swiss keyboard emphasizes multilingual support (German, French, Italian)
  */
-const DE_CH_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> =
-  {
-    // Top row number keys
-    Digit1: { altGr: '¦' }, // AltGr+1 -> ¦ (broken bar)
-    Digit2: { altGr: '@' }, // AltGr+2 -> @
-    Digit3: { altGr: '#' }, // AltGr+3 -> #
-    Digit4: { altGr: '°' }, // AltGr+4 -> °
-    Digit5: { altGr: '§' }, // AltGr+5 -> §
-    Digit6: { altGr: '¬' }, // AltGr+6 -> ¬
-    Digit7: { altGr: '|' }, // AltGr+7 -> |
-    Digit8: { altGr: '¢' }, // AltGr+8 -> ¢
-    Digit9: { altGr: '\'' }, // AltGr+9 -> '
-    Digit0: { altGr: '\'' }, // AltGr+0 -> '
-    Equal: { altGr: '{' }, // AltGr+^ -> {
-    Backquote: { altGr: '}' }, // AltGr+§ -> }
-    Minus:{altGr: '´'},
-    Equal:{altGr:'~'},
-    // Letter area
-    KeyE: { altGr: '€' }, // AltGr+E -> €
-    BracketLeft: { altGr: '[' }, // AltGr+ü -> [
-    BracketRight: { altGr: ']' }, // AltGr+¨ -> ]
+const DE_CH_ALTGR: Record<string, { altGr?: string; 'shift+altGr'?: string }> = {
+  // Top row number keys
+  Digit1: { altGr: '¦' }, // AltGr+1 -> ¦ (broken bar)
+  Digit2: { altGr: '@' }, // AltGr+2 -> @
+  Digit3: { altGr: '#' }, // AltGr+3 -> #
+  Digit4: { altGr: '°' }, // AltGr+4 -> °
+  Digit5: { altGr: '§' }, // AltGr+5 -> §
+  Digit6: { altGr: '¬' }, // AltGr+6 -> ¬
+  Digit7: { altGr: '|' }, // AltGr+7 -> |
+  Digit8: { altGr: '¢' }, // AltGr+8 -> ¢
+  Digit9: { altGr: '\'' }, // AltGr+9 -> '
+  Digit0: { altGr: '\'' }, // AltGr+0 -> '
+  Equal: { altGr: '{' }, // AltGr+^ -> {
+  Backquote: { altGr: '}' }, // AltGr+§ -> }
+  Minus: { altGr: '´' },
+  // Letter area
+  KeyE: { altGr: '€' }, // AltGr+E -> €
+  BracketLeft: { altGr: '[' }, // AltGr+ü -> [
+  BracketRight: { altGr: ']' }, // AltGr+¨ -> ]
 
-    Quote: { altGr: '{' }, //
-    Backslash: { altGr: '}' },
-    // ISO extra key
-    IntlBackslash: { altGr: '\\' }, // AltGr+< -> \
-  };
+  Quote: { altGr: '{' }, //
+  Backslash: { altGr: '}' },
+  // ISO extra key
+  IntlBackslash: { altGr: '\\' }, // AltGr+< -> \
+};
 
 // ✅ Swiss German (Windows) — Swiss German QWERTZ keyboard layout
-export const DE_CH_WIN_LAYOUT = {
-  id: 'de-ch-win',
-  name: 'Deutsch (Schweiz)',
+const KEY_LEGENDS: Record<string, KeyLegends> = {
+  Tab: { base: 'TAB' },
+  Backquote: {
+    base: '§',
+    shift: '°',
+  },
+  Digit1: {
+    base: '1',
+    shift: '+',
+    ...DE_CH_ALTGR.Digit1,
+  },
+  Digit2: {
+    base: '2',
+    shift: '"',
+    ...DE_CH_ALTGR.Digit2,
+  },
+  Digit3: {
+    base: '3',
+    shift: '*',
+    ...DE_CH_ALTGR.Digit3,
+  },
+  Digit4: {
+    base: '4',
+    shift: 'ç',
+    ...DE_CH_ALTGR.Digit4,
+  },
+  Digit5: {
+    base: '5',
+    shift: '%',
+    ...DE_CH_ALTGR.Digit5,
+  },
+  Digit6: {
+    base: '6',
+    shift: '&',
+    ...DE_CH_ALTGR.Digit6,
+  },
+  Digit7: {
+    base: '7',
+    shift: '/',
+    ...DE_CH_ALTGR.Digit7,
+  },
+  Digit8: {
+    base: '8',
+    shift: '(',
+    ...DE_CH_ALTGR.Digit8,
+  },
+  Digit9: {
+    base: '9',
+    shift: ')',
+  },
+  Digit0: {
+    base: '0',
+    shift: '=',
+  },
+  Minus: { base: '\'', shift: '?', ...DE_CH_ALTGR.Minus },
+  Equal: { base: '^', shift: '`', ...DE_CH_ALTGR.Equal },
+  KeyY: { base: 'z', shift: 'Z' },
+  BracketLeft: {
+    base: 'ü',
+    shift: 'è',
+    ...DE_CH_ALTGR.BracketLeft,
+  },
+  BracketRight: {
+    base: '¨',
+    shift: '!',
+    ...DE_CH_ALTGR.BracketRight,
+  },
+  Semicolon: {
+    base: 'ö',
+    shift: 'é',
+  },
+  Quote: {
+    base: 'ä',
+    shift: 'à',
+    ...DE_CH_ALTGR.Quote,
+  },
+  Backslash: { base: '$', shift: '£', ...DE_CH_ALTGR.Backslash },
+  IntlBackslash: {
+    base: '<',
+    shift: '>',
+    ...DE_CH_ALTGR.IntlBackslash,
+  },
+  KeyZ: { base: 'y', shift: 'Y' },
+  Comma: { base: ',', shift: ';' },
+  Period: { base: '.', shift: ':' },
+  Slash: { base: '-', shift: '_' },
+  CapsLock: { base: 'Fest' },
+  ShiftLeft: { base: 'Umsch' },
+  ShiftRight: { base: 'Umsch' },
+  Enter: { base: 'Eingabe' },
+  Delete: { base: 'Entf' },
+  ControlLeft: { base: 'Strg' },
+  AltGr: { base: 'Alt Gr' },
+  ControlRight: { base: 'Strg' },
+  Insert: { base: 'Einfg' },
+  Home: { base: 'Pos1' },
+  PageUp: { base: 'Bild↑' },
+  End: { base: 'Ende' },
+  PageDown: { base: 'Bild↓' },
+  PrintScreen: { base: 'Druck' },
+  ScrollLock: { base: 'Rollen' },
+};
+
+const DE_CH_RIGHT_PANEL_ROWS = [
+  [
+    createKeyDef('Insert', KEY_LEGENDS.Insert),
+    createKeyDef('Home', KEY_LEGENDS.Home),
+    createKeyDef('PageUp', KEY_LEGENDS.PageUp),
+  ],
+  [
+    createKeyDef('Delete', KEY_LEGENDS.Delete),
+    createKeyDef('End', KEY_LEGENDS.End),
+    createKeyDef('PageDown', KEY_LEGENDS.PageDown),
+  ],
+  [
+    createKeyDef('PrintScreen', KEY_LEGENDS.PrintScreen),
+    createKeyDef('ScrollLock', KEY_LEGENDS.ScrollLock),
+    createKeyDef('Pause'),
+  ],
+  [createKeyDef('__vk_spacer__placeholder1', { base: '' })],
+  [
+    createKeyDef('__vk_spacer__arrowUpLeft', { base: '' }),
+    createKeyDef('ArrowUp', { base: '⌃' }),
+    createKeyDef('__vk_spacer__arrowUpRight', { base: '' }),
+  ],
+  [
+    createKeyDef('ArrowLeft', { base: '‹' }),
+    createKeyDef('ArrowDown', { base: '⌄' }),
+    createKeyDef('ArrowRight', { base: '›' }),
+  ],
+];
+
+export const DE_CH_WIN_LAYOUT: KeyboardLayout = {
+  id: LAYOUT_META.id,
+  name: LAYOUT_META.name,
   rows: [
     FUNCTION_KEYS_ROW,
     [
-      createKeyDef('Backquote', {
-        base: '§',
-        shift: '°',
-      }),
-      createKeyDef('Digit1', {
-        base: '1',
-        shift: '+',
-        caps: '1',
-        ...DE_CH_ALTGR.Digit1,
-      }),
-      createKeyDef('Digit2', {
-        base: '2',
-        shift: '"',
-        caps: '2',
-        ...DE_CH_ALTGR.Digit2,
-      }),
-      createKeyDef('Digit3', {
-        base: '3',
-        shift: '*',
-        caps: '3',
-        ...DE_CH_ALTGR.Digit3,
-      }),
-      createKeyDef('Digit4', {
-        base: '4',
-        shift: 'ç',
-        caps: '4',
-        ...DE_CH_ALTGR.Digit4,
-      }),
-      createKeyDef('Digit5', {
-        base: '5',
-        shift: '%',
-        caps: '5',
-        ...DE_CH_ALTGR.Digit5,
-      }),
-      createKeyDef('Digit6', {
-        base: '6',
-        shift: '&',
-        caps: '6',
-        ...DE_CH_ALTGR.Digit6,
-      }),
-      createKeyDef('Digit7', {
-        base: '7',
-        shift: '/',
-        caps: '7',
-        ...DE_CH_ALTGR.Digit7,
-      }),
-      createKeyDef('Digit8', {
-        base: '8',
-        shift: '(',
-        caps: '8',
-        ...DE_CH_ALTGR.Digit8,
-      }),
-      createKeyDef('Digit9', {
-        base: '9',
-        shift: ')',
-        caps: '9',
-
-      }),
-      createKeyDef('Digit0', {
-        base: '0',
-        shift: '=',
-        caps: '0',
-
-      }),
-      createKeyDef('Minus', { base: '\'', shift: '?' ,  ...DE_CH_ALTGR.Minus,}),
-      createKeyDef('Equal', { base: '^', shift: '`',  ...DE_CH_ALTGR.Equal, }),
+      createKeyDef('Backquote', KEY_LEGENDS.Backquote),
+      createKeyDef('Digit1', KEY_LEGENDS.Digit1),
+      createKeyDef('Digit2', KEY_LEGENDS.Digit2),
+      createKeyDef('Digit3', KEY_LEGENDS.Digit3),
+      createKeyDef('Digit4', KEY_LEGENDS.Digit4),
+      createKeyDef('Digit5', KEY_LEGENDS.Digit5),
+      createKeyDef('Digit6', KEY_LEGENDS.Digit6),
+      createKeyDef('Digit7', KEY_LEGENDS.Digit7),
+      createKeyDef('Digit8', KEY_LEGENDS.Digit8),
+      createKeyDef('Digit9', KEY_LEGENDS.Digit9),
+      createKeyDef('Digit0', KEY_LEGENDS.Digit0),
+      createKeyDef('Minus', KEY_LEGENDS.Minus),
+      createKeyDef('Equal', KEY_LEGENDS.Equal),
       createKeyDef('Backspace', undefined, { width: 1.5 }),
     ],
     [
-      createKeyDef('Tab', undefined, { width: 1.5 }),
+      createKeyDef('Tab', KEY_LEGENDS.Tab, { width: 1.5 }),
       createKeyDef('KeyQ', DE_CH_ALTGR.KeyQ),
       createKeyDef('KeyW'),
       createKeyDef('KeyE', DE_CH_ALTGR.KeyE),
       createKeyDef('KeyR'),
       createKeyDef('KeyT'),
 
-       createKeyDef('KeyY', { base: 'z', shift: 'Z' }),
+      createKeyDef('KeyY', KEY_LEGENDS.KeyY),
       createKeyDef('KeyU'),
       createKeyDef('KeyI'),
       createKeyDef('KeyO'),
       createKeyDef('KeyP'),
-      createKeyDef(
-        'BracketLeft',
-        {
-          base: 'ü',
-          shift: 'è',
-          ...DE_CH_ALTGR.BracketLeft,
-        },
-        { showDualState: false }
-      ),
-      createKeyDef('BracketRight', {
-        base: '¨',
-        shift: '!',
-        ...DE_CH_ALTGR.BracketRight,
-      }),
-      createKeyDef('Delete'),
+      createKeyDef('BracketLeft', KEY_LEGENDS.BracketLeft, { showDualState: false }),
+      createKeyDef('BracketRight', KEY_LEGENDS.BracketRight),
+      createKeyDef('Delete', KEY_LEGENDS.Delete),
     ],
     [
-      createKeyDef('CapsLock',undefined , { width: 1.8 }),
+      createKeyDef('CapsLock', KEY_LEGENDS.CapsLock, { width: 1.8 }),
       createKeyDef('KeyA'),
       createKeyDef('KeyS'),
       createKeyDef('KeyD'),
@@ -157,57 +224,37 @@ export const DE_CH_WIN_LAYOUT = {
       createKeyDef('KeyJ'),
       createKeyDef('KeyK'),
       createKeyDef('KeyL'),
-      createKeyDef(
-        'Semicolon',
-        {
-          base: 'ö',
-          shift: 'é',
-
-        },
-        { showDualState: false }
-      ),
-      createKeyDef(
-        'Quote',
-        {
-          base: 'ä',
-          shift: 'à',
-          ...DE_CH_ALTGR.Quote,
-        },
-        { showDualState: false }
-      ),
-      createKeyDef('Backslash', { base: '$', shift: '£',  ...DE_CH_ALTGR.Backslash }),
-      createKeyDef('Enter', undefined, { width: 1.8 }),
+      createKeyDef('Semicolon', KEY_LEGENDS.Semicolon, { showDualState: false }),
+      createKeyDef('Quote', KEY_LEGENDS.Quote, { showDualState: false }),
+      createKeyDef('Backslash', KEY_LEGENDS.Backslash),
+      createKeyDef('Enter', KEY_LEGENDS.Enter, { width: 1.8 }),
     ],
     [
-      createKeyDef('ShiftLeft',undefined, { width: 1.3 }),
-      createKeyDef('IntlBackslash', {
-        base: '<',
-        shift: '>',
-        ...DE_CH_ALTGR.IntlBackslash,
-      }),
-     createKeyDef('KeyZ', { base: 'y', shift: 'Y' }),
+      createKeyDef('ShiftLeft', KEY_LEGENDS.ShiftLeft, { width: 1.3 }),
+      createKeyDef('IntlBackslash', KEY_LEGENDS.IntlBackslash),
+      createKeyDef('KeyZ', KEY_LEGENDS.KeyZ),
       createKeyDef('KeyX'),
       createKeyDef('KeyC'),
       createKeyDef('KeyV'),
       createKeyDef('KeyB'),
       createKeyDef('KeyN'),
       createKeyDef('KeyM'),
-      createKeyDef('Comma', { base: ',', shift: ';' }),
-      createKeyDef('Period', { base: '.', shift: ':' }),
-      createKeyDef('Slash', { base: '-', shift: '_' }),
-      createKeyDef('ShiftRight',undefined, { width: 2.7 }),
+      createKeyDef('Comma', KEY_LEGENDS.Comma),
+      createKeyDef('Period', KEY_LEGENDS.Period),
+      createKeyDef('Slash', KEY_LEGENDS.Slash),
+      createKeyDef('ShiftRight', KEY_LEGENDS.ShiftRight, { width: 2.7 }),
     ],
     [
-      createKeyDef('ControlLeft', undefined, { width: 1.2 }),
+      createKeyDef('ControlLeft', KEY_LEGENDS.ControlLeft, { width: 1.2 }),
       createKeyDef('MetaLeft'),
       createKeyDef('AltLeft'),
       createKeyDef('Space', undefined, { width: 6 }),
-      createKeyDef('AltGr'),
-      createKeyDef('ControlRight', undefined),
+      createKeyDef('AltGr', KEY_LEGENDS.AltGr),
+      createKeyDef('ControlRight', KEY_LEGENDS.ControlRight),
       createKeyDef('ContextMenu'),
     ],
   ],
-  rightPanel: RIGHT_PANEL_ROWS,
+  rightPanel: DE_CH_RIGHT_PANEL_ROWS,
   extraChars: {
     // Swiss German special characters (directly typable, no dead key required)
     ß: { code: 'Minus', mod: ['AltRight'] }, // AltGr+' -> ß

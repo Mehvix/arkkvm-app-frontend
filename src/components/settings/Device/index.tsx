@@ -2,7 +2,7 @@
  * @Author: zhanglei
  * @Date: 2026-06-04 17:45:28
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-06-16 18:11:52
+ * @LastEditTime: 2026-08-12 17:51:01
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,58 +30,56 @@ import {
   UsbDeviceSwitchGroup,
 } from '@/components';
 import type { UsbConfigFormRef } from '@/components/settings/Device/UsbConfigForm';
-import {
-  getUsbMouseOption,
-} from '../UsbMouseModeSync';
+import { getUsbMouseOption } from '../UsbMouseModeSync';
 import { useAppStore } from '@/stores';
 import type { JsonRpcErrorResponse } from '@/api/rpc/types';
 
 type JsonRpcCall = {
-  method: string
-  params?: unknown
-}
+  method: string;
+  params?: unknown;
+};
 
 type SendAsync = (
   call: JsonRpcCall,
   opts?: Record<string, unknown>
-) => Promise<{ success: boolean; result?: unknown; error?: { message?: string; data?: string } }>
+) => Promise<{ success: boolean; result?: unknown; error?: { message?: string; data?: string } }>;
 
 type LoadingController = {
-  start: (key: string) => void
-  stop: (key: string) => void
-}
+  start: (key: string) => void;
+  stop: (key: string) => void;
+};
 
 type BacklightState = {
-  max_brightness?: number
-  dim_after?: number
-  off_after?: number
-}
+  max_brightness?: number;
+  dim_after?: number;
+  off_after?: number;
+};
 
-type SetDeviceSetting = (key: string, val: unknown) => void
+type SetDeviceSetting = (key: string, val: unknown) => void;
 
 type DeviceApiContext = LoadingController & {
-  isChannelReady: boolean
-  setDeviceSetting: SetDeviceSetting
-  backlightSettings: BacklightState
-  usbPreset: string
-  setUsbPreset: (val: string) => void
-  setUsbConfigState: (val: USBConfig) => void
-  setUsbIdentifierPreset: (val: string) => void
-  activeDeviceId: string | null
-  showUnhandledErrorToast?: boolean
-}
+  isChannelReady: boolean;
+  setDeviceSetting: SetDeviceSetting;
+  backlightSettings: BacklightState;
+  usbPreset: string;
+  setUsbPreset: (val: string) => void;
+  setUsbConfigState: (val: USBConfig) => void;
+  setUsbIdentifierPreset: (val: string) => void;
+  activeDeviceId: string | null;
+  showUnhandledErrorToast?: boolean;
+};
 
 type UsbPreset = {
-  labelKey: string
-  value: string
-  config?: UsbDeviceConfig
-}
+  labelKey: string;
+  value: string;
+  config?: UsbDeviceConfig;
+};
 
 type UsbIdentifierPreset = {
-  labelKey: string
-  value: string
-  config?: USBConfig
-}
+  labelKey: string;
+  value: string;
+  config?: USBConfig;
+};
 
 const LOADING_KEYS = [
   'setFileTransfer',
@@ -108,12 +106,23 @@ const USB_PRESETS: UsbPreset[] = [
     },
   },
   {
-    labelKey: 'settings:hardware.usb.devices.keyboardRelativeMouse.title',
+    labelKey: 'settings:hardware.usb.devices.presets.keyboardMouse',
     value: 'keyboard_mouse',
     config: {
       keyboard: true,
-      absolute_mouse: false,
+      absolute_mouse: true,
       relative_mouse: true,
+      mass_storage: false,
+      microphone: false,
+    },
+  },
+  {
+    labelKey: 'settings:hardware.usb.devices.presets.keyboardOnly',
+    value: 'keyboard_only',
+    config: {
+      keyboard: true,
+      absolute_mouse: false,
+      relative_mouse: false,
       mass_storage: false,
       microphone: false,
     },
@@ -145,8 +154,7 @@ const USB_IDENTIFIER_PRESETS: UsbIdentifierPreset[] = [
     },
   },
   {
-    labelKey:
-      'settings:hardware.usb.identifiers.presets.logitechUniversalAdapter',
+    labelKey: 'settings:hardware.usb.identifiers.presets.logitechUniversalAdapter',
     value: 'Logitech USB Input Device',
     config: {
       vendor_id: '0x046d',
@@ -157,8 +165,7 @@ const USB_IDENTIFIER_PRESETS: UsbIdentifierPreset[] = [
     },
   },
   {
-    labelKey:
-      'settings:hardware.usb.identifiers.presets.microsoftWirelessKeyboard',
+    labelKey: 'settings:hardware.usb.identifiers.presets.microsoftWirelessKeyboard',
     value: 'Wireless MultiMedia Keyboard',
     config: {
       vendor_id: '0x045e',
@@ -169,8 +176,7 @@ const USB_IDENTIFIER_PRESETS: UsbIdentifierPreset[] = [
     },
   },
   {
-    labelKey:
-      'settings:hardware.usb.identifiers.presets.dellMultimediaKeyboard',
+    labelKey: 'settings:hardware.usb.identifiers.presets.dellMultimediaKeyboard',
     value: 'Multimedia Pro Keyboard',
     config: {
       vendor_id: '0x413c',
@@ -229,7 +235,7 @@ function getErrorMessage(error: unknown, fallback = 'Unknown error') {
   return e?.data || e?.message || fallback;
 }
 
-type UsbConfigFieldErrors = Partial<Record<keyof USBConfig, string>>
+type UsbConfigFieldErrors = Partial<Record<keyof USBConfig, string>>;
 
 function validateUsbConfig(config: USBConfig): UsbConfigFieldErrors {
   const hexU16 = /^0x[0-9a-fA-F]{4}$/;
@@ -243,10 +249,7 @@ function validateUsbConfig(config: USBConfig): UsbConfigFieldErrors {
   return errors;
 }
 
-function resolveUsbConfig(
-  config: USBConfig,
-  activeDeviceId: string | null
-): USBConfig {
+function resolveUsbConfig(config: USBConfig, activeDeviceId: string | null): USBConfig {
   return {
     ...config,
     serial_number:
@@ -328,58 +331,44 @@ function useDeviceApi(ctx: DeviceApiContext) {
 
   return useMemo(() => {
     const raw = {
-      getGuiSettings: () =>
-        send({ method: 'getGuiSettings' }, { resultOnly: true }),
-      getUsbConfig: () =>
-        send({ method: 'getUsbConfig' }, { resultOnly: true }),
-      getUsbDevices: () =>
-        send({ method: 'getUsbDevices' }, { timeout: 10000, resultOnly: true }),
-      getFileTransfer: () =>
-        send({ method: 'getFileTransfer' }, { resultOnly: true }),
+      getGuiSettings: () => send({ method: 'getGuiSettings' }, { resultOnly: true }),
+      getUsbConfig: () => send({ method: 'getUsbConfig' }, { resultOnly: true }),
+      getUsbDevices: () => send({ method: 'getUsbDevices' }, { timeout: 10000, resultOnly: true }),
+      getFileTransfer: () => send({ method: 'getFileTransfer' }, { resultOnly: true }),
       setBacklightSettings: (params: BacklightState) =>
-        send(
-          { method: 'setBacklightSettings', params },
-          { showUnhandledErrorToast: true }
-        ),
+        send({ method: 'setBacklightSettings', params }, { showUnhandledErrorToast: true }),
       setDisplayRotation: (rotation: string) =>
         send(
           { method: 'setDisplayRotation', params: { rotation } },
           { showUnhandledErrorToast: true }
         ),
       setFileTransfer: (enabled: boolean) =>
-        send(
-          { method: 'setFileTransfer', params: { enabled } },
-          { showUnhandledErrorToast: true }
-        ),
+        send({ method: 'setFileTransfer', params: { enabled } }, { showUnhandledErrorToast: true }),
       setUsbDevices: (devices: UsbDeviceConfig) =>
         send(
           { method: 'setUsbDevices', params: { devices } },
           {
-            showUnhandledErrorToast: (_resp: JsonRpcErrorResponse) => {
-              // console.log('resp',resp);
-              // const reasonKey = getErrorReasonKey(resp.error?.data as string, {
-              //   segmentIndex: 1,
-              // });
+            showUnhandledErrorToast: true,
+            // showUnhandledErrorToast: (_resp: JsonRpcErrorResponse) => {
+            //   // console.log('resp',resp);
+            //   // const reasonKey = getErrorReasonKey(resp.error?.data as string, {
+            //   //   segmentIndex: 1,
+            //   // });
 
-              // const t = i18n.getFixedT(i18n.language);
-              //  console.log('reasonKey', reasonKey, t(`toast:${reasonKey}`));
-              return 'Cannot disable Virtual Storage while the Virtual USB Drive is mounted to the remote system. Mount it back to ArkKVM and try again. ';
-            },
+            //   // const t = i18n.getFixedT(i18n.language);
+            //   //  console.log('reasonKey', reasonKey, t(`toast:${reasonKey}`));
+            //   return 'Cannot disable Virtual Storage while the Virtual USB Drive is mounted to the remote system. Mount it back to ArkKVM and try again. ';
+            // },
           }
         ),
       setUsbConfig: (params: USBConfig) =>
-        send(
-          { method: 'setUsbConfig', params },
-          { showUnhandledErrorToast: true }
-        ),
+        send({ method: 'setUsbConfig', params }, { showUnhandledErrorToast: true }),
     };
 
     return {
-      getGuiSettings: () =>
-        runWithLoading('getGuiSettings', raw.getGuiSettings),
+      getGuiSettings: () => runWithLoading('getGuiSettings', raw.getGuiSettings),
 
-      getFileTransfer: () =>
-        runWithLoading('getFileTransfer', raw.getFileTransfer),
+      getFileTransfer: () => runWithLoading('getFileTransfer', raw.getFileTransfer),
 
       setBacklightSettings: async (patch: Partial<BacklightState>) => {
         if (!ensureChannelReady()) return;
@@ -408,24 +397,26 @@ function useDeviceApi(ctx: DeviceApiContext) {
         if (!ensureChannelReady()) return null;
 
         try {
-          const result = await runWithLoading(
-            'getUsbDevices',
-            raw.getUsbDevices
-          );
+          const result = await runWithLoading('getUsbDevices', raw.getUsbDevices);
           if (!result) return null;
+
+          const normalizedResult: UsbDeviceConfig = {
+            ...defaultUsbDeviceConfig,
+            ...result,
+          };
 
           const presetIndex = findPresetIndexByKeys(
             USB_DEVICE_CONFIG_KEYS,
-            result,
+            normalizedResult,
             USB_PRESETS.filter(p => p.config) as Array<{
-              config: UsbDeviceConfig
+              config: UsbDeviceConfig;
             }>
           );
 
           const nextUsbPreset = USB_PRESETS[presetIndex]?.value || 'custom';
           setUsbPreset(nextUsbPreset);
           setDeviceSetting('usbPreset', nextUsbPreset);
-          setDeviceSetting('usbDeviceConfig', result);
+          setDeviceSetting('usbDeviceConfig', normalizedResult);
 
           return result;
         } catch (e: unknown) {
@@ -447,7 +438,7 @@ function useDeviceApi(ctx: DeviceApiContext) {
             ['manufacturer', 'product', 'product_id', 'vendor_id'],
             result,
             USB_IDENTIFIER_PRESETS.filter(p => p.config) as Array<{
-              config: USBConfig
+              config: USBConfig;
             }>
           );
 
@@ -483,9 +474,7 @@ function useDeviceApi(ctx: DeviceApiContext) {
           const resp = await raw.setUsbConfig(nextConfig);
 
           if ('error' in resp) {
-            showError(
-              `Failed to update USB config: ${getErrorMessage(resp.error)}`
-            );
+            showError(`Failed to update USB config: ${getErrorMessage(resp.error)}`);
             return;
           }
 
@@ -530,18 +519,18 @@ export default function SettingDevice() {
   const [, isChannelReady] = useJsonRpc();
 
   const currentSettings = useActiveDeviceSettings();
-  const backlightSettings = useActiveDeviceSettings(
-    state => state.backlightSettings
-  );
+  const backlightSettings = useActiveDeviceSettings(state => state.backlightSettings) ?? {
+    max_brightness: 64,
+    dim_after: 1800,
+    off_after: 0,
+  };
   const fileTransfer = useActiveDeviceSettings(state => state.fileTransfer);
   const { activeDeviceId } = useSettingsStore();
   const { setDeviceSetting, setNestedDeviceSetting } = useSettingsActions();
 
   const { is: isLoading, start, stop } = useLoadingMap([...LOADING_KEYS]);
 
-  const [usbPreset, setUsbPreset] = useState<string>(
-    currentSettings?.usbPreset || 'default'
-  );
+  const [usbPreset, setUsbPreset] = useState<string>(currentSettings?.usbPreset || 'default');
 
   const [usbIdentifierPreset, setUsbIdentifierPreset] = useState<string>(
     currentSettings?.usbConfigProduct || 'USB Emulation Device'
@@ -612,16 +601,7 @@ export default function SettingDevice() {
     [t]
   );
 
-  const appliedUsbDeviceConfig = currentSettings?.usbDeviceConfig;
-  const hasPendingUsbDeviceConfig =
-    !appliedUsbDeviceConfig ||
-    !isSameByKeys(
-      USB_DEVICE_CONFIG_KEYS,
-      usbDeviceConfig,
-      appliedUsbDeviceConfig
-    );
-  const canUseVirtualUsbDrive =
-    Boolean(appliedUsbDeviceConfig?.mass_storage) && !hasPendingUsbDeviceConfig;
+  const canUseVirtualUsbDrive = Boolean(currentSettings?.usbDeviceConfig?.mass_storage);
 
   useEffect(() => {
     if (currentSettings?.usbDeviceConfig) {
@@ -654,11 +634,10 @@ export default function SettingDevice() {
 
     void (async () => {
       try {
-        const [guiSettings, fileTransferRes] =
-          await Promise.all([
-            deviceApiRef.current.getGuiSettings().catch(e => e),
-            deviceApiRef.current.getFileTransfer().catch(e => e),
-          ]);
+        const [guiSettings, fileTransferRes] = await Promise.all([
+          deviceApiRef.current.getGuiSettings().catch(e => e),
+          deviceApiRef.current.getFileTransfer().catch(e => e),
+        ]);
 
         if (cancelled) return;
 
@@ -680,6 +659,10 @@ export default function SettingDevice() {
 
   const handleUsbPresetChange = useCallback(
     async (value: string, deviceConfig?: UsbDeviceConfig) => {
+      if (isLoading('setUsbDevices')) return;
+
+      const previousPreset = usbPreset;
+      const previousDeviceConfig = usbDeviceConfig;
       setUsbPreset(value);
 
       if (value === 'custom' && !deviceConfig) return;
@@ -690,31 +673,35 @@ export default function SettingDevice() {
           : USB_PRESETS.find(item => item.value === value)?.config;
       if (!devices) return;
 
-      const nextDevices = { ...devices };
+      const nextDevices: UsbDeviceConfig = { ...defaultUsbDeviceConfig, ...devices };
       setUsbDeviceConfig(nextDevices);
-      const { success } = await deviceApi.setUsbDevices(devices);
+      let success = false;
+
+      try {
+        ({ success } = await deviceApi.setUsbDevices(nextDevices));
+      } catch {
+        // The request layer handles the error message; restore the last selection below.
+      }
+
+      if (!success) {
+        setUsbPreset(previousPreset);
+        setUsbDeviceConfig(previousDeviceConfig);
+        return;
+      }
+
       if (success) {
         const currentMouseInputMode = getUsbMouseOption(devices);
 
         if (currentMouseInputMode === 'none') {
           toast.warning(t('settings:mouse.inputMode.toast.noMouseDevice'));
           setMouseInputMode('none');
-        } else if (
-          currentMouseInputMode === 'both' &&
-          mouseInputMode !== 'absolute'
-        ) {
+        } else if (currentMouseInputMode === 'both' && mouseInputMode !== 'absolute') {
           toast.info(t('settings:mouse.inputMode.toast.changedToAbsolute'));
           setMouseInputMode('absolute');
-        } else if (
-          currentMouseInputMode === 'relative' &&
-          mouseInputMode !== 'relative'
-        ) {
+        } else if (currentMouseInputMode === 'relative' && mouseInputMode !== 'relative') {
           toast.info(t('settings:mouse.inputMode.toast.changedToRelative'));
           setMouseInputMode('relative');
-        } else if (
-          currentMouseInputMode === 'absolute' &&
-          mouseInputMode !== 'absolute'
-        ) {
+        } else if (currentMouseInputMode === 'absolute' && mouseInputMode !== 'absolute') {
           toast.info(t('settings:mouse.inputMode.toast.changedToAbsolute'));
           setMouseInputMode('absolute');
         }
@@ -725,7 +712,7 @@ export default function SettingDevice() {
         setDeviceSetting('usbPreset', value);
       }
     },
-    [deviceApi, mouseInputMode]
+    [deviceApi, isLoading, mouseInputMode, usbDeviceConfig, usbPreset]
   );
 
   const handleUsbIdentifierPresetChange = useCallback(
@@ -744,9 +731,7 @@ export default function SettingDevice() {
         return;
       }
 
-      const selectedConfig = USB_IDENTIFIER_PRESETS.find(
-        item => item.value === nextValue
-      )?.config;
+      const selectedConfig = USB_IDENTIFIER_PRESETS.find(item => item.value === nextValue)?.config;
 
       if (!selectedConfig) return;
 
@@ -820,14 +805,12 @@ export default function SettingDevice() {
           <Select
             value={String(backlightSettings.max_brightness)}
             size="xs"
-            onChange={val =>
-              deviceApi.setBacklightSettings({ max_brightness: Number(val) })
-            }
-            placeholder={t(
-              'settings:hardware.displayBrightness.placeholder',
-              'Select brightness'
-            )}
-            options={BRIGHTNESS_OPTIONS}
+            onChange={val => deviceApi.setBacklightSettings({ max_brightness: Number(val) })}
+            placeholder={t('settings:hardware.displayBrightness.placeholder', 'Select brightness')}
+            options={BRIGHTNESS_OPTIONS.map(o => ({
+              ...o,
+              label: t(`settings:hardware.displayBrightness.${o.label.toLowerCase()}`),
+            }))}
             disabled={!isChannelReady || isLoading('setBacklightSettings')}
           />
         </SettingBlock.Right>
@@ -841,14 +824,23 @@ export default function SettingDevice() {
           <Select
             value={String(backlightSettings.dim_after)}
             size="xs"
-            onChange={val =>
-              deviceApi.setBacklightSettings({ dim_after: Number(val) })
-            }
-            placeholder={t(
-              'settings:hardware.dimAfter.placeholder',
-              'Select dim timeout'
-            )}
-            options={DIM_AFTER_OPTIONS}
+            onChange={val => deviceApi.setBacklightSettings({ dim_after: Number(val) })}
+            placeholder={t('settings:hardware.dimAfter.placeholder', 'Select dim timeout')}
+            options={DIM_AFTER_OPTIONS.map(o => ({
+              ...o,
+              label:
+                o.value === '0'
+                  ? t('settings:hardware.dimAfter.never')
+                  : o.value === '60'
+                    ? t('settings:hardware.dimAfter.1minute')
+                    : o.value === '300'
+                      ? t('settings:hardware.dimAfter.5minutes')
+                      : o.value === '600'
+                        ? t('settings:hardware.dimAfter.10minutes')
+                        : o.value === '1800'
+                          ? t('settings:hardware.dimAfter.30minutes')
+                          : t('settings:hardware.dimAfter.1hour'),
+            }))}
             disabled={!isChannelReady || isLoading('setBacklightSettings')}
           />
         </SettingBlock.Right>
@@ -862,21 +854,26 @@ export default function SettingDevice() {
           <Select
             value={String(backlightSettings.off_after)}
             size="xs"
-            onChange={val =>
-              deviceApi.setBacklightSettings({ off_after: Number(val) })
-            }
-            placeholder={t(
-              'settings:hardware.offAfter.placeholder',
-              'Select off timeout'
-            )}
-            options={OFF_AFTER_OPTIONS}
+            onChange={val => deviceApi.setBacklightSettings({ off_after: Number(val) })}
+            placeholder={t('settings:hardware.offAfter.placeholder', 'Select off timeout')}
+            options={OFF_AFTER_OPTIONS.map(o => ({
+              ...o,
+              label:
+                o.value === '0'
+                  ? t('settings:hardware.turnOffAfter.never')
+                  : o.value === '300'
+                    ? t('settings:hardware.turnOffAfter.5minutes')
+                    : o.value === '600'
+                      ? t('settings:hardware.turnOffAfter.10minutes')
+                      : o.value === '1800'
+                        ? t('settings:hardware.turnOffAfter.30minutes')
+                        : t('settings:hardware.turnOffAfter.1hour'),
+            }))}
             disabled={!isChannelReady || isLoading('setBacklightSettings')}
           />
         </SettingBlock.Right>
         <SettingBlock.Bottom>
-          <span className="text-sm">
-            {t('settings:hardware.turnOffAfter.tip')}
-          </span>
+          <span className="text-sm">{t('settings:hardware.turnOffAfter.tip')}</span>
         </SettingBlock.Bottom>
       </SettingBlock>
 
@@ -899,13 +896,13 @@ export default function SettingDevice() {
               onRefresh={() => handleUsbPresetChange('default')}
               loading={isLoading('getUsbDevices')}
               saving={isLoading('setUsbDevices')}
-              disabled={!isChannelReady}
+              disabled={!isChannelReady || isLoading('setUsbDevices')}
             >
               <UsbDeviceSwitchGroup
                 className="ml-[20px] mt-[10px]"
                 value={usbDeviceConfig}
                 onChange={handleUsbDeviceConfigChange}
-                disabled={!isChannelReady}
+                disabled={!isChannelReady || isLoading('setUsbDevices')}
                 titleSize={10}
                 contentSize={10}
               />
@@ -923,6 +920,8 @@ export default function SettingDevice() {
                   onCheckedChange={handleFileTransferChange}
                   disabled={
                     isLoading('setFileTransfer') ||
+                    isLoading('getUsbDevices') ||
+                    isLoading('setUsbDevices') ||
                     !isChannelReady ||
                     !canUseVirtualUsbDrive
                   }

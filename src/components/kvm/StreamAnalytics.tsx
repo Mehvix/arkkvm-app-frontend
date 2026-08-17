@@ -1294,7 +1294,7 @@ const StreamAnalytics = memo<StreamAnalyticsProps>(
       : 'Video, network, and playback performance are healthy. Audio is not currently available.';
 
     return (
-      <div className="h-full w-full px-3 py-4 flex flex-col overflow-x-hidden">
+      <div className="flex h-full w-full min-w-0 flex-col overflow-x-hidden px-3 py-4">
         {/* Header */}
         <div className="mb-5">
           <Button className='border-none bg-transparent float-right' onClick={() => toggleMain('streamAnalytics')}>
@@ -1304,34 +1304,34 @@ const StreamAnalytics = memo<StreamAnalyticsProps>(
               <IconToBottomOne className="cursor-pointer mb-[15px]" />
             )}
           </Button>
-          <div className="mb-1 flex items-start justify-between gap-2 clear-both">
-            <h2 className="text-[14px] font-semibold leading-tight tracking-wide">
+          <div className="mb-1 flex min-w-0 flex-col items-stretch gap-2 clear-both sm:flex-row sm:items-start sm:justify-between">
+            <h2 className="min-w-0 truncate text-[14px] font-semibold leading-tight tracking-wide">
               Stream Diagnostics
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               {/* View mode toggle */}
-              <div className="flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--secondary-bg-color)] p-1">
+              <div className="flex min-w-0 items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--secondary-bg-color)] p-1">
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-all ${
+                  className={`flex min-w-0 items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-all sm:px-2.5 ${
                     viewMode === 'list'
                       ? 'bg-blue-500/20 text-blue-400'
                       : 'text-[var(--inactive-text-color)] hover:text-[var(--text-color)]'
                   }`}
                   title="Overview"
                 >
-                  <span>Overview</span>
+                  <span className="truncate">Overview</span>
                 </button>
                 <button
                   onClick={() => setViewMode('chart')}
-                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-all ${
+                  className={`flex min-w-0 items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-all sm:px-2.5 ${
                     viewMode === 'chart'
                       ? 'bg-blue-500/20 text-blue-400'
                       : 'text-[var(--inactive-text-color)] hover:text-[var(--text-color)]'
                   }`}
                   title="Trends"
                 >
-                  <span>Trends</span>
+                  <span className="truncate">Trends</span>
                 </button>
               </div>
             </div>
@@ -1815,22 +1815,22 @@ const StreamAnalytics = memo<StreamAnalyticsProps>(
 	                    <button
 	                      key={module.id}
 	                      onClick={() => openTrendSection(module.id as StreamSectionId)}
-                      className={`flex items-center justify-between gap-3 py-1.5 px-3 rounded-lg border transition-colors text-left w-full min-h-[44px] ${moduleToneClasses[module.status.tone].bg} ${moduleToneClasses[module.status.tone].border} hover:border-[var(--text-color)]/30`}
+                      className={`flex min-h-[44px] w-full min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-left transition-colors ${moduleToneClasses[module.status.tone].bg} ${moduleToneClasses[module.status.tone].border} hover:border-[var(--text-color)]/30`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 shrink-0 items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${moduleToneClasses[module.status.tone].dot}`} />
-                        <span className="text-[11px] text-text font-medium w-14">{module.title}</span>
+                        <span className="w-14 truncate text-[11px] font-medium text-text">{module.title}</span>
                       </div>
-                      <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-                        <span className={`text-[11px] whitespace-nowrap ${moduleToneClasses[module.status.tone].label}`}>{module.status.label}</span>
-                        <div className="text-right min-w-0">
+                      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                        <span className={`min-w-0 truncate text-[11px] ${moduleToneClasses[module.status.tone].label}`}>{module.status.label}</span>
+                        <div className="min-w-0 text-right">
                           {module.lines.map((line) => (
                             <div key={line} className="text-[10px] text-text-muted tabular-nums truncate">
                               {line}
                             </div>
                           ))}
                         </div>
-                        <ChevronRight className="w-3 h-3 text-text-muted" />
+                        <ChevronRight className="h-3 w-3 shrink-0 text-text-muted" />
                       </div>
                     </button>
                   ));
@@ -1839,12 +1839,12 @@ const StreamAnalytics = memo<StreamAnalyticsProps>(
 
               <details className="mt-2 rounded-lg border border-(--border-color) bg-secondary-bg">
                 <summary className="cursor-pointer list-none px-3 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[13px] font-medium text-text">Advanced stream details</div>
-                      <div className="text-[12px] text-text-muted">Technical metrics for deeper analysis.</div>
+                  <div className="flex min-w-0 items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-medium text-text">Advanced stream details</div>
+                      <div className="truncate text-[12px] text-text-muted">Technical metrics for deeper analysis.</div>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-text-muted" />
+                    <ChevronDown className="h-4 w-4 shrink-0 text-text-muted" />
                   </div>
                 </summary>
                 <div className="border-t border-(--border-color) px-3 py-2">

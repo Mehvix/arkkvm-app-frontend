@@ -3,28 +3,14 @@
  * @Author: zhanglei
  * @Date: 2026-01-23
  */
-import type { LanguageLayoutModule, LayoutMeta } from '../types';
+import type { LanguageLayoutModule } from '../types';
+import { enGBMeta as meta } from '../meta';
 import { UK_WIN_LAYOUT } from './windows';
-
-/** UK English layout metadata */
-export const meta: LayoutMeta = {
-  id: 'en-GB-qwerty',
-  tag: 'UK',
-  name: 'UK English – QWERTY',
-  nativeName: 'English (UK)',
-  layout: 'qwerty',
-  standard: 'iso',
-  region: 'europe',
-  priority: 2,
-  recommended: true,
-  hasAltGr: true,
-  note: 'UK ISO layout',
-};
-
-/** UK English layout module */
+import { macLayout } from './mac';
 const enGB: LanguageLayoutModule = {
   meta,
   windows: UK_WIN_LAYOUT,
+  mac: macLayout,
 };
 
 export default enGB;

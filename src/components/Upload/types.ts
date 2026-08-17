@@ -1,6 +1,7 @@
 /**
  * Upload component type definitions.
  */
+import type { TransferSource } from '@/stores/slices/fileTransferListSlice';
 import React from 'react';
 
 /**
@@ -9,9 +10,9 @@ import React from 'react';
  * - `waiting`: File queued, waiting for current upload to finish
  * - `uploading`: File transfer active
  * - `success`: Upload completed
- * - `error`: Upload failed
+ * - `failed`: Upload failed
  */
-export type UploadState = 'idle' | 'waiting' | 'uploading' | 'success' | 'error'
+export type UploadState = 'idle' | 'waiting' | 'uploading' | 'success' | 'failed'
 
 /**
  * Information emitted when an upload starts.
@@ -21,6 +22,8 @@ export interface UploadStartInfo {
   dataChannel: string | RTCDataChannel | null
   filename: string
   size: number
+  /** Task id used for IndexedDB persistence; defaults to filename when omitted. */
+  taskId?: string
 }
 
 /**
@@ -125,6 +128,10 @@ export interface UploadDropZoneProps {
   onUploadSpeed?: (data: unknown) => void
   /** Callback when paused, returns current transfer state */
   onPause?: (info: UploadPauseInfo) => void
+  /** Callback when an upload resumes from a persisted task */
+  onResumeStart?: (info: UploadStartInfo) => void
+  /** Upload source used to build the persisted task id */
+  source?: TransferSource
   /** Custom upload trigger element (e.g., Button). If provided, replaces default upload box */
   customUploadTrigger?: React.ReactNode
   /** Custom className for uploader container (when using customUploadTrigger) */

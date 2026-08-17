@@ -14,6 +14,7 @@ import { Switch } from '../../ui/switch';
 import SettingBlock from '../SettingBlock';
 import SettingPageContainer from '../SettingPageContainer';
 import { ThemeSwitcher } from '../ThemeSwitcher';
+import { LanguageSwitcher } from '../LanguageSwitcher';
 
 export default memo(function SettingAppearance() {
   const { t } = useTranslation(['settings']);
@@ -45,6 +46,16 @@ export default memo(function SettingAppearance() {
       >
         <SettingBlock.Right>
           <ThemeSwitcher  size="mini"/>
+        </SettingBlock.Right>
+      </SettingBlock>
+
+      {/* Language */}
+      <SettingBlock
+        title={t('settings:appearance.language.title')}
+        content={t('settings:appearance.language.desc')}
+      >
+        <SettingBlock.Right>
+          <LanguageSwitcher />
         </SettingBlock.Right>
       </SettingBlock>
 

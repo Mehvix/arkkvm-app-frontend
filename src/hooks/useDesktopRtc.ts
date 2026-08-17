@@ -122,6 +122,7 @@ export interface DataChannels {
   serial: RTCDataChannel
   disk: RTCDataChannel
   input: RTCDataChannel
+  inputUnstable: RTCDataChannel
 }
 
 // Log entry structure
@@ -208,7 +209,7 @@ export interface UseDesktopRtcResult {
   // Manual disconnect method
   disconnect: () => void
   // Manually re-initiate WebRTC connection (when WebSocket is still available)
-  reconnect: () => void
+  reconnect: (force?: boolean) => void
   // Manually unmute and try to play (to satisfy browser gesture policy)
   unmute: () => void
   // WebAudio: Set gain (1.0 for original volume)
@@ -357,16 +358,17 @@ export const useDesktopRtc = ({
       };
       channels.inputUnstable.binaryType = 'arraybuffer';
 
+      const exposeDataChannels = (reason: string) => {
+        addLog(`data channels exposed: ${reason}`, 'info');
+        try {
+          onDataChannels?.(channels);
+        } catch {}
+      };
+
       const bind = (ch: RTCDataChannel, label: keyof DataChannels) => {
         ch.onopen = () => {
           addLog(`${label} channel open`, 'success');
-
-          // Expose all channels to upper layer when RPC opens
-          if (label === 'rpc' && ch.readyState === 'open') {
-            try {
-              onDataChannels?.(channels);
-            } catch {}
-          }
+          exposeDataChannels(`${label} open`);
         };
 
         ch.onclose = () => {
@@ -393,6 +395,7 @@ export const useDesktopRtc = ({
 
       // Save data channel references for later use
       dataChannelsRef.current = channels;
+      exposeDataChannels('created');
 
       return channels;
     },
@@ -441,6 +444,7 @@ export const useDesktopRtc = ({
   // Bind remote stream to local media elements (video + audio)
   const bindRemoteStream = useCallback(
     (stream: MediaStream) => {
+      remoteStreamRef.current = stream;
       const audioTracks = stream.getAudioTracks();
       const videoTracks = stream.getVideoTracks();
       addLog(`Binding remote stream - Video tracks: ${videoTracks.length}, Audio tracks: ${audioTracks.length}`, 'info');
@@ -646,8 +650,6 @@ export const useDesktopRtc = ({
       const message =
         typeof eventData === 'string' ? JSON.parse(eventData) : eventData;
       const { type, data } = message || {};
-      // let msgggg = type!=="answer"?data:"<too long>";
-      // console.log('onMessage',type,msgggg)
       if (!type) return;
 
       if (type === 'device-metadata') {
@@ -719,7 +721,7 @@ export const useDesktopRtc = ({
     },
   });
   // Send WebRTC signal
-  const sendWebRTCSignal = (type: string, data: unknown) => {
+  const sendWebRTCSignal = useCallback((type: string, data: unknown) => {
     const ws = getWebSocket();
     if (ws && ws.readyState === WebSocket.OPEN) {
       const message = { type, data };
@@ -735,17 +737,69 @@ export const useDesktopRtc = ({
         }
       );
     }
-  };
-  // WebRTC disconnect: thoroughly clean up PeerConnection, media tracks and local media elements
-  const stopWebRTCReconnectionAndCleanup = useCallback(() => {
+  }, [getWebSocket]);
+
+  const rebindRemoteMediaToLiveEdge = useCallback(() => {
+    const stream = remoteStreamRef.current;
+    const video = videoRef.current;
+    if (!stream || !video) return;
+
+    const freshStream = new MediaStream(stream.getTracks());
+    remoteStreamRef.current = freshStream;
+
+    try {
+      video.pause();
+      video.srcObject = null;
+      video.load();
+    } catch {}
+
+    requestAnimationFrame(() => {
+      const currentVideo = videoRef.current;
+      if (!currentVideo) return;
+
+      try {
+        currentVideo.srcObject = freshStream;
+        currentVideo.setAttribute('playsinline', 'true');
+        currentVideo.setAttribute('webkit-playsinline', 'true');
+        currentVideo.muted = !unmutedRef.current;
+        currentVideo.play().catch(() => {});
+      } catch {}
+    });
+  }, [videoRef]);
+
+  const requestRemoteKeyFrame = useCallback((reason: string) => {
+    sendWebRTCSignal('request-keyframe', {
+      reason,
+      forceIdr: true,
+      ts: Date.now(),
+    });
+    addLog(`Requested remote keyframe: ${reason}`, 'info');
+  }, [sendWebRTCSignal]);
+
+  const clearDataChannelBacklog = useCallback(() => {
+    const channels = dataChannelsRef.current;
+    if (!channels) return;
+
+    Object.values(channels).forEach(channel => {
+      try {
+        channel.bufferedAmountLowThreshold = 0;
+      } catch {}
+    });
+  }, []);
+  // WebRTC disconnect: thoroughly clean up PeerConnection, media tracks and local media elements.
+  // Forced reconnects can keep media attached so the last video frame remains visible
+  // while a replacement PeerConnection is negotiated.
+  const stopWebRTCReconnectionAndCleanup = useCallback((options?: { keepMedia?: boolean }) => {
+    clearDataChannelBacklog();
+
     // 1. Detach media elements first (stop decoding/rendering immediately)
     const v = videoRef.current;
-    if (v) {
+    if (v && !options?.keepMedia) {
       v.srcObject = null;
     }
 
     const a = audioRef.current;
-    if (a) {
+    if (a && !options?.keepMedia) {
       a.srcObject = null;
     }
 
@@ -794,14 +848,16 @@ export const useDesktopRtc = ({
         });
       } catch {}
 
-      // 5. Stop all receiver tracks (remote media)
-      try {
-        pc.getReceivers().forEach(receiver => {
-          try {
-            receiver.track?.stop();
-          } catch {}
-        });
-      } catch {}
+      if (!options?.keepMedia) {
+        // 5. Stop all receiver tracks (remote media)
+        try {
+          pc.getReceivers().forEach(receiver => {
+            try {
+              receiver.track?.stop();
+            } catch {}
+          });
+        } catch {}
+      }
 
       // 6. Close PeerConnection
       try {
@@ -813,7 +869,7 @@ export const useDesktopRtc = ({
 
     // 7. Stop and clear remote stream reference
     const remoteStream = remoteStreamRef.current;
-    if (remoteStream) {
+    if (remoteStream && !options?.keepMedia) {
       try {
         remoteStream.getTracks().forEach(track => {
           try {
@@ -827,13 +883,17 @@ export const useDesktopRtc = ({
     // 8. Clear negotiation state and flags
     isCreatingOffer.current = false;
     pendingCandidatesRef.current = [];
+    if (answerTimeoutRef.current !== null) {
+      window.clearTimeout(answerTimeoutRef.current);
+      answerTimeoutRef.current = null;
+    }
 
     // 9. Update connection state
     setPeerConnectionState('closed');
     onPeerConnectionStateChange?.('closed');
     setConnectionState({ ws: 'closed', webrtc: 'closed' });
     updateViewerStatus('closed');
-  }, [videoRef, audioRef]);
+  }, [videoRef, audioRef, clearDataChannelBacklog]);
   // WebSocket disconnect
   const stopWebSocketReconnectionAndCleanup = useCallback(() => {
     manualCloseRef.current = true;
@@ -1114,11 +1174,18 @@ export const useDesktopRtc = ({
       const state = pc.connectionState;
       setPeerConnectionState(state);
       onPeerConnectionStateChange?.(state);
-      if (state === 'disconnected') {
+      if (state === 'connected') {
+        clearDataChannelBacklog();
+        rebindRemoteMediaToLiveEdge();
+        requestRemoteKeyFrame('peer_connection_connected');
+      } else if (state === 'disconnected') {
+        clearDataChannelBacklog();
         updateViewerStatus('reconnecting');
       } else if (state === 'failed') {
+        clearDataChannelBacklog();
         updateViewerStatus('failed');
       } else if (state === 'closed') {
+        clearDataChannelBacklog();
         updateViewerStatus('closed');
       }
       addLog(`onconnectionstatechange:${new Date().getTime()}`);
@@ -1140,12 +1207,18 @@ export const useDesktopRtc = ({
       if (state === 'checking') {
         updateViewerStatus('ice_checking');
       } else if (state === 'connected' || state === 'completed') {
+        clearDataChannelBacklog();
+        rebindRemoteMediaToLiveEdge();
+        requestRemoteKeyFrame(`ice_${state}`);
         updateViewerStatus('waiting_media');
       } else if (state === 'disconnected') {
+        clearDataChannelBacklog();
         updateViewerStatus('reconnecting');
       } else if (state === 'failed') {
+        clearDataChannelBacklog();
         updateViewerStatus('failed');
       } else if (state === 'closed') {
+        clearDataChannelBacklog();
         updateViewerStatus('closed');
       }
       addLog(`oniceconnectionstatechange:${new Date().getTime()},type:${state}`);
@@ -1222,6 +1295,14 @@ export const useDesktopRtc = ({
           clearTimeout(answerTimeoutRef.current);
         }
         answerTimeoutRef.current = window.setTimeout(() => {
+          answerTimeoutRef.current = null;
+
+          // Ignore a stale timeout from a replaced PeerConnection or an
+          // answer that arrived at the timeout boundary.
+          if (peerConnectionRef.current !== pc || pc.remoteDescription) {
+            return;
+          }
+
           logError(
             '❌ Answer timeout: No response from server after 10 seconds'
           );
@@ -1236,6 +1317,13 @@ export const useDesktopRtc = ({
             connectionState: pc.connectionState,
             iceGatheringState: pc.iceGatheringState,
           });
+
+          // Move out of the transient "connecting" state so the existing
+          // failed-state retry effect can negotiate a fresh PeerConnection.
+          setConnectionState(prev => ({ ...prev, webrtc: 'failed' }));
+          setPeerConnectionState('failed');
+          onPeerConnectionStateChange?.('failed');
+          updateViewerStatus('failed');
         }, 10000);
       } catch {
         stopWebRTCReconnectionAndCleanup();
@@ -1311,6 +1399,9 @@ export const useDesktopRtc = ({
     stopWebRTCReconnectionAndCleanup,
     setupTransceiversAndCodecs,
     createDataChannels,
+    clearDataChannelBacklog,
+    rebindRemoteMediaToLiveEdge,
+    requestRemoteKeyFrame,
     setConnectionState,
     updateViewerStatus,
     getWebSocket,
@@ -1321,7 +1412,7 @@ export const useDesktopRtc = ({
   ]);
 
   // Manually trigger one WebRTC reconnect (only valid when WebSocket is connected).
-  const reconnect = useCallback(() => {
+  const reconnect = useCallback((force = false) => {
     // Allow follow-up automatic reconnection.
     manualCloseRef.current = false;
 
@@ -1332,10 +1423,10 @@ export const useDesktopRtc = ({
 
     // Re-start WebRTC negotiation when not connected or already failed.
     const state = connectionState.webrtc;
-    if (state === 'connected') return;
+    if (!force && state === 'connected') return;
 
     try {
-      stopWebRTCReconnectionAndCleanup();
+      stopWebRTCReconnectionAndCleanup({ keepMedia: force });
     } catch {}
     startWebRTC();
   }, [

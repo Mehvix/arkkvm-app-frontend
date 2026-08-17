@@ -3,27 +3,16 @@
  * @Author: zhanglei
  * @Date: 2026-01-23
  */
-import type { LanguageLayoutModule, LayoutMeta } from '../types';
+import type { LanguageLayoutModule } from '../types';
+import { deDEMeta as meta } from '../meta';
 import { DE_WIN_LAYOUT } from './windows';
-
-/** German layout metadata */
-export const meta: LayoutMeta = {
-  id: 'de-DE-qwertz',
-  tag: 'DE',
-  name: 'German – QWERTZ',
-  nativeName: 'Deutsch (Deutschland)',
-  layout: 'qwertz',
-  standard: 'iso',
-  region: 'europe',
-  priority: 12,
-  hasAltGr: true,
-};
+import { macLayout } from './mac';
 
 /** German layout module */
 const deDE: LanguageLayoutModule = {
   meta,
   windows: DE_WIN_LAYOUT,
-  // mac: DE_MAC_LAYOUT, // Add when needed
+  mac: macLayout,
 };
 
 export default deDE;

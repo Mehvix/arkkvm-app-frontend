@@ -127,6 +127,10 @@
       "title": "主题",
       "desc": "选择您偏好的配色主题"
     },
+    "language": {
+      "title": "语言",
+      "desc": "选择您偏好的显示语言"
+    },
     "statusBar": {
       "title": "状态栏",
       "desc": "选择状态栏中显示的信息",
@@ -152,7 +156,8 @@
     "disable": "禁用",
     "retry": "重试",
     "update": "保存更改",
-    "refresh": "恢复默认"
+    "refresh": "恢复默认",
+    "custom": "自定义"
   },
   "panels": {
     "accessibility": "辅助功能",
@@ -174,22 +179,33 @@
     },
     "scrollThrottling": {
       "title": "滚动节流",
-      "desc": "降低滚动事件频率"
+      "desc": "降低滚动事件频率",
+      "off": "关闭",
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "maximum": "最高"
     },
     "jiggler": {
       "title": "摇鼠器",
-      "desc": "模拟鼠标移动，防止进入睡眠、待机或屏保。"
+      "desc": "模拟鼠标移动，防止进入睡眠、待机或屏保。",
+      "off": "关闭",
+      "30seconds": "30 秒",
+      "1minute": "1 分钟",
+      "5minutes": "5 分钟"
     },
     "inputMode": {
       "title": "输入模式",
       "desc": "选择鼠标输入模式",
       "absolute": {
         "title": "绝对模式",
-        "desc": "更便捷"
+        "desc": "更便捷",
+        "tip": "绝对模式将鼠标位置直接映射到远程屏幕，在大多数情况下更易于控制。"
       },
       "relative": {
         "title": "相对模式",
-        "desc": "传统行为"
+        "desc": "传统行为",
+        "tip": "相对模式与传统 PC 鼠标行为一致，适合特定应用场景。"
       },
       "toast": {
         "noMouseDevice": "鼠标控制不可用，因为没有启用鼠标设备。",
@@ -235,11 +251,20 @@
     },
     "streamQuality": {
       "title": "流质量",
-      "desc": "调整视频流的质量"
+      "desc": "调整视频流的质量",
+      "high": "高",
+      "medium": "中",
+      "low": "低"
     },
     "enhancement": {
       "title": "画面增强",
       "desc": "调整颜色设置，使视频更鲜艳",
+      "standard": "标准",
+      "vivid": "鲜艳",
+      "textFocus": "文字优先",
+      "warm": "暖色",
+      "custom": "自定义",
+      "restoreButton": "恢复默认",
       "saturation": {
         "title": "饱和度",
         "desc": "颜色饱和度 (2.0x)"
@@ -260,9 +285,11 @@
     "edid": {
       "title": "EDID",
       "desc": "调整显示器的 EDID 设置",
+      "default": "ArkKVM 默认",
       "custom": {
         "title": "自定义 EDID",
         "desc": "EDID 详细说明视频模式兼容性。默认设置适用于大多数情况，但某些特殊的 UEFI/BIOS 可能需要调整。",
+        "placeholder": "粘贴 EDID 十六进制字符串（偶数长度，0–9 和 A–F）。允许包含空格，将自动去除。",
         "fileLabel": "EDID 文件",
         "setButton": "设置自定义 EDID",
         "restoreButton": "恢复为默认"
@@ -272,15 +299,32 @@
   "audio": {
     "streamQuality": {
       "title": "音频流质量",
-      "desc": "调整音频流的质量"
+      "desc": "调整音频流的质量",
+      "high": "高",
+      "medium": "中",
+      "low": "低",
+      "toast": {
+        "updated": "音频质量已更新",
+        "failed": "更新音频质量失败"
+      }
     },
     "playback": {
       "title": "播放",
-      "desc": "将远程音频流式传输到此设备"
+      "desc": "将远程音频流式传输到此设备",
+      "toast": {
+        "enabled": "音频播放已启用",
+        "disabled": "音频播放已禁用",
+        "failed": "更新音频播放设置失败"
+      }
     },
     "microphoneEmulation": {
       "title": "麦克风模拟",
-      "desc": "允许远程应用访问本地麦克风"
+      "desc": "允许远程应用访问本地麦克风",
+      "toast": {
+        "enabled": "麦克风模拟已启用",
+        "disabled": "麦克风模拟已禁用",
+        "failed": "更新麦克风模拟设置失败"
+      }
     }
   },
   "hardware": {
@@ -295,16 +339,31 @@
     },
     "displayBrightness": {
       "title": "显示亮度",
-      "desc": "设置显示器亮度"
+      "desc": "设置显示器亮度",
+      "off": "关闭",
+      "low": "低",
+      "medium": "中",
+      "high": "高"
     },
     "dimAfter": {
       "title": "在此之后调暗",
-      "desc": "设置调暗显示前的等待时间"
+      "desc": "设置调暗显示前的等待时间",
+      "never": "从不",
+      "1minute": "1 分钟",
+      "5minutes": "5 分钟",
+      "10minutes": "10 分钟",
+      "30minutes": "30 分钟",
+      "1hour": "1 小时"
     },
     "turnOffAfter": {
       "title": "在此之后关闭显示",
       "desc": "在无操作时自动关闭显示的时间",
-      "tip": "当连接状态变化或触摸时，显示器会被唤醒。"
+      "tip": "当连接状态变化或触摸时，显示器会被唤醒。",
+      "never": "从不",
+      "5minutes": "5 分钟",
+      "10minutes": "10 分钟",
+      "30minutes": "30 分钟",
+      "1hour": "1 小时"
     },
     "usb": {
       "title": "USB 设备",
@@ -313,6 +372,33 @@
         "title": "类别",
         "desc": "组合设备中的 USB 设备类别"
       },
+      "devices": {
+        "presets": {
+          "fullFeatureSet": "完整功能集",
+          "keyboardMouse": "键盘和鼠标",
+          "keyboardOnly": "仅键盘"
+        },
+        "keyboard": {
+          "title": "键盘",
+          "desc": "在目标计算机上模拟标准 USB 键盘。"
+        },
+        "relativeMouse": {
+          "title": "相对鼠标",
+          "desc": "模拟相对 USB 鼠标，适用于 BIOS、GRUB、游戏及旧版系统，兼容性更佳。"
+        },
+        "absoluteMouse": {
+          "title": "绝对鼠标（指针）",
+          "desc": "模拟绝对定位 USB 指针，可直接与目标屏幕光标对齐。"
+        },
+        "virtualStorage": {
+          "title": "虚拟存储",
+          "desc": "启用虚拟存储设备，包括虚拟媒体和虚拟 USB 驱动器。"
+        },
+        "usbMicrophone": {
+          "title": "USB 麦克风",
+          "desc": "在目标计算机上模拟 USB 麦克风输入设备。"
+        }
+      },
       "virtualUsbDrive": {
         "title": "虚拟 USB 驱动器",
         "desc": "提供可写入的 USB 驱动器用于自由文件传输",
@@ -320,11 +406,45 @@
       },
       "identifiers": {
         "title": "标识符",
-        "desc": "暴露给目标计算机的 USB 设备标识符"
+        "desc": "暴露给目标计算机的 USB 设备标识符",
+        "presets": {
+          "arkkvmDefault": "ArkKVM 默认",
+          "logitechUniversalAdapter": "Logitech",
+          "microsoftWirelessKeyboard": "Microsoft",
+          "dellMultimediaKeyboard": "Dell"
+        },
+        "fields": {
+          "vendorId": "厂商 ID",
+          "productId": "产品 ID",
+          "serialNumber": "序列号",
+          "manufacturer": "制造商",
+          "productName": "产品名称"
+        },
+        "validation": {
+          "vendorIdRequired": "请填写厂商 ID",
+          "vendorIdInvalid": "请输入有效的十六进制 ID，例如 0x413c",
+          "productIdRequired": "请填写产品 ID",
+          "productIdInvalid": "请输入有效的十六进制 ID，例如 0x2011",
+          "serialNumberMaxLength": "序列号最多 64 个字符",
+          "manufacturerMaxLength": "制造商最多 126 个字符",
+          "productNameMaxLength": "产品名称最多 126 个字符"
+        }
       }
     }
   },
   "network": {
+    "applyDialog": {
+      "title": "应用网络设置",
+      "desc": "以下网络设置将被应用。这些更改可能需要重启并导致短暂断开连接。",
+      "networkGroup": "网络",
+      "ipChangeWarning": "更改 IP 地址将断开当前会话，浏览器将自动重定向。",
+      "cancel": "取消",
+      "confirm": "应用更改",
+      "keepChanges": "保留更改",
+      "confirmed": "VLAN 设置已确认",
+      "reverted": "VLAN 设置已恢复",
+      "revertedTimeout": "配置已自动恢复。"
+    },
     "macAddress": {
       "title": "MAC 地址",
       "desc": "网络接口的硬件标识符"
@@ -340,7 +460,12 @@
     "domain": {
       "title": "域名",
       "desc": "设备的网络域名后缀",
-      "customLabel": "自定义域名"
+      "customLabel": "自定义域名",
+      "options": {
+        "dhcpProvided": "DHCP 提供",
+        "none": "无",
+        "custom": "自定义"
+      }
     },
     "mdns": {
       "title": "mDNS",
@@ -371,13 +496,32 @@
         "desc": "为 ArkKVM 提供额外的本地访问入口，不承载设备出向系统流量。",
         "idDesc": "辅助 VLAN 的 ID 不能与主 VLAN 相同。"
       },
-      "addSecondary": "添加辅助 VLAN"
+      "addSecondary": "添加辅助 VLAN",
+      "applyDialog": {
+        "vlanDesc": [
+          "应用 VLAN 设置将暂时中断连接。",
+          "ArkKVM 可能会获取新的 IP 地址。请使用 ArkKVM 设备屏幕上显示的更新地址重新连接。",
+          "如果因 VLAN 设置错误导致 ArkKVM 不可达，请在 ArkKVM 设备屏幕上使用<strong>“重置网络配置”</strong>以恢复默认网络设置。",
+          "在应用这些设置之前，请确保交换机已配置所选的 VLAN。"
+        ]
+      }
+    },
+    "connectionLost": {
+      "title": "连接丢失",
+      "line1": "ArkKVM 网络设置已应用。",
+      "line2": "IP 地址或 VLAN 配置可能已更改。",
+      "line3": "请查看 ArkKVM 设备屏幕上的当前网络信息并重新连接。",
+      "ok": "确定"
     },
     "saveButton": "保存设置",
     "savingButton": "保存中...",
     "ipv4Mode": {
       "title": "IPv4 模式",
-      "desc": "配置 IPv4 模式"
+      "desc": "配置 IPv4 模式",
+      "options": {
+        "dhcp": "DHCP",
+        "static": "静态"
+      }
     },
     "ipv6Mode": {
       "title": "IPv6 模式",
@@ -405,6 +549,14 @@
       "validLifetime": "有效生命周期",
       "preferredLifetime": "首选生命周期"
     },
+    "dhcpModeChanged": {
+      "title": "连接已断开",
+      "desc": [
+        "ArkKVM 网络设置已应用。",
+        "IP 地址或 VLAN 配置可能已更改。",
+        "请查看 ArkKVM 设备屏幕上的当前网络信息并重新连接。"
+      ]
+    },
     "emptyState": {
       "switchToDhcp": {
         "title": "切换到 DHCP？",
@@ -417,6 +569,24 @@
       "ipv6Pending": {
         "title": "IPv6 信息",
         "desc": "暂无 IPv6 地址。"
+      },
+      "ipv6Info": {
+        "title": "IPv6 信息",
+        "desc": "未配置 IPv6 地址"
+      }
+    },
+    "staticIpv4": {
+      "title": "静态 IPv4 配置",
+      "ipAddress": "IPv4 地址",
+      "subnetMask": "IPv4 子网掩码",
+      "gateway": "IPv4 网关",
+      "dnsServers": "IPv4 DNS",
+      "addDns": "添加 DNS 服务器",
+      "error": {
+        "ipRequired": "IPv4 地址不能为空",
+        "maskRequired": "子网掩码不能为空",
+        "gatewayRequired": "网关不能为空",
+        "invalidIp": "无效的 IPv4 地址"
       }
     }
   },
@@ -431,7 +601,16 @@
     },
     "loopbackOnly": {
       "title": "仅本地回环模式",
-      "desc": "限制 Web 界面仅允许本地主机访问 (127.0.0.1)"
+      "desc": "限制 Web 界面仅允许本地主机访问 (127.0.0.1)",
+      "confirm": {
+        "title": "启用仅本地回环模式？",
+        "warning": "警告：这将限制 Web 界面仅允许本地主机（127.0.0.1）访问。",
+        "prereqNote": "启用此功能前，请确保您已具备以下其中一项：",
+        "prereqSsh": "已配置并测试 SSH 访问",
+        "prereqCloud": "已启用并正常使用云端访问",
+        "confirmText": "我已了解，仍然启用",
+        "cancelText": "取消"
+      }
     },
     "sshAccess": {
       "title": "SSH 访问",
@@ -439,7 +618,8 @@
       "keyLabel": "SSH 公钥",
       "keyPlaceholder": "在此粘贴您的 SSH 公钥...",
       "defaultUserText": "默认 SSH 用户是",
-      "updateButton": "更新 SSH 密钥"
+      "updateButton": "更新 SSH 密钥",
+      "successMessage": "SSH 密钥更新成功"
     },
     "troubleshooting": {
       "title": "故障排除模式",
@@ -451,9 +631,25 @@
         "disableButton": "禁用 USB 模拟"
       },
       "resetConfig": {
-        "title": "重置配置",
-        "desc": "将配置重置为默认值。这将使您退出登录。",
-        "button": "重置配置"
+        "title": "恢复出厂设置",
+        "desc": "清除所有内容并恢复出厂设置。",
+        "button": "恢复出厂设置",
+        "confirm": {
+          "title": "恢复出厂设置",
+          "desc": [
+            "恢复出厂设置将永久清除所有本地数据，并将 ArkKVM 恢复到出厂设置。",
+            "这包括上传的镜像文件、虚拟 USB 驱动器中存储的任何文件、证书、SSH 密钥以及所有其他设置。",
+            "此操作无法撤销。"
+          ],
+          "button": "恢复出厂设置",
+          "cancel": "取消"
+        }
+      },
+      "diagnostic": {
+        "title": "诊断",
+        "desc": "下载诊断信息，帮助识别和解决问题。",
+        "descSlow": "生成包含系统信息和日志的诊断包，用于故障排查。",
+        "button": "下载诊断文件"
       }
     }
   },

@@ -2,9 +2,7 @@
  * @Author: Lei Zhang daisy_zlei@163.com
  * @Date: 2025-10-27 16:25:25
  * @LastEditors: Lei Zhang daisy_zlei@163.com
- * @LastEditTime: 2026-06-23 14:45:10
- * @FilePath: /git-arkkvm-app-frontend/src/stores/slices/fileTransferDownloadSlice.ts
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @LastEditTime: 2026-07-02 23:01:03
  */
 import type { StateCreator } from 'zustand';
 import type { TransferState } from '@/hooks/useFileDownload';

@@ -12,6 +12,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { useTranslation } from 'react-i18next';
 
 export interface UsbConfigFormProps {
   value: USBConfig
@@ -41,28 +42,29 @@ const usbIdRegex = /^0x[0-9a-fA-F]{1,4}$/;
  */
 const UsbConfigForm = forwardRef<UsbConfigFormRef, UsbConfigFormProps>(
   function UsbConfigForm({ value, onChange, disabled = false, readOnly = false, className }, ref) {
+    const { t } = useTranslation(['settings']);
     const schema = useMemo(
       () =>
         z.object({
           vendor_id: z
             .string()
-            .min(1, 'Vendor ID is required')
-            .refine(v => usbIdRegex.test(v), { message: 'Must be a valid hex ID, e.g. 0x413c' }),
+            .min(1, t('settings:hardware.usb.identifiers.validation.vendorIdRequired'))
+            .refine(v => usbIdRegex.test(v), { message: t('settings:hardware.usb.identifiers.validation.vendorIdInvalid') }),
           product_id: z
             .string()
-            .min(1, 'Product ID is required')
-            .refine(v => usbIdRegex.test(v), { message: 'Must be a valid hex ID, e.g. 0x2011' }),
+            .min(1, t('settings:hardware.usb.identifiers.validation.productIdRequired'))
+            .refine(v => usbIdRegex.test(v), { message: t('settings:hardware.usb.identifiers.validation.productIdInvalid') }),
           serial_number: z
             .string()
-            .max(64, 'Serial number must be at most 64 characters'),
+            .max(64, t('settings:hardware.usb.identifiers.validation.serialNumberMaxLength')),
           manufacturer: z
             .string()
-            .max(126, 'Manufacturer must be at most 126 characters'),
+            .max(126, t('settings:hardware.usb.identifiers.validation.manufacturerMaxLength')),
           product: z
             .string()
-            .max(126, 'Product name must be at most 126 characters'),
+            .max(126, t('settings:hardware.usb.identifiers.validation.productNameMaxLength')),
         }),
-      []
+      [t]
     );
 
     type FormData = z.infer<typeof schema>;
@@ -107,7 +109,7 @@ const UsbConfigForm = forwardRef<UsbConfigFormRef, UsbConfigFormProps>(
                 render={({ field }) => (
                   <FormItem className="relative mb-[10px]">
                     <FormLabel className="text-[12px] text-[var(--text-secondary)]">
-                      Vendor ID
+                      {t('settings:hardware.usb.identifiers.fields.vendorId')}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -129,7 +131,7 @@ const UsbConfigForm = forwardRef<UsbConfigFormRef, UsbConfigFormProps>(
                 render={({ field }) => (
                   <FormItem className="relative mb-[10px]">
                     <FormLabel className="text-[12px] text-[var(--text-secondary)]">
-                      Product ID
+                      {t('settings:hardware.usb.identifiers.fields.productId')}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -151,7 +153,7 @@ const UsbConfigForm = forwardRef<UsbConfigFormRef, UsbConfigFormProps>(
                 render={({ field }) => (
                   <FormItem className="relative mb-[10px]">
                     <FormLabel className="text-[12px] text-[var(--text-secondary)]">
-                      Serial Number
+                      {t('settings:hardware.usb.identifiers.fields.serialNumber')}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -173,7 +175,7 @@ const UsbConfigForm = forwardRef<UsbConfigFormRef, UsbConfigFormProps>(
                 render={({ field }) => (
                   <FormItem className="relative mb-[10px]">
                     <FormLabel className="text-[12px] text-[var(--text-secondary)]">
-                      Manufacturer
+                      {t('settings:hardware.usb.identifiers.fields.manufacturer')}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -195,7 +197,7 @@ const UsbConfigForm = forwardRef<UsbConfigFormRef, UsbConfigFormProps>(
                 render={({ field }) => (
                   <FormItem className="relative mb-[10px]">
                     <FormLabel className="text-[12px] text-[var(--text-secondary)]">
-                      Product Name
+                      {t('settings:hardware.usb.identifiers.fields.productName')}
                     </FormLabel>
                     <FormControl>
                       <Input

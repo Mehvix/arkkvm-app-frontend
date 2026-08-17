@@ -1,8 +1,9 @@
+import type { JigglerConfig } from '@/api/rpc/methods';
 import { useJsonRpc } from '@/hooks/useJsonRpc';
 import { useAppStore, useGlobalSettingsStore } from '@/stores';
 import { useActiveDeviceSettings, useSettingsActions } from '@/stores/devicesStore';
 import { createLogger } from '@/utils/logger';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SelectCard from '../SelectCard';
 import { Select } from '../ui/select';
@@ -10,6 +11,7 @@ import { Switch } from '../ui/switch';
 import SettingBlock from './SettingBlock';
 import SettingPageContainer from './SettingPageContainer';
 import { TipList } from './TipList';
+import type { MouseInputMode } from './UsbMouseModeSync';
 
 const logger = createLogger('SettingMouse');
 
@@ -119,8 +121,8 @@ export default function SettingMouse() {
   const changeJigglerChecked = useCallback(
     async (
       val: boolean,
-      jigglerConfig?: JigglerValues,
-      newSelectedJiggleValue?: string
+      jigglerConfig?: JigglerConfig | null,
+      newSelectedJiggleValue?: JigglerValues
     ) => {
       setJiggler(val);
       await sendAsync({
@@ -136,24 +138,55 @@ export default function SettingMouse() {
           method: 'setJigglerConfig',
           params: jigglerConfig,
           onResponse: () => {
-            setSelectedJiggleValue(newSelectedJiggleValue);
+            setSelectedJiggleValue(newSelectedJiggleValue ?? null);
           },
         });
       }
     },
     [selectedJigglerValue]
   );
-  const changeMouseInputMode = (val: string) => {
+  const changeMouseInputMode = (val: MouseInputMode) => {
     setMouseInputMode(val);
   };
 
-  const handleJigglerChange = useCallback(val => {
+  const scrollThrottlingOptionsMemo = useMemo(
+    () => scrollThrottlingOptions.map(o => ({
+      ...o,
+      label: t(`settings:mouse.scrollThrottling.${o.label.toLowerCase().replace(' ', '')}`),
+    })),
+    [t]
+  );
+
+  const jigglerOptionsMemo = useMemo(
+    () => jigglerOptions.map(o => ({
+      ...o,
+      label:
+        o.value === 'disabled' ? t('settings:mouse.jiggler.off') :
+        o.value === 'frequent' ? t('settings:mouse.jiggler.30seconds') :
+        o.value === 'standard' ? t('settings:mouse.jiggler.1minute') :
+        t('settings:mouse.jiggler.5minutes'),
+    })),
+    [t]
+  );
+
+  const cursorStyleOptionsMemo = useMemo(
+    () => cursorStyleOptions.map(o => ({
+      ...o,
+      label:
+        o.value === 'dot'
+          ? t('settings:mouse.cursorStyle.dot')
+          : t('settings:mouse.cursorStyle.arrow'),
+    })),
+    [t]
+  );
+
+  const handleJigglerChange = useCallback((val: string) => {
     if (val === 'disabled') {
       changeJigglerChecked(false);
       return;
     } else {
       const jigglerConfig = jigglerOptions.find(o => o.value === val)?.config;
-      changeJigglerChecked(true, jigglerConfig, val);
+      changeJigglerChecked(true, jigglerConfig, val as JigglerValues);
     }
   }, []);
   return (
@@ -181,14 +214,8 @@ export default function SettingMouse() {
           <Select
             size="xs"
             value={String(cursorStyle ?? 'dot')}
-            onChange={v => setCursorStyle(v as 'dot' | 'crosshair' | 'none')}
-            options={cursorStyleOptions.map(o => ({
-              ...o,
-              label:
-                o.value === 'dot'
-                  ? t('settings:mouse.cursorStyle.dot')
-                  : t('settings:mouse.cursorStyle.arrow'),
-            }))}
+            onChange={v => setCursorStyle(v as 'dot' | 'arrow')}
+            options={cursorStyleOptionsMemo}
 
           />
         </SettingBlock.Right>
@@ -202,7 +229,7 @@ export default function SettingMouse() {
            size="xs"
             value={String(scrollThrottling ?? 0)}
             onChange={v => setScrollThrottling(Number(v))}
-            options={scrollThrottlingOptions}
+            options={scrollThrottlingOptionsMemo}
 
           />
         </SettingBlock.Right>
@@ -215,9 +242,9 @@ export default function SettingMouse() {
           <Select
            size="xs"
             triggerClassName="w-[150px]"
-            value={selectedJigglerValue}
+            value={selectedJigglerValue ?? undefined}
             onChange={handleJigglerChange}
-            options={jigglerOptions}
+            options={jigglerOptionsMemo}
 
           />
         </SettingBlock.Right>
@@ -228,7 +255,7 @@ export default function SettingMouse() {
         content={t('settings:mouse.inputMode.desc')}
       >
         <p>{t('settings:mouse.inputMode.desc')}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-[var(--spacing-base)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-(--spacing-base)">
           <SelectCard
             title={t('settings:mouse.inputMode.absolute.title')}
             description={t('settings:mouse.inputMode.absolute.desc')}
@@ -245,7 +272,7 @@ export default function SettingMouse() {
 
           />
         </div>
-        <SettingBlock.Bottom className="text-[var(--inactive-text-color)]">
+        <SettingBlock.Bottom className="text-inactive-text">
           <TipList
             itemsKey={[
               t('settings:mouse.inputMode.absolute.tip'),

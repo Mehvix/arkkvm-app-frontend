@@ -11,11 +11,11 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 
 const variantStyles = {
-  beta: 'text-white',
-  success: 'text-white',
-  warning: 'text-white',
-  error: 'text-white',
-  info: 'text-white',
+  beta: 'text-text',
+  success: 'text-text',
+  warning: 'text-text',
+  error: 'text-text',
+  info: 'text-text',
 } as const;
 
 const variantClasses = {

@@ -1,3 +1,9 @@
+/*
+ * @Author: zhanglei
+ * @Date: 2025-11-03 14:42:12
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-07-09 18:59:46
+ */
 /**
  * @Purpose:
  * @Descripttion:
@@ -37,11 +43,11 @@ export const KeyLabel: React.FC<
 
     // Show dual state: shift character small on top, base character large on bottom (standard keyboard layout)
     return (
-      <span className="flex flex-col leading-tight items-center">
-        <span className="opacity-60 text-[10px]" aria-hidden="true">
+      <span className="flex flex-col leading-tight items-center w-full p-[10px] relative text-base">
+        <span className="opacity-60 text-[10px] text-left w-full text-[--text-secondary] absolute top-[4px] left-[10px]" aria-hidden="true">
           {secondary}
         </span>
-        <span className="font-semibold">{primary}</span>
+        <span className="text-text">{primary}</span>
       </span>
     );
   }

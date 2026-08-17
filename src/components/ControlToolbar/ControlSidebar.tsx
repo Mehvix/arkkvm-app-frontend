@@ -5,29 +5,27 @@
  * @Author: zhanglei
  * @Date: 2025-12-24 10:48:26
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-05-27 14:10:50
+ * @LastEditTime: 2026-07-31 20:46:31
  */
 import React, { useCallback, useEffect, useState } from 'react';
 
 import {
-    IconCd,
-    IconChartHistogramTwo,
-    IconClipboard,
-    IconFileTransfer,
-    IconKeyboard,
-    IconRing,
-    IconRouter,
-    IconSetting,
-    IconTerminal,
+  IconCd,
+  IconChartHistogramTwo,
+  IconClipboard,
+  IconFileTransfer,
+  IconKeyboard,
+  IconRing,
+  IconRouter,
+  IconSetting,
+  IconTerminal,
 } from '@/assets/icons';
 import { cn } from '@/lib/utils';
 
 import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
 import { useAppStore, useUiStore } from '@/stores';
-import {
-    useActiveDeviceSettings,
-    useSettingsActions,
-} from '@/stores/devicesStore';
+import { useActiveDeviceSettings, useSettingsActions } from '@/stores/devicesStore';
+import { Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Extension from '../kvm/Extension';
 import { Button } from '../ui/button';
@@ -40,36 +38,39 @@ import VirtualUsbDrive from './VirtualUsbDrive';
 import WakeOnLAN from './WakeOnLAN';
 
 const popoverContentClassName =
-  'w-[400px] max-w-[90vw] max-h-[80vh] flex flex-col bg-[var(--bg-secondary)] border-0 shadow-none p-[24px] ml-[12px] border border-[var(--border-color)]';
+  'ml-[16px] w-[var(--control-sidebar-popover-width,400px)] max-w-[calc(var(--radix-popover-content-available-width)-32px)] max-h-[80vh] flex flex-col overflow-hidden bg-[var(--bg-secondary)] border-0 shadow-none p-3 sm:p-4 border border-[var(--border-color)]';
+const popoverBodyClassName = 'min-w-0 overflow-auto';
 export type ControlSidebarItem = {
-  key: string
-  label: React.ReactNode
-  icon: React.ReactNode
-  isPopover?: boolean
-  openKey?: string
-  poverContent?: React.ReactNode
-  disabled?: boolean
-  className?: string
-}
+  key: string;
+  label?: React.ReactNode;
+  icon?: React.ReactNode;
+  isPopover?: boolean;
+  openKey?: string;
+  poverContent?: React.ReactNode;
+  disabled?: boolean;
+  className?: string;
+  /** Fully custom render for this sidebar item */
+  render?: () => React.ReactNode;
+};
 
 export interface ControlSidebarProps {
-  rpc: JsonRpcHandle
-  atxState?: { power: boolean; hdd: boolean }
-  activeKey?: string
-  collapsed?: boolean
-  defaultCollapsed?: boolean
-  onCollapsedChange?: (collapsed: boolean) => void
-  className?: string
-  panelClassName?: string
-  panelWidth?: number
-  openKey?: string
-  onOpenKeyChange?: (key: string | undefined) => void
-  renderPanel?: (key: string) => React.ReactNode
-  onItemClick?: (key: string) => void
+  rpc: JsonRpcHandle;
+  atxState?: { power: boolean; hdd: boolean };
+  activeKey?: string;
+  collapsed?: boolean;
+  defaultCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  className?: string;
+  panelClassName?: string;
+  panelWidth?: number;
+  openKey?: string;
+  onOpenKeyChange?: (key: string | undefined) => void;
+  renderPanel?: (key: string) => React.ReactNode;
+  onItemClick?: (key: string) => void;
   /** Whether OCR text recognition is currently active */
-  ocrEnabled?: boolean
+  ocrEnabled?: boolean;
   /** OCR text recognition click event */
-  onOcrClick?: () => void
+  onOcrClick?: () => void;
 }
 
 export default function ControlSidebar({
@@ -86,8 +87,8 @@ export default function ControlSidebar({
   onOpenKeyChange: _onOpenKeyChange,
   renderPanel,
   onItemClick,
-  ocrEnabled: _ocrEnabled = false,
-  onOcrClick: _onOcrClick,
+  ocrEnabled = false,
+  onOcrClick,
 }: ControlSidebarProps) {
   const { t } = useTranslation('common');
   const [send, isChannelReady, sendAsync] = rpc;
@@ -101,18 +102,14 @@ export default function ControlSidebar({
     fileTransfer: false,
   });
   const [hiddenPopovers, setHiddenPopovers] = useState<Record<string, boolean>>({});
-  const usbDeviceConfig = useActiveDeviceSettings(
-      state => state.usbDeviceConfig
-    );
+  const usbDeviceConfig = useActiveDeviceSettings(state => state.usbDeviceConfig);
   const handleVirtualMediaDialogChange = useCallback((isOpen: boolean) => {
     setHiddenPopovers(prev => {
       if (prev.virtualMedia === isOpen) return prev;
       return { ...prev, virtualMedia: isOpen };
     });
   }, []);
-  const webTerminalEnabled = useActiveDeviceSettings(
-    state => state.webTerminalEnabled
-  );
+  const webTerminalEnabled = useActiveDeviceSettings(state => state.webTerminalEnabled);
   const fileTransfer = useActiveDeviceSettings(state => state.fileTransfer);
 
   // Read panel visibility state from uiSlice
@@ -124,10 +121,7 @@ export default function ControlSidebar({
   ) => {
     return (
       <IconComponent
-        className={cn(
-          'size-4',
-          isActive ? 'text-white' : 'text-[var(--text-secondary)]'
-        )}
+        className={cn('size-4', isActive ? 'text-text' : 'text-[var(--text-secondary)]')}
       />
     );
   };
@@ -151,6 +145,7 @@ export default function ControlSidebar({
       disabled: !isChannelReady || !usbDeviceConfig?.mass_storage,
       poverContent: (
         <VirtualMedia
+          className="w-full min-w-0"
           onClose={() => {}}
           onDialogStateChange={handleVirtualMediaDialogChange}
           rpc={[send, isChannelReady, sendAsync]}
@@ -162,14 +157,14 @@ export default function ControlSidebar({
       ? [
           {
             key: 'fileTransfer',
-            label: t('Virtual USB Drive'),
+            label: t('toolbar.virtualUsbDrive.title'),
             icon: <IconFileTransfer className="size-4" />,
             isPopover: true,
             disabled: !isChannelReady || !usbDeviceConfig?.mass_storage,
-            className: 'w-[750px] p-0 bg-transparent border border-transparent',
+            className: '[--control-sidebar-popover-width:750px]',
             poverContent: (
               <VirtualUsbDrive
-                className="w-[750px]"
+                className="w-full min-w-0"
                 onClose={() => {}}
                 rpc={[send, isChannelReady, sendAsync]}
               />
@@ -198,7 +193,8 @@ export default function ControlSidebar({
       isPopover: true,
       openKey: 'paste',
       disabled: !isChannelReady || !usbDeviceConfig?.keyboard,
-      className: 'border w-[750px] border-[var(--border-color)] overflow-auto',
+      className:
+        'border [--control-sidebar-popover-width:750px] border-[var(--border-color)] overflow-auto',
       poverContent: (
         <PasteText
           onSend={() => {
@@ -207,54 +203,45 @@ export default function ControlSidebar({
         />
       ),
     },
-    // {
-    //   key: 'ocr',
-    //   label: ocrEnabled ? 'OCR Active' : 'OCR',
-    //   icon: <Type className="size-4" />,
-    //   render: () => (
-    //     <Tooltip key="ocr">
-    //       <TooltipTrigger asChild>
-    //         <Button
-    //           className="w-[34px] h-[34px] p-[0] bg-transparent"
-    //           disabled={!isChannelReady}
-    //           onClick={e => {
-    //             if (!isChannelReady) return;
-    //             e.stopPropagation();
-    //             e.preventDefault();
-    //             // Mutual exclusion: close popovers / panels first to
-    //             // mirror the behaviour of other sidebar buttons.
-    //             closeAllPopovers();
-    //             onOcrClick?.();
-    //           }}
-    //           style={{
-    //             color: ocrEnabled
-    //               ? 'var(--text-color)'
-    //               : 'var(--text-secondary)',
-    //             borderColor: ocrEnabled
-    //               ? 'var(--border-color)'
-    //               : 'transparent',
-    //             background: ocrEnabled ? 'var(--btn-outline-bg)' : undefined,
-    //             opacity: !isChannelReady ? 0.4 : undefined,
-    //             pointerEvents: !isChannelReady ? 'none' : undefined,
-    //           }}
-    //           title={ocrEnabled ? 'OCR Active' : 'OCR Text Recognition'}
-    //         >
-    //           <Type
-    //             className={cn(
-    //               'size-4',
-    //               ocrEnabled && 'text-blue-500'
-    //             )}
-    //           />
-    //         </Button>
-    //       </TooltipTrigger>
-    //       {isCollapsed && (
-    //         <TooltipContent side="right" align="center">
-    //          Copy text
-    //         </TooltipContent>
-    //       )}
-    //     </Tooltip>
-    //   ),
-    // },
+    {
+      key: 'ocr',
+      label: ocrEnabled ? t('toolbar.ocrActive') : t('toolbar.ocr'),
+      icon: <Type className="size-4" />,
+      render: () => (
+        <Tooltip key="ocr">
+          <TooltipTrigger asChild>
+            <Button
+              className="w-[34px] h-[34px] p-[0] bg-transparent"
+              disabled={!isChannelReady}
+              onClick={e => {
+                if (!isChannelReady) return;
+                e.stopPropagation();
+                e.preventDefault();
+                // Mutual exclusion: close popovers / panels first to
+                // mirror the behaviour of other sidebar buttons.
+                closeAllPopovers();
+                onOcrClick?.();
+              }}
+              style={{
+                color: ocrEnabled ? 'var(--text-color)' : 'var(--text-secondary)',
+                borderColor: ocrEnabled ? 'var(--border-color)' : 'transparent',
+                background: ocrEnabled ? 'var(--btn-outline-bg)' : undefined,
+                opacity: !isChannelReady ? 0.4 : undefined,
+                pointerEvents: !isChannelReady ? 'none' : undefined,
+              }}
+              title={ocrEnabled ? t('toolbar.ocrActive') : t('toolbar.ocr')}
+            >
+              <Type className={cn('size-4', ocrEnabled && 'text-blue-500')} />
+            </Button>
+          </TooltipTrigger>
+          {isCollapsed && (
+            <TooltipContent side="right" align="center">
+              {t('toolbar.copyText')}
+            </TooltipContent>
+          )}
+        </Tooltip>
+      ),
+    },
     {
       key: 'render1',
       render: () => {
@@ -352,15 +339,11 @@ export default function ControlSidebar({
       className={cn(
         'flex h-full self-stretch align-center overflow-hidden border-r border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-color)] ',
         !railPanelMode && 'transition-[width] duration-200 ease-out',
-        railPanelMode
-          ? 'w-fit max-w-full'
-          : isCollapsed
-            ? 'w-[48px]'
-            : 'w-[160px]',
+        railPanelMode ? 'w-fit max-w-full' : isCollapsed ? 'w-[40px] sm:w-[48px]' : 'w-[160px]',
         className
       )}
     >
-      <div className="h-full w-auto m-auto shrink-0 flex flex-col  gap-[5px] py-[12px]">
+      <div className="m-auto flex h-full w-auto shrink-0 flex-col gap-1 py-2 sm:gap-[5px] sm:py-[12px]">
         {/* <p>
           {!isCollapsed ? (
             <IconStretchRight
@@ -376,14 +359,12 @@ export default function ControlSidebar({
         </p> */}
         {items.map(item => {
           if (item.render) {
-            return (
-              <React.Fragment key={item.key}>{item.render()}</React.Fragment>
-            );
+            return <React.Fragment key={item.key}>{item.render()}</React.Fragment>;
           }
           if (item.isPopover) {
             return (
               <Popover
-                modal={['fileTransfer','virtualMedia'].includes(item.key)}
+                modal={['fileTransfer', 'virtualMedia'].includes(item.key)}
                 key={item.key}
                 open={!!popoverOpen[item.key]}
                 onOpenChange={open => {
@@ -400,7 +381,7 @@ export default function ControlSidebar({
                   <TooltipTrigger asChild>
                     <PopoverTrigger asChild>
                       <Button
-                        className="w-[34px] h-[34px] p-[0]  bg-transparent data-[state=open]:!bg-[var(--btn-outline-bg)] data-[state=open]:!text-white"
+                        className="h-[30px] w-[30px] p-0 bg-transparent data-[state=open]:!bg-[var(--btn-outline-bg)] data-[state=open]:!text-text sm:h-[34px] sm:w-[34px]"
                         disabled={item.disabled}
                         style={{
                           color: !!popoverOpen[item.key]
@@ -411,9 +392,7 @@ export default function ControlSidebar({
                             : 'transparent',
                           opacity: !isChannelReady ? 0.4 : undefined,
                           pointerEvents: !isChannelReady ? 'none' : undefined,
-                           background: !!popoverOpen[item.key]
-                        ? 'var(--btn-outline-bg)'
-                        : undefined,
+                          background: !!popoverOpen[item.key] ? 'var(--btn-outline-bg)' : undefined,
                         }}
                       >
                         {item.icon}
@@ -440,15 +419,14 @@ export default function ControlSidebar({
                   className={cn(
                     popoverContentClassName,
                     item.className,
-                    'mt-[6px]',
                     hiddenPopovers[item.key] && 'invisible pointer-events-none'
                   )}
-                  sideOffset={8}
+                  sideOffset={0}
                   side="right"
                   align="start"
                   onOpenAutoFocus={e => e.preventDefault()}
                 >
-                  {item.poverContent}
+                  <div className={popoverBodyClassName}>{item.poverContent}</div>
                 </PopoverContent>
               </Popover>
             );
@@ -457,8 +435,8 @@ export default function ControlSidebar({
             <Tooltip key={item.key}>
               <TooltipTrigger asChild>
                 <Button
-                  className="w-[34px] h-[34px] p-[0]  bg-transparent"
-                   disabled={item.disabled}
+                  className="h-[30px] w-[30px] p-0 bg-transparent sm:h-[34px] sm:w-[34px]"
+                  disabled={item.disabled}
                   onClick={e => {
                     if (!isChannelReady) return;
                     e.stopPropagation();
@@ -474,9 +452,9 @@ export default function ControlSidebar({
                       : 'transparent',
                     opacity: !isChannelReady ? 0.4 : undefined,
                     pointerEvents: !isChannelReady ? 'none' : undefined,
-                     background:  visibleState[item.key as keyof typeof visibleState]
-                        ? 'var(--btn-outline-bg)'
-                        : undefined,
+                    background: visibleState[item.key as keyof typeof visibleState]
+                      ? 'var(--btn-outline-bg)'
+                      : undefined,
                   }}
                 >
                   {item.icon}

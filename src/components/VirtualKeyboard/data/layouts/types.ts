@@ -49,6 +49,8 @@ export interface LanguageLayoutModule {
   windows?: KeyboardLayout
   /** Mac layout */
   mac?: KeyboardLayout
+  /** Optional special characters function */
+  getSpecialChars?(): import('../../utils/generateCharMap').LayoutChars
 }
 
 /** Layout option (used for dropdown selection and other UI) */

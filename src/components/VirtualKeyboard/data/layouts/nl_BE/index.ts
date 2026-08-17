@@ -1,22 +1,18 @@
-import type { LanguageLayoutModule, LayoutMeta } from '../types';
+/**
+ * @Author: zhanglei
+ * @Date: 2026-01-28 23:41:23
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-08-04 22:07:25
+ */
+import type { LanguageLayoutModule } from '../types';
+import { nlBEMeta as meta } from '../meta';
 import { NL_BE_WIN_LAYOUT } from './windows';
-
-export const meta: LayoutMeta = {
-  id: 'nl-BE-azerty',
-  tag: 'NL-BE',
-  name: 'Dutch (Belgium)',
-  nativeName: 'Dutch (Belgium)',
-  layout: 'azerty',
-  standard: 'iso',
-  region: 'europe',
-  priority: 15,
-  recommended: false,
-  hasAltGr: true,
-};
+import { macLayout } from './mac';
 
 const nlBE: LanguageLayoutModule = {
   meta,
   windows: NL_BE_WIN_LAYOUT,
+  mac: macLayout,
 };
 
 export default nlBE;

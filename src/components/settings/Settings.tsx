@@ -1,4 +1,16 @@
-import { IconAccess, IconAdvanced, IconAppearance, IconHardware, IconKeyboard, IconMouse, IconNetwork, IconSetting, IconToBottomOne, IconVideo, IconVolOn } from '@/assets/icons';
+import {
+  IconAccess,
+  IconAdvanced,
+  IconAppearance,
+  IconHardware,
+  IconKeyboard,
+  IconMouse,
+  IconNetwork,
+  IconSetting,
+  IconToBottomOne,
+  IconVideo,
+  IconVolOn,
+} from '@/assets/icons';
 import type { JsonRpcHandle } from '@/hooks/useJsonRpc';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores';
@@ -28,27 +40,67 @@ export default function Settings({
   closeIcon,
   onNetworkReconnect,
 }: {
-  className?: string
-  rpc?: JsonRpcHandle
-  closeIcon?: React.ReactNode
+  className?: string;
+  rpc?: JsonRpcHandle;
+  closeIcon?: React.ReactNode;
   /** Cloud mode: callback to reconnect WebRTC instead of page reload */
-  onNetworkReconnect?: () => void | Promise<void>
+  onNetworkReconnect?: () => void | Promise<void>;
 }) {
   const { t } = useTranslation(['settings']);
   const [active, setActive] = useState<string>('regular');
   const closeAllPanels = useAppStore(s => s.ui.closeAllPanels);
   const tabs: Array<{ key: string; i18nKey: string }> = [
-    { key: 'regular', i18nKey: 'settings:sidebar.regular',icon: <IconSetting  className="size-[12px]" /> },
-    { key: 'mouse', i18nKey: 'settings:sidebar.mouse',icon: <IconMouse  className="size-[12px]" /> },
-    { key: 'keyboard', i18nKey: 'settings:sidebar.keyboard',icon: <IconKeyboard  className="size-[12px]" /> },
-    { key: 'video', i18nKey: 'settings:sidebar.video',icon: <IconVideo  className="size-[12px]" /> },
-    { key: 'audio', i18nKey: 'settings:sidebar.audio',icon: <IconVolOn className="size-[12px]" /> },
-    { key: 'hardware', i18nKey: 'settings:sidebar.hardware',icon: <IconHardware  className="size-[12px]" /> },
-    { key: 'accessibility', i18nKey: 'settings:sidebar.accessibility',icon: <IconAccess   className="size-[12px]" /> },
-    { key: 'appearance', i18nKey: 'settings:sidebar.appearance',icon: <IconAppearance  className="size-[12px]" /> },
+    {
+      key: 'regular',
+      i18nKey: 'settings:sidebar.regular',
+      icon: <IconSetting className="size-[12px]" />,
+    },
+    {
+      key: 'mouse',
+      i18nKey: 'settings:sidebar.mouse',
+      icon: <IconMouse className="size-[12px]" />,
+    },
+    {
+      key: 'keyboard',
+      i18nKey: 'settings:sidebar.keyboard',
+      icon: <IconKeyboard className="size-[12px]" />,
+    },
+    {
+      key: 'video',
+      i18nKey: 'settings:sidebar.video',
+      icon: <IconVideo className="size-[12px]" />,
+    },
+    {
+      key: 'audio',
+      i18nKey: 'settings:sidebar.audio',
+      icon: <IconVolOn className="size-[12px]" />,
+    },
+    {
+      key: 'hardware',
+      i18nKey: 'settings:sidebar.hardware',
+      icon: <IconHardware className="size-[12px]" />,
+    },
+    {
+      key: 'accessibility',
+      i18nKey: 'settings:sidebar.accessibility',
+      icon: <IconAccess className="size-[12px]" />,
+    },
+    {
+      key: 'appearance',
+      i18nKey: 'settings:sidebar.appearance',
+      icon: <IconAppearance className="size-[12px]" />,
+    },
     // { key: 'keyboardMacros', i18nKey: 'settings:sidebar.keyboardMacros' },
-    { key: 'network', i18nKey: 'settings:sidebar.network',icon: <IconNetwork  className="size-[12px]" /> },
-    { key: 'advanced', i18nKey: 'settings:sidebar.advanced',icon: <IconAdvanced  className="size-[12px]" /> },
+    {
+      key: 'network',
+      i18nKey: 'settings:sidebar.network',
+      icon: <IconNetwork className="size-[12px]" />,
+    },
+    {
+      key: 'advanced',
+      i18nKey: 'settings:sidebar.advanced',
+      icon: <IconAdvanced className="size-[12px]" />,
+    },
   ];
   const panels: Record<string, JSX.Element> = {
     regular: <SettingRegular rpc={rpc} />,
@@ -72,19 +124,10 @@ export default function Settings({
   return (
     <div className="h-full">
       <div className="flex items-center justify-between px-[16px] sm:px-[30px] py-[24px]">
-        <span className='text-3xl'>Settings</span>
-        <Button className='border-none bg-transparent' onClick={closeAllPanels}>
-      {closeIcon ? (
-          <> {closeIcon}</>
-
-        ) : (
-          <IconToBottomOne
-            className="cursor-pointer"
-
-          />
-        )}
+        <span className="text-3xl">Settings</span>
+        <Button className="border-none bg-transparent" onClick={closeAllPanels}>
+          {closeIcon ? <> {closeIcon}</> : <IconToBottomOne className="cursor-pointer" />}
         </Button>
-
       </div>
       <div
         defaultValue="regular"

@@ -1,23 +1,23 @@
 import {
-    IconFolder,
-    IconMountBack,
-    IconNoFile,
-    IconNoFile1,
-    IconUSB,
-    IconUnion,
+  IconFolder,
+  IconMountBack,
+  IconNoFile,
+  IconNoFile1,
+  IconUSB,
+  IconUnion,
 } from '@/assets/icons';
 import { cn } from '@/lib/utils';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import StorageUsage from '../../StorageUsage';
 import {
-    Breadcrumb,
-    BreadcrumbEllipsis,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from '../../ui/breadcrumb';
 import { Button } from '../../ui/button';
 import DataTable from '../../ui/data-table';
@@ -26,8 +26,9 @@ import ActionPanel from '../ActionPanel';
 import { completedColumns } from './columns';
 import type { UseVirtualUsbDriveReturn } from './useVirtualUsbDrive';
 import { commandClass } from './utils';
+import { env } from '@/utils';
 
-type FileManagerViewProps = UseVirtualUsbDriveReturn
+type FileManagerViewProps = UseVirtualUsbDriveReturn;
 
 export default function FileManagerView(props: FileManagerViewProps) {
   const { t } = useTranslation('common');
@@ -58,9 +59,11 @@ export default function FileManagerView(props: FileManagerViewProps) {
     onStartUpload,
     onSuccessUpload,
     onProgressUpload,
+    onResumeStart,
     setState,
     truncateBytes,
     logger,
+    uploadDropZoneRef,
   } = props;
   const breadcrumbNodes = React.useMemo(() => {
     const norm = (p: string) => p.replace(/\\+/g, '/');
@@ -85,7 +88,7 @@ export default function FileManagerView(props: FileManagerViewProps) {
           {/* Root */}
           <BreadcrumbItem>
             {items.length === 0 ? (
-              <BreadcrumbPage>My Files</BreadcrumbPage>
+              <BreadcrumbPage>{t('toolbar.virtualUsbDrive.myFiles')}</BreadcrumbPage>
             ) : (
               <BreadcrumbLink
                 href="#"
@@ -93,7 +96,7 @@ export default function FileManagerView(props: FileManagerViewProps) {
                 onClick={_e => handleBreadcrumbClick?.('/')}
                 className="cursor-pointer"
               >
-                My Files
+                {t('toolbar.virtualUsbDrive.myFiles')}
               </BreadcrumbLink>
             )}
           </BreadcrumbItem>
@@ -157,11 +160,11 @@ export default function FileManagerView(props: FileManagerViewProps) {
   }, [currentPath, truncateBytes, handleBreadcrumbClick]);
 
   return (
-    <>
+    <div className="w-full min-w-0 space-y-[10px]">
       <ActionPanel
-        title="ArkKVM USB Drive"
+        title={t('toolbar.virtualUsbDrive.title')}
         subtitle={
-          <div className="flex items-center justify-between w-full pt-[10px]">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pt-[10px]">
             {breadcrumbNodes}
             {fileTransferState === 'Kvm' && (
               <Button
@@ -173,21 +176,20 @@ export default function FileManagerView(props: FileManagerViewProps) {
                 onClick={handleCreateDir}
               >
                 <IconFolder className="w-4 h-4 mr-1" />
-                Create Dir
+                {t('toolbar.virtualUsbDrive.createDir')}
               </Button>
             )}
           </div>
         }
-        className="p-4  rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]"
+        className="min-w-0 overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
         rightSlot={
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {fileTransferState === 'Kvm' &&
               (() => {
                 const isRunning =
-                  uploads?.some(t => t.state === 'running') ||
-                  downloads?.some(t => t.state === 'running');
-                const totalCount =
-                  (uploads?.length ?? 0) + (downloads?.length ?? 0);
+                  uploads?.some(u => u.state === 'running') ||
+                  downloads?.some(d => d.state === 'running');
+                const totalCount = (uploads?.length ?? 0) + (downloads?.length ?? 0);
                 return (
                   <Button
                     size="sm"
@@ -196,16 +198,12 @@ export default function FileManagerView(props: FileManagerViewProps) {
                     onClick={() => setListType('transfer')}
                   >
                     <IconUnion
-                      className={
-                        isRunning
-                          ? 'animate-pulse text-green-400'
-                          : 'text-gray-400'
-                      }
+                      className={isRunning ? 'animate-pulse text-green-400' : 'text-gray-400'}
                     />
                     {totalCount > 0 ? (
                       <span
                         className={
-                          'absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[10px] leading-none bg-gray-500 text-white'
+                          'absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[10px] leading-none bg-gray-500 text-text'
                         }
                       >
                         {totalCount}
@@ -222,11 +220,11 @@ export default function FileManagerView(props: FileManagerViewProps) {
                 onClick={() => handleMountWithFileImg('RemoteUsb')}
                 title={
                   hasActiveTransfers
-                    ? 'Cannot mount while file transfers are running'
+                    ? t('toolbar.virtualUsbDrive.cannotMountWhileTransfer')
                     : undefined
                 }
               >
-                <IconUSB /> Mount to Remote
+                <IconUSB /> {t('toolbar.virtualUsbDrive.mountToRemote')}
               </Button>
             ) : null}
             {['RemoteUsb'].includes(fileTransferState) && (
@@ -237,11 +235,11 @@ export default function FileManagerView(props: FileManagerViewProps) {
                 disabled={isLoading('mountWithFileImg') || hasActiveTransfers}
                 title={
                   hasActiveTransfers
-                    ? 'Cannot mount while file transfers are running'
+                    ? t('toolbar.virtualUsbDrive.cannotMountWhileTransfer')
                     : undefined
                 }
               >
-                <IconMountBack /> Mount to Back
+                <IconMountBack /> {t('toolbar.virtualUsbDrive.mountToBack')}
               </Button>
             )}
           </div>
@@ -265,7 +263,7 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   disabled={!isDownload}
                   onClick={handleDownload}
                 >
-                  Download
+                  {t('toolbar.virtualUsbDrive.download')}
                 </Button>
                 <Button
                   size="sm"
@@ -275,24 +273,22 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   loading={isLoading('ftDelFile') || isLoading('ftDelDir')}
                   title={
                     hasFtcacheUploadingConflict
-                      ? t(
-                          'toolbar.virtualUsbDrive.deleteDisabled.ftcacheUploading'
-                        )
+                      ? t('toolbar.virtualUsbDrive.deleteDisabled.ftcacheUploading')
                       : undefined
                   }
-                  disabled={
-                    !canDeleteSelected ||
-                    isLoading('ftDelFile') ||
-                    isLoading('ftDelDir')
-                  }
+                  disabled={!canDeleteSelected || isLoading('ftDelFile') || isLoading('ftDelDir')}
                   onClick={handleDelete}
                 >
-                  Delete
+                  {t('toolbar.virtualUsbDrive.delete')}
                 </Button>
                 <UploadDropZone
+                  ref={uploadDropZoneRef}
                   startMethod="startFtFsUpload"
                   step="overview"
-                  formatsText="Supported formats: All file types"
+                  formatsText={t('toolbar.virtualUsbDrive.uploadFormatsText')}
+                  source="virtual-usb"
+                  path={currentPath}
+                  httpUploadUrl={env.target === 'device' ? '/ft/upload' : ''}
                   accept="*"
                   beforeUpload={file => {
                     if (file.size === 0) {
@@ -305,25 +301,24 @@ export default function FileManagerView(props: FileManagerViewProps) {
                   maxFileSize={4 * 1000 * 1000 * 1000}
                   startParams={startParamsFn}
                   onStart={onStartUpload}
+                  onResumeStart={onResumeStart}
                   onSuccess={onSuccessUpload}
                   onProgress={onProgressUpload}
                   onError={info => {
                     if (info?.name) {
-                      setState(info.name, 'error', info?.error);
+                      setState(info.name, 'failed', info?.error);
                     }
                   }}
                   onPause={info => {
                     // Update state to paused
-                    setTimeout(() => {
-                      logger.debug('Upload paused', { name: info.name });
-                      setState(info.name, 'paused');
-                    }, 3000);
+                    logger.debug('Upload paused', { name: info.name });
+                    setState(info.name, 'paused');
                   }}
                   showProgress={false}
                   showInputAlways={true}
                   customUploadTrigger={
                     <Button size="sm" variant="primary" className="btn-primary">
-                      Upload Files
+                      {t('toolbar.virtualUsbDrive.uploadFiles')}
                     </Button>
                   }
                 />
@@ -333,52 +328,48 @@ export default function FileManagerView(props: FileManagerViewProps) {
         }
       >
         <DataTable
-          columns={completedColumns}
+          columns={completedColumns(t)}
           list={showCompletedList}
           rowKey="id"
           loading={isLoading('ftListFile')}
           rowHover={true}
-          className="text-sm mt-[var(--spacing-base)] flex-1 min-h-0 [&_table]:table-fixed [&_table]:w-full"
+          className="mt-[var(--spacing-base)] min-h-0 flex-1 text-sm [&_table]:w-full [&_table]:table-fixed"
           scroll={{ y: 'calc(100vh - 450px)', x: 'max-content' }}
           emptyProps={(() => {
             switch (fileTransferState) {
               case 'None':
                 return {
                   icon: <IconUSB className="size-8 opacity-80" />,
-                  title: 'File System Not Mounted',
-                  description:
-                    'Click \'Mount to Remote\' to access the remote computer\'s file system and manage files.',
+                  title: t('toolbar.virtualUsbDrive.empty.notMountedTitle'),
+                  description: t('toolbar.virtualUsbDrive.empty.notMountedDesc'),
                   className: 'py-14',
                 };
               case 'RemoteUsb':
                 return {
                   icon: <IconNoFile className="size-8 opacity-80" />,
-                  title: 'Unable to Display Files',
-                  description:
-                    'Click \'Mount Back\' to disconnect ArkKVM from the remote computer so you can view, upload, and download files on your local computer.',
+                  title: t('toolbar.virtualUsbDrive.empty.remoteUsbTitle'),
+                  description: t('toolbar.virtualUsbDrive.empty.remoteUsbDesc'),
                   className: 'py-14',
                 };
               case 'Kvm':
                 return {
                   icon: <IconNoFile1 className="size-8 opacity-80" />,
-                  title: 'No Files Available',
-                  description:
-                    'Upload files from your local computer with the button below,or Click \'Mount to Remote\' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.',
+                  title: t('toolbar.virtualUsbDrive.empty.noFilesTitle'),
+                  description: t('toolbar.virtualUsbDrive.empty.noFilesDesc'),
                   className: 'py-14',
                 };
               default:
                 return {
                   icon: <IconNoFile className="size-8 opacity-80" />,
-                  title: 'No Files Available',
-                  description:
-                    'Upload files from your local computer with the button below,or Click \'Mount to Remote\' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.',
+                  title: t('toolbar.virtualUsbDrive.empty.noFilesTitle'),
+                  description: t('toolbar.virtualUsbDrive.empty.noFilesDesc'),
                   className: 'py-14',
                 };
             }
           })()}
           rowSelection={{
             selectedRowKeys: selectedCompletedRowKeys,
-            onChange: (keys) => {
+            onChange: keys => {
               setSelectedCompletedRowKeys(keys);
             },
             columnWidth: 40,
@@ -394,25 +385,19 @@ export default function FileManagerView(props: FileManagerViewProps) {
         />
       </ActionPanel>
       {fileTransferState === 'Kvm' ? (
-        <div
-          className={cn(
-            commandClass,
-            'mt-[10px]',
-            'border border-[var(--border)]'
-          )}
-        >
+        <div className={cn(commandClass, 'border border-[var(--border)]')}>
           <StorageUsage
             total={storageInfo.total_space * 1024}
             used={storageInfo.used_space * 1024}
             free={storageInfo.free_space * 1024}
             loading={isLoading('ftFileSystemInfo')}
-            title="Available Storage"
+            title={t('toolbar.virtualUsbDrive.availableStorage')}
             className="mt-2"
           />
         </div>
       ) : (
         <></>
       )}
-    </>
+    </div>
   );
 }

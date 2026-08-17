@@ -9,6 +9,7 @@
  */
 import { IconFolder, IconReturn } from '@/assets/icons';
 import { Tabs } from '@radix-ui/react-tabs';
+import { useTranslation } from 'react-i18next';
 import TransferList from '../../TransferList';
 import { Button } from '../../ui/button';
 import { TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
@@ -18,6 +19,7 @@ import type { UseVirtualUsbDriveReturn } from './useVirtualUsbDrive';
 type TransferListViewProps = UseVirtualUsbDriveReturn
 
 export default function TransferListView(props: TransferListViewProps) {
+  const { t } = useTranslation('common');
   const {
     uploads,
     downloads,
@@ -26,14 +28,15 @@ export default function TransferListView(props: TransferListViewProps) {
     setListType,
     handlePauseUpload,
     handleRemoveUpload,
+    handleResumeUpload,
   } = props;
 
   return (
     <>
       <div className="p-4  rounded-md bg-[var(--bg-secondary)] border border-[var(--border)]">
-        <Tabs defaultValue={transferType} className="w-full" size="sm">
+        <Tabs value={transferType} className="w-full" size="sm">
           <div className="flex justify-between items-center">
-            <h3 className="text-h1">Tasks</h3>
+            <h3 className="text-h1">{t('toolbar.virtualUsbDrive.tasks')}</h3>
             <TabsList
               className="m-auto h-[32px] bg-[var(--bg-secondary)]"
               size="sm"
@@ -43,14 +46,14 @@ export default function TransferListView(props: TransferListViewProps) {
                 className="h-[28px]"
                 onClick={() => setTransferType('upload')}
               >
-                Upload
+                {t('toolbar.virtualUsbDrive.upload')}
               </TabsTrigger>
               <TabsTrigger
                 value="download"
                 className="h-[28px]"
                 onClick={() => setTransferType('download')}
               >
-                Download
+                {t('toolbar.virtualUsbDrive.download')}
               </TabsTrigger>
             </TabsList>
             <Button
@@ -60,34 +63,33 @@ export default function TransferListView(props: TransferListViewProps) {
               className=""
             >
               <IconReturn />
-              Back
+              {t('toolbar.virtualUsbDrive.back')}
             </Button>
           </div>
 
-          <TabsContent value="upload">
+          <TabsContent forceMount value="upload" className="min-h-[200px] data-[state=inactive]:hidden">
             <TransferList
               list={uploads}
               onPause={handlePauseUpload}
               onRemove={handleRemoveUpload}
+              onResume={handleResumeUpload}
               emptyProps={{
                 icon: <IconFolder className="size-8 opacity-80" />,
-                title: 'Unable to Display',
-                description:
-                  'Click ‘Back’ to return to the Virtual USB Drive to browse, upload, or download files.',
+                title: t('toolbar.virtualUsbDrive.empty.transferUnableTitle'),
+                description: t('toolbar.virtualUsbDrive.empty.transferUnableDesc'),
                 className: 'py-14',
               }}
             />
           </TabsContent>
-          <TabsContent value="download">
+          <TabsContent forceMount value="download" className="min-h-[200px] data-[state=inactive]:hidden">
              <TransferList
-              columns={downloadsColumns}
+              columns={downloadsColumns(t)}
               list={downloads}
               showActions={false}
               emptyProps={{
                 icon: <IconFolder className="size-8 opacity-80" />,
-                title: 'Unable to Display',
-                description:
-                  'Click ‘Back’ to return to the Virtual USB Drive to browse, upload, or download files.',
+                title: t('toolbar.virtualUsbDrive.empty.transferUnableTitle'),
+                description: t('toolbar.virtualUsbDrive.empty.transferUnableDesc'),
                 className: 'py-14',
               }}
             />

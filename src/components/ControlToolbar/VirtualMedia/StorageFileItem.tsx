@@ -9,6 +9,7 @@
  */
 import { humanSize } from '@/utils/format';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/button';
 
 export interface StorageFile {
@@ -33,6 +34,7 @@ const StorageFileItem = memo(function StorageFileItem({
   onContinueUpload,
   onDelete,
 }: StorageFileItemProps) {
+  const { t } = useTranslation('virtualMedia');
   const baseName = (file.filename || '').replace(/\.incomplete$/, '');
   const rowClass = [
     'group flex items-center justify-between p-3 rounded cursor-pointer ring-1 ring-transparent transition-colors duration-200 ease-out hover:bg-[var(--btn-primary-bg)]/20 hover:ring-[var(--btn-primary-bg)]',
@@ -68,7 +70,7 @@ const StorageFileItem = memo(function StorageFileItem({
             if (onDelete) onDelete(file);
           }}
         >
-          Delete
+          {t('storageDialog.deleteFileButton')}
         </Button>
 
         {file.incomplete ? (
@@ -79,7 +81,7 @@ const StorageFileItem = memo(function StorageFileItem({
               if (onContinueUpload) onContinueUpload(file.filename);
             }}
           >
-            Continue uploading
+            {t('storageDialog.continueUploading')}
           </Button>
         ) : null}
 
@@ -93,7 +95,7 @@ const StorageFileItem = memo(function StorageFileItem({
               if (onSelect) onSelect(file);
             }}
           >
-            {selected ? 'Selected' : 'Select'}
+            {selected ? t('storageDialog.selectedFile') : t('storageDialog.selectFile')}
           </Button>
         ) : null}
       </div>

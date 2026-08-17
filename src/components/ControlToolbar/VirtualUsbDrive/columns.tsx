@@ -10,13 +10,14 @@
 import { IconRightSmall } from '@/assets/icons';
 import type { DownloadFileInfo } from '@/hooks/useWebRtcFile';
 import { humanSize } from '@/utils/format';
+import type { TFunction } from 'i18next';
 import type { DataTableColumn } from '../../ui/data-table';
 import type { Row } from './types';
 import { formatTime, getFileIcon } from './utils';
 
-export const completedColumns: DataTableColumn<Row>[] = [
+export const completedColumns = (t: TFunction): DataTableColumn<Row>[] => [
   {
-    title: 'Name',
+    title: t('toolbar.virtualUsbDrive.col.name'),
     dataIndex: 'name',
     sorter: true,
     width: '60%',
@@ -49,7 +50,7 @@ export const completedColumns: DataTableColumn<Row>[] = [
   },
 
   {
-    title: 'Modified time',
+    title: t('toolbar.virtualUsbDrive.col.modifiedTime'),
     dataIndex: 'modified',
     className: 'capitalize',
     sorter: true,
@@ -57,20 +58,20 @@ export const completedColumns: DataTableColumn<Row>[] = [
     render: ts => formatTime(ts as number),
   },
   {
-    title: 'File size',
+    title: t('toolbar.virtualUsbDrive.col.fileSize'),
     dataIndex: 'size',
     align: 'left',
     sorter: true,
     width: '15%',
-    render: (v,record) => {
+    render: (v, record) => {
       return record.is_dir ? '--' : humanSize(Number(v) || 0);
-    }
+    },
   },
 ];
 
-export const downloadsColumns: DataTableColumn<DownloadFileInfo[]> = [
+export const downloadsColumns = (t: TFunction): DataTableColumn<DownloadFileInfo>[] => [
   {
-    title: 'Name',
+    title: t('toolbar.virtualUsbDrive.col.name'),
     dataIndex: 'name',
     width: '50%',
     className: 'max-w-0',
@@ -82,14 +83,14 @@ export const downloadsColumns: DataTableColumn<DownloadFileInfo[]> = [
   },
 
   {
-    title: 'Transfer Info',
+    title: t('toolbar.virtualUsbDrive.col.transferInfo'),
     dataIndex: 'speed',
     width: '35%',
     render: (v, record) =>
       `${record.speedFormatted || '-'} · ${record.transferredFormatted || '-'} / ${record.totalFormatted || '-'} · ${record.progressFormatted || '-'}`,
   },
   {
-    title: 'Transfer Status',
+    title: t('toolbar.virtualUsbDrive.col.transferStatus'),
     dataIndex: 'state',
     align: 'left',
     width: '15%',

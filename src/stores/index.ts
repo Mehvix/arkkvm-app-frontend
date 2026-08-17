@@ -15,6 +15,7 @@ import { createSetupSlice } from './slices/setupSlice';
 import { createUISlice, type UISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 import { createUploadSlice } from './slices/uploadSlice';
+import { createVirtualMediaSlice } from './slices/virtualMediaSlice';
 import { createUserSlice } from './slices/userSlice';
 import type { RootState } from './types';
 export type { UpdateModalView } from './slices/updateSlice';
@@ -33,6 +34,7 @@ export const useAppStore = create<RootState>()(
         ...createDeviceStateSlice(set, get, api),
         ...createSetupSlice(set, get, api),
         ...createSettingsSlice(set, get, api),
+        ...createVirtualMediaSlice(set, get, api),
         fileTransferList: createFileTransferUploadListSlice(set, get, api),
         fileDownloadList: createFileTransferDownloadListSlice(set, get, api),
         rtc: createRTCSlice(set, get, api),
@@ -68,6 +70,8 @@ export const useAppStore = create<RootState>()(
           // Persist upload sessions for cross-refresh visibility when needed.
           uploads: state.uploads,
           keyboardLanguage: state.keyboardLanguage,
+          keyboardTargetSystem: state.keyboardTargetSystem,
+          virtualMediaCustomImages: state.virtualMedia?.customImages ?? [],
         }),
         // Deep-merge persisted data while preserving runtime action references.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,8 +85,7 @@ export const useAppStore = create<RootState>()(
             ...p,
             localAuthMode: p?.localAuthMode ?? c.localAuthMode,
             password: p?.password ?? c.password,
-            microphone_emulation:
-              p?.microphone_emulation ?? c.microphone_emulation,
+            microphone_emulation: p?.microphone_emulation ?? c.microphone_emulation,
             camera_emulation: p?.camera_emulation ?? c.camera_emulation,
             file_transfer: p?.file_transfer ?? c.file_transfer,
             audio_playback: p?.audio_playback ?? c.audio_playback,
@@ -94,9 +97,7 @@ export const useAppStore = create<RootState>()(
             // Merge UI by overriding only controlLayoutMode.
             const mergedUi = {
               ...c.ui,
-              controlLayoutMode:
-                p?.uiControlLayoutMode ??
-                c.ui?.controlLayoutMode,
+              controlLayoutMode: p?.uiControlLayoutMode ?? c.ui?.controlLayoutMode,
             };
 
             return {
@@ -104,13 +105,26 @@ export const useAppStore = create<RootState>()(
               ui: mergedUi,
               // Merge uploads with runtime entries taking precedence.
               uploads: { ...(p?.uploads ?? {}), ...(c?.uploads ?? {}) },
+              // Restore custom images into virtualMedia slice.
+              virtualMedia: (() => {
+                const currentVirtualMedia = c?.virtualMedia;
+                const currentCustomImages = currentVirtualMedia?.customImages ?? [];
+                const persistedCustomImages = p?.virtualMediaCustomImages;
+                const needsRestore =
+                  persistedCustomImages !== undefined &&
+                  JSON.stringify(persistedCustomImages) !== JSON.stringify(currentCustomImages);
+                if (currentVirtualMedia) {
+                  return needsRestore
+                    ? { ...currentVirtualMedia, customImages: persistedCustomImages }
+                    : currentVirtualMedia;
+                }
+                return { customImages: persistedCustomImages ?? [] };
+              })(),
             } as RootState;
           }
 
           const persistedHasDevices =
-            !!p?.settings &&
-            p.settings.devices &&
-            Object.keys(p.settings.devices).length > 0;
+            !!p?.settings && p.settings.devices && Object.keys(p.settings.devices).length > 0;
 
           const mergedSettingsBase = persistedHasDevices
             ? { ...(c.settings ?? {}), ...p.settings }
@@ -132,8 +146,7 @@ export const useAppStore = create<RootState>()(
           const mergedUi = {
             ...c.ui,
             controlLayoutMode:
-              (p?.uiControlLayoutMode as string | undefined) ??
-              c.ui?.controlLayoutMode,
+              (p?.uiControlLayoutMode as string | undefined) ?? c.ui?.controlLayoutMode,
           };
 
           return {
@@ -144,6 +157,21 @@ export const useAppStore = create<RootState>()(
             settings: mergedSettings,
             // Update state is not persisted and should use runtime state.
             update: c.update,
+            // Restore custom images into virtualMedia slice.
+            virtualMedia: (() => {
+              const currentVirtualMedia = c?.virtualMedia;
+              const currentCustomImages = currentVirtualMedia?.customImages ?? [];
+              const persistedCustomImages = p?.virtualMediaCustomImages;
+              const needsRestore =
+                persistedCustomImages !== undefined &&
+                JSON.stringify(persistedCustomImages) !== JSON.stringify(currentCustomImages);
+              if (currentVirtualMedia) {
+                return needsRestore
+                  ? { ...currentVirtualMedia, customImages: persistedCustomImages }
+                  : currentVirtualMedia;
+              }
+              return { customImages: persistedCustomImages ?? [] };
+            })(),
           } as RootState;
         },
       }
@@ -248,14 +276,11 @@ export const isAnyUiPanelOpen = () => {
 export const useSettingsStore = <T = SettingsSlice['settings']>(
   selector?: (s: SettingsSlice['settings']) => T
 ) => {
-  return useAppStore(state =>
-    selector ? selector(state.settings) : (state.settings as T)
-  );
+  return useAppStore(state => (selector ? selector(state.settings) : (state.settings as T)));
 };
 
 // Common convenience hooks.
-export const useActiveDeviceId = () =>
-  useAppStore(s => s.settings?.activeDeviceId);
+export const useActiveDeviceId = () => useAppStore(s => s.settings?.activeDeviceId);
 
 export const useActiveDeviceSettings = () =>
   useAppStore(s => {
@@ -269,23 +294,15 @@ export const useSettingsActions = () =>
     const removeDevice = useAppStore(s => s.settings.removeDevice);
     const setActiveDevice = useAppStore(s => s.settings.setActiveDevice);
     const setDeviceSetting = useAppStore(s => s.settings.setDeviceSetting);
-    const setNestedDeviceSetting = useAppStore(
-      s => s.settings.setNestedDeviceSetting
-    );
-    const setDeviceSettingById = useAppStore(
-      s => s.settings.setDeviceSettingById
-    );
-    const setNestedDeviceSettingById = useAppStore(
-      s => s.settings.setNestedDeviceSettingById
-    );
+    const setNestedDeviceSetting = useAppStore(s => s.settings.setNestedDeviceSetting);
+    const setDeviceSettingById = useAppStore(s => s.settings.setDeviceSettingById);
+    const setNestedDeviceSettingById = useAppStore(s => s.settings.setNestedDeviceSettingById);
     const resetSettings = useAppStore(s => s.settings.resetSettings);
     const createChannel = useAppStore(s => s.settings.createChannel);
     const removeChannel = useAppStore(s => s.settings.removeChannel);
     const setActiveChannel = useAppStore(s => s.settings.setActiveChannel);
     const setChannelState = useAppStore(s => s.settings.setChannelState);
-    const setNestedChannelState = useAppStore(
-      s => s.settings.setNestedChannelState
-    );
+    const setNestedChannelState = useAppStore(s => s.settings.setNestedChannelState);
 
     return {
       // device-level actions
@@ -321,6 +338,8 @@ export const useGlobalSettingsStore = () => {
   const mouseInputMode = useAppStore(s => s.mouseInputMode);
   const preferredMouseInputMode = useAppStore(s => s.preferredMouseInputMode);
   const modifierReleaseMode = useAppStore(s => s.modifierReleaseMode);
+  const typingSpeed = useAppStore(s => s.typingSpeed);
+  const keyboardTargetSystem = useAppStore(s => s.keyboardTargetSystem);
 
   // Obtain setter references through getState() to avoid rerenders.
   const setHideCursor = useAppStore.getState().setHideCursor;
@@ -331,10 +350,12 @@ export const useGlobalSettingsStore = () => {
   const setLanguage = useAppStore.getState().setLanguage;
   const setTheme = useAppStore.getState().setTheme;
   const setMouseInputMode = useAppStore.getState().setMouseInputMode;
-  const setTemporaryMouseInputMode =
-    useAppStore.getState().setTemporaryMouseInputMode;
+  const setTemporaryMouseInputMode = useAppStore.getState().setTemporaryMouseInputMode;
   const setModifierReleaseMode = useAppStore.getState().setModifierReleaseMode;
   const setEnhancement = useAppStore.getState().setEnhancement;
+  const setTypingSpeed = useAppStore.getState().setTypingSpeed;
+  const setKeyboardTargetSystem = useAppStore.getState().setKeyboardTargetSystem;
+  const resetGlobalSettings = useAppStore.getState().resetGlobalSettings;
 
   return {
     hideCursor,
@@ -349,6 +370,8 @@ export const useGlobalSettingsStore = () => {
     mouseInputMode,
     preferredMouseInputMode,
     modifierReleaseMode,
+    typingSpeed,
+    keyboardTargetSystem,
     setHideCursor,
     setCursorStyle,
     setScrollThrottling,
@@ -360,6 +383,9 @@ export const useGlobalSettingsStore = () => {
     setTemporaryMouseInputMode,
     setModifierReleaseMode,
     setEnhancement,
+    setTypingSpeed,
+    setKeyboardTargetSystem,
+    resetGlobalSettings,
   };
 };
 

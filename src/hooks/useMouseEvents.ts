@@ -22,7 +22,12 @@ interface MouseEventsOptions {
   videoRef: React.RefObject<HTMLVideoElement | null>
   onAbsMove?: AbsMoveHandler
   onRelMove?: RelMoveHandler
-  onWheel?: (data: { deltaX: number; deltaY: number; wheelY: number }) => void
+  onWheel?: (data: {
+    deltaX: number
+    deltaY: number
+    wheelX: number
+    wheelY: number
+  }) => void
   onClick?: ClickEventHandler
   onDoubleClick?: DoubleClickEventHandler
   onRightClick?: ClickEventHandler
@@ -31,6 +36,7 @@ interface MouseEventsOptions {
   videoHeight?: number
   enabled?: boolean
   scrollThrottling?: number | boolean
+  invertScroll?: boolean
   jiggler?: boolean
   isCursorHidden?: boolean
   /** HDMI connection state - when not 'ready', bypass coordinate deduplication to allow wake-from-sleep */
@@ -48,11 +54,21 @@ const MOUSE_CONSTANTS = {
   MAX_DELTA_PER_FRAME: 500,
   INT8_MIN: -128,
   INT8_MAX: 127,
-  SCROLL_THRESHOLD: 100,
-  SCROLL_CLAMP_MIN: -127,
-  SCROLL_CLAMP_MAX: 127,
   DEFAULT_THROTTLE_MS: 60,
 } as const;
+
+const normalizeWheelDelta = (delta: number): number => {
+  if (!Number.isFinite(delta) || delta === 0) {
+    return 0;
+  }
+
+  const normalized =
+    Math.abs(delta) >= 100 ? delta / 100 : Math.sign(delta);
+
+  const clamped = Math.max(-127, Math.min(127, normalized));
+
+  return Math.trunc(clamped) || Math.sign(clamped);
+};
 
 const TOUCH_CONSTANTS = {
   DOUBLE_TAP_DELAY: 400,
@@ -127,6 +143,28 @@ const isEventBlockedByOverlay = (e: Event): boolean => {
   );
 };
 
+const isTouchLikePointer = (e: PointerEvent): boolean => {
+  return e.pointerType === 'touch' || e.pointerType === 'pen';
+};
+
+const getControlSurface = (
+  videoRef: React.RefObject<HTMLVideoElement | null>
+): HTMLElement | null => {
+  const video = videoRef.current;
+  return (
+    video?.closest('[data-kvm-control-surface="true"]') as HTMLElement | null
+  ) ?? video?.parentElement ?? null;
+};
+
+const focusControlSurface = (
+  videoRef: React.RefObject<HTMLVideoElement | null>
+): void => {
+  const surface = getControlSurface(videoRef);
+  try {
+    surface?.focus({ preventScroll: true });
+  } catch {}
+};
+
 export function useMouseEvents(options: MouseEventsOptions) {
   const {
     videoRef,
@@ -140,11 +178,11 @@ export function useMouseEvents(options: MouseEventsOptions) {
     videoHeight = 1080,
     mode = 'absolute',
     scrollThrottling,
+    invertScroll = false,
     jiggler,
     isCursorHidden = false,
   } = options;
   const enabled = options.enabled ?? true;
-  const blockWheelEventRef = useRef(false);
 
   const throttleMs =
     typeof scrollThrottling === 'number'
@@ -161,8 +199,8 @@ export function useMouseEvents(options: MouseEventsOptions) {
   const lastSent = useRef<{ x: number; y: number; buttons: number } | null>(
     null
   );
-  const wheelAcc = useRef(0);
-  const wheelTimer = useRef<number | null>(null);
+  const blockWheelEventRef = useRef(false);
+  const wheelBlockTimerRef = useRef<number | null>(null);
   const rafId = useRef<number | null>(null);
   const lastActivityTs = useRef<number>(Date.now());
   const jigglerTimer = useRef<number | null>(null);
@@ -269,6 +307,7 @@ export function useMouseEvents(options: MouseEventsOptions) {
       if (!onAbsMove) return;
       if (isEventBlockedByOverlay(e)) return;
       if (!isEventOnVideo(e, videoRef)) return;
+      focusControlSurface(videoRef);
       lastActivityTs.current = Date.now();
       const t = transform.current;
 
@@ -323,6 +362,7 @@ export function useMouseEvents(options: MouseEventsOptions) {
       if (isEventBlockedByOverlay(e)) return;
       // When pointer lock is active, movement is unbounded by element edges.
       if (!isLockedRef.current && !isEventInRelativeMouseArea(e, videoRef)) return;
+      focusControlSurface(videoRef);
       lastActivityTs.current = Date.now();
       let { movementX, movementY, buttons } = e;
 
@@ -380,52 +420,62 @@ export function useMouseEvents(options: MouseEventsOptions) {
   // }, [mode, videoRef]);
   const onWheelInternal = useCallback(
     (e: WheelEvent) => {
-      if (throttleMs > 0 && blockWheelEventRef.current) {
-        e.preventDefault();
-        return;
-      }
       if (isEventBlockedByOverlay(e)) return;
+
       lastActivityTs.current = Date.now();
+
       if (!onWheel) return;
+
+      recomputeTransform();
 
       const t = transform.current;
       const rx = e.clientX - t.offX;
       const ry = e.clientY - t.offY;
-      const inArea = !(
-        rx < 0 ||
-        ry < 0 ||
-        rx > t.vw * t.scale ||
-        ry > t.vh * t.scale
-      );
+
+      const inArea =
+        rx >= 0 &&
+        ry >= 0 &&
+        rx <= t.vw * t.scale &&
+        ry <= t.vh * t.scale;
+
       if (!inArea) return;
 
-      const { deltaX, deltaY } = e;
-      wheelAcc.current += deltaY;
-      if (wheelTimer.current) return;
-      wheelTimer.current = window.setTimeout(() => {
-        const total = wheelAcc.current;
-        wheelAcc.current = 0;
-        if (wheelTimer.current) clearTimeout(wheelTimer.current);
-        wheelTimer.current = null;
+      e.preventDefault();
 
-        const isAccel = Math.abs(total) >= MOUSE_CONSTANTS.SCROLL_THRESHOLD;
-        const accelScrollValue = total / MOUSE_CONSTANTS.SCROLL_THRESHOLD;
-        const noAccelScrollValue = Math.sign(total);
-        const scrollValue = isAccel ? accelScrollValue : noAccelScrollValue;
-        const clamped = Math.max(
-          MOUSE_CONSTANTS.SCROLL_CLAMP_MIN,
-          Math.min(MOUSE_CONSTANTS.SCROLL_CLAMP_MAX, scrollValue)
-        );
-        const wheelY = -clamped;
-        onWheel({ deltaX, deltaY: total, wheelY });
+      if (throttleMs > 0 && blockWheelEventRef.current) {
+        return;
+      }
 
-        if (throttleMs > 0) {
-          blockWheelEventRef.current = true;
-          setTimeout(() => { blockWheelEventRef.current = false; }, throttleMs);
+      const wheelY =
+        (invertScroll ? 1 : -1) * normalizeWheelDelta(e.deltaY);
+
+      const wheelX =
+        (invertScroll ? -1 : 1) * normalizeWheelDelta(e.deltaX);
+
+      if (wheelY === 0 && wheelX === 0) {
+        return;
+      }
+      onWheel({
+        deltaX: ~~e.deltaX,
+        deltaY: ~~e.deltaY,
+        wheelX: ~~wheelX,
+        wheelY:~~wheelY,
+      });
+
+      if (throttleMs > 0) {
+        blockWheelEventRef.current = true;
+
+        if (wheelBlockTimerRef.current !== null) {
+          window.clearTimeout(wheelBlockTimerRef.current);
         }
-      }, throttleMs) as unknown as number;
+
+        wheelBlockTimerRef.current = window.setTimeout(() => {
+          blockWheelEventRef.current = false;
+          wheelBlockTimerRef.current = null;
+        }, throttleMs);
+      }
     },
-    [onWheel, throttleMs]
+    [onWheel, throttleMs, recomputeTransform, isEventBlockedByOverlay, invertScroll]
   );
 
   const inEffectiveAreaByClient = (clientX: number, clientY: number) => {
@@ -488,12 +538,16 @@ export function useMouseEvents(options: MouseEventsOptions) {
       if (!onAbsMove) return;
       if (isEventBlockedByOverlay(e)) return;
       if (!isEventOnVideo(e, videoRef)) return;
+      focusControlSurface(videoRef);
+      try {
+        getControlSurface(videoRef)?.setPointerCapture(e.pointerId);
+      } catch {}
       const payload = computeAbsPayload(e);
       if (!payload) return;
-      lastSent.current = null;
+      lastSent.current = payload;
       onAbsMove(payload.x, payload.y, payload.buttons);
     },
-    [onAbsMove]
+    [onAbsMove, videoRef]
   );
 
   const absPointerUp = useCallback(
@@ -501,12 +555,15 @@ export function useMouseEvents(options: MouseEventsOptions) {
       if (!onAbsMove) return;
       if (isEventBlockedByOverlay(e)) return;
       if (!isEventOnVideo(e, videoRef)) return;
+      try {
+        getControlSurface(videoRef)?.releasePointerCapture(e.pointerId);
+      } catch {}
       const payload = computeAbsPayload(e);
       if (!payload) return;
-      lastSent.current = null;
+      lastSent.current = payload;
       onAbsMove(payload.x, payload.y, payload.buttons);
     },
-    [onAbsMove]
+    [onAbsMove, videoRef]
   );
 
   const relPointerDown = useCallback(
@@ -514,6 +571,12 @@ export function useMouseEvents(options: MouseEventsOptions) {
       if (!onRelMove || mode !== 'relative') return;
       if (isEventBlockedByOverlay(e)) return;
       if (!isLockedRef.current && !isEventInRelativeMouseArea(e, videoRef)) return;
+      focusControlSurface(videoRef);
+      if (isTouchLikePointer(e)) {
+        try {
+          getControlSurface(videoRef)?.setPointerCapture(e.pointerId);
+        } catch {}
+      }
       const buttons = e.buttons || 0;
       onRelMove({
         dx: 0,
@@ -523,7 +586,7 @@ export function useMouseEvents(options: MouseEventsOptions) {
         y: e.movementY || 0,
       });
     },
-    [onRelMove, mode]
+    [onRelMove, mode, videoRef]
   );
 
   const relPointerUp = useCallback(
@@ -531,6 +594,11 @@ export function useMouseEvents(options: MouseEventsOptions) {
       if (!onRelMove || mode !== 'relative') return;
       if (isEventBlockedByOverlay(e)) return;
       if (!isLockedRef.current && !isEventInRelativeMouseArea(e, videoRef)) return;
+      if (isTouchLikePointer(e)) {
+        try {
+          getControlSurface(videoRef)?.releasePointerCapture(e.pointerId);
+        } catch {}
+      }
       const buttons = e.buttons || 0;
       onRelMove({
         dx: 0,
@@ -540,8 +608,40 @@ export function useMouseEvents(options: MouseEventsOptions) {
         y: e.movementY || 0,
       });
     },
-    [onRelMove, mode]
+    [onRelMove, mode, videoRef]
   );
+
+  const releasePointerState = useCallback(() => {
+    latestPointer.current = null;
+    lastClientRef.current = null;
+    relAggRef.current = { dx: 0, dy: 0, buttons: 0 };
+
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+
+    if (relRafIdRef.current) {
+      cancelAnimationFrame(relRafIdRef.current);
+      relRafIdRef.current = null;
+    }
+
+    if (mode === 'relative') {
+      onRelMove?.({
+        dx: 0,
+        dy: 0,
+        buttons: 0,
+        x: 0,
+        y: 0,
+      });
+      return;
+    }
+
+    const last = lastSent.current;
+    if (last) {
+      onAbsMove?.(last.x, last.y, 0);
+    }
+  }, [mode, onAbsMove, onRelMove]);
 
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
   const tapTimeoutRef = useRef<number | null>(null);
@@ -716,6 +816,15 @@ export function useMouseEvents(options: MouseEventsOptions) {
     [mode, relPointerUp, absPointerUp]
   );
 
+  const handleTouchCancel = useCallback(
+    (e: TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      releasePointerState();
+    },
+    [releasePointerState]
+  );
+
   useEffect(() => {
     if (!enabled) return;
     const v = videoRef.current;
@@ -760,6 +869,22 @@ export function useMouseEvents(options: MouseEventsOptions) {
     window.addEventListener('resize', onWindowResize);
 
     v.addEventListener('loadedmetadata', recomputeTransform);
+    const controlSurface = getControlSurface(videoRef);
+    const handleSurfaceEnter = () => {
+      focusControlSurface(videoRef);
+    };
+    const handleSurfaceLeave = () => {
+      releasePointerState();
+    };
+    const handleSurfaceBlur = () => {
+      releasePointerState();
+    };
+    controlSurface?.addEventListener('mouseenter', handleSurfaceEnter);
+    controlSurface?.addEventListener('pointermove', handleSurfaceEnter, {
+      passive: true,
+    });
+    controlSurface?.addEventListener('mouseleave', handleSurfaceLeave);
+    controlSurface?.addEventListener('blur', handleSurfaceBlur);
 
     const targetElement: EventTarget = document;
     targetElement.addEventListener(
@@ -776,6 +901,9 @@ export function useMouseEvents(options: MouseEventsOptions) {
       targetElement.addEventListener('pointerup', relPointerUp as EventListener, {
         passive: true,
       });
+      targetElement.addEventListener('pointercancel', releasePointerState as EventListener, {
+        passive: true,
+      });
     } else {
       targetElement.addEventListener('pointerdown', absPointerDown as EventListener, {
         passive: true,
@@ -783,16 +911,20 @@ export function useMouseEvents(options: MouseEventsOptions) {
       targetElement.addEventListener('pointerup', absPointerUp as EventListener, {
         passive: true,
       });
+      targetElement.addEventListener('pointercancel', releasePointerState as EventListener, {
+        passive: true,
+      });
     }
 
     document.addEventListener('wheel', onWheelInternal as EventListener, {
-      passive: throttleMs <= 0,
+      passive: false,
     });
 
     const onVis = () => {
-      if (document.hidden) latestPointer.current = null;
+      if (document.hidden) releasePointerState();
     };
     document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('blur', releasePointerState);
 
     const onLockChange = () => {
       const locked = document.pointerLockElement === v;
@@ -823,6 +955,7 @@ export function useMouseEvents(options: MouseEventsOptions) {
         passive: false,
       });
       v.addEventListener('touchend', handleTouchEnd as EventListener, { passive: false });
+      v.addEventListener('touchcancel', handleTouchCancel as EventListener, { passive: false });
     }
 
     return () => {
@@ -831,6 +964,10 @@ export function useMouseEvents(options: MouseEventsOptions) {
         intersectionObs.disconnect();
       } catch {}
       v.removeEventListener('loadedmetadata', recomputeTransform);
+      controlSurface?.removeEventListener('mouseenter', handleSurfaceEnter);
+      controlSurface?.removeEventListener('pointermove', handleSurfaceEnter);
+      controlSurface?.removeEventListener('mouseleave', handleSurfaceLeave);
+      controlSurface?.removeEventListener('blur', handleSurfaceBlur);
       window.removeEventListener('resize', onWindowResize);
 
       document.removeEventListener(
@@ -845,6 +982,7 @@ export function useMouseEvents(options: MouseEventsOptions) {
       document.removeEventListener('pointerup', relPointerUp as EventListener);
       document.removeEventListener('pointerdown', absPointerDown as EventListener);
       document.removeEventListener('pointerup', absPointerUp as EventListener);
+      document.removeEventListener('pointercancel', releasePointerState as EventListener);
       document.removeEventListener('wheel', onWheelInternal as EventListener);
       document.removeEventListener('click', handleClick as EventListener);
       document.removeEventListener('dblclick', handleDoubleClick as EventListener);
@@ -855,15 +993,18 @@ export function useMouseEvents(options: MouseEventsOptions) {
         v.removeEventListener('touchstart', handleTouchStart as EventListener);
         v.removeEventListener('touchmove', handleTouchMove as EventListener);
         v.removeEventListener('touchend', handleTouchEnd as EventListener);
+        v.removeEventListener('touchcancel', handleTouchCancel as EventListener);
       }
 
       document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('blur', releasePointerState);
       document.removeEventListener('pointerlockchange', onLockChange);
 
-      if (wheelTimer.current) {
-        clearTimeout(wheelTimer.current);
-        wheelTimer.current = null;
+      if (wheelBlockTimerRef.current) {
+        window.clearTimeout(wheelBlockTimerRef.current);
+        wheelBlockTimerRef.current = null;
       }
+      blockWheelEventRef.current = false;
       if (rafId.current) {
         cancelAnimationFrame(rafId.current);
         rafId.current = null;
@@ -882,6 +1023,12 @@ export function useMouseEvents(options: MouseEventsOptions) {
     videoRef,
     recomputeTransform,
     absMouseMovePointerEvent,
+    relMouseMovePointerEvent,
+    absPointerDown,
+    absPointerUp,
+    relPointerDown,
+    relPointerUp,
+    releasePointerState,
     onWheelInternal,
     handleClick,
     handleDoubleClick,
@@ -889,6 +1036,7 @@ export function useMouseEvents(options: MouseEventsOptions) {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    handleTouchCancel,
     mode,
     enabled,
     throttleMs,

@@ -1,5 +1,6 @@
 import {
     getLanguageKeyboardLayout,
+    getLanguageSpecialChars,
     languageLayoutOptions,
 } from '../data/language-layouts';
 import { generateCharMapFromLayout } from './generateCharMap';
@@ -11,6 +12,9 @@ export type LayoutId =
   | 'de-DE'
   | 'de-CH'
   | 'nl-BE'
+  | 'es-ES'
+  | 'fr-FR'
+  | 'pt-PT'
   | 'unknown'
 
 /**
@@ -38,8 +42,9 @@ function countMissingChars(
     return { missing: text.length, total: text.length, missingChars: new Set(text.split('')) };
   }
 
-  // Generate character mapping table
-  const charMap = generateCharMapFromLayout(layout);
+  // Generate character mapping table (include specialChars to match createHidReporter behavior)
+  const specialChars = getLanguageSpecialChars(layoutId);
+  const charMap = generateCharMapFromLayout(layout, specialChars);
 
   // Count unmappable characters
   const missingChars = new Set<string>();
@@ -99,24 +104,45 @@ export function detectKeyboardLayout(pasted: string): LayoutId {
     missing: Infinity,
   };
 
+  // Language-specific unique characters for tie-breaking.
+  // When multiple layouts have equal match rate, prefer the one whose signature chars appear in the text.
+  const LAYOUT_SIGNATURE_CHARS: Partial<Record<string, string[]>> = {
+    'es-ES': ['ñ', 'Ñ', '¿', '¡', '«', '»'],
+    'fr-FR': ['œ', 'æ', 'ç', 'à', 'û', 'î'],
+    'de-DE': ['ß', 'ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü'],
+    'de-CH': ['ß', 'ä', 'ö', 'ü'],
+    'cs-CZ': ['č', 'š', 'ž', 'ř', 'ů', 'ě'],
+  };
+
+  function signatureBonus(isoCode: string): number {
+    const sigs = LAYOUT_SIGNATURE_CHARS[isoCode];
+    if (!sigs) return 0;
+    return sigs.some(c => text.includes(c)) ? 1 : 0;
+  }
+
   // Iterate all layouts to find best match
   for (const option of languageLayoutOptions) {
     const stats = countMissingChars(text, option.id);
     const matchRate = stats.total > 0 ? (stats.total - stats.missing) / stats.total : 0;
+    const isoCode = extractIsoCode(option.id);
 
     // Performance optimization: Found perfect match (100%), return immediately
+    // Only do this if no signature chars of other layouts are present
     if (matchRate === 1.0 && stats.missing === 0) {
-      return extractIsoCode(option.id) as LayoutId;
+      return isoCode as LayoutId;
     }
+
+    const bonus = signatureBonus(isoCode);
+    const effectiveRate = matchRate + bonus * 0.001; // tiny bonus to break ties
 
     // Update best match
     if (
-      matchRate > bestMatch.matchRate ||
-      (matchRate === bestMatch.matchRate && stats.missing < bestMatch.missing)
+      effectiveRate > bestMatch.matchRate ||
+      (effectiveRate === bestMatch.matchRate && stats.missing < bestMatch.missing)
     ) {
       bestMatch = {
-        isoCode: extractIsoCode(option.id) as LayoutId,
-        matchRate,
+        isoCode: isoCode as LayoutId,
+        matchRate: effectiveRate,
         missing: stats.missing,
       };
     }

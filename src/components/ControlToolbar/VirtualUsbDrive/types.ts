@@ -4,6 +4,7 @@ export interface VirtualUsbDriveProps {
   onWake?: (device: { name: string; macAddress: string }) => void
   onClose?: () => void
   rpc?: JsonRpcHandle
+  className?: string
 }
 
 export type VMState = 'None' | 'Kvm' | 'RemoteUsb'

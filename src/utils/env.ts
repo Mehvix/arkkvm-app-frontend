@@ -84,7 +84,9 @@ const isSecureContext = (() => {
 const apiBaseUrl = isDev
   ? window.location.origin+'/api'
   : buildProtocolUrl(baseApiUrl, 'http');
-const signalingUrl = isDev? window.location.origin+'/webrtc/signaling/client': `${buildProtocolUrl(apiBaseUrl, 'ws')}/webrtc/signaling/client`;
+const signalingUrl = isDev
+  ? `${buildProtocolUrl(window.location.origin, 'ws')}/webrtc/signaling/client`
+  : `${buildProtocolUrl(apiBaseUrl, 'ws')}/webrtc/signaling/client`;
 export const env = {
   baseApiUrl,
   apiDomain,

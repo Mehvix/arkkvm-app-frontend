@@ -1,3 +1,9 @@
+/*
+ * @Author: Lei Zhang daisy_zlei@163.com
+ * @Date: 2026-06-26 14:34:26
+ * @LastEditors: Lei Zhang daisy_zlei@163.com
+ * @LastEditTime: 2026-07-03 20:39:51
+ */
 import type {
   JsonRpcResponse,
   JsonRpcSend,
@@ -31,7 +37,6 @@ export async function fetchDeviceSettings(
     sendAsync({ method: 'getJigglerState' }).catch(e => e),
     sendAsync({ method: 'getAutoUpdateState' }).catch(e => e),
   ]);
-
   const settings: Partial<DeviceSettings> = {};
 
   // Version information.

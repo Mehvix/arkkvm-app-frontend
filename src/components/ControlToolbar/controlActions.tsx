@@ -122,7 +122,7 @@ export function generateControlActions(
       ? [
           {
             key: 'fileTransfer' as const,
-            label: t('Virtual USB Drive'),
+            label: t('toolbar.fileTransfer'),
             icon: <IconFileTransfer className="size-4" />,
             isPopover: true,
             renderPopover: () => (
@@ -172,7 +172,7 @@ export function generateControlActions(
     // OCR - has custom render
     {
       key: 'ocr',
-      label: ocrEnabled ? 'OCR Active' : 'OCR',
+      label: ocrEnabled ? t('toolbar.ocrActive') : t('toolbar.ocr'),
       icon: <Type className="size-4" />,
       hasCustomRender: true,
       renderCustom: ({ isChannelReady: ready, isActive, onClick, disabled }) => {
@@ -189,7 +189,7 @@ export function generateControlActions(
               pointerEvents: !ready ? 'none' : undefined,
               border: '1px solid',
             }}
-            title={isActive ? 'OCR Active' : 'OCR Text Recognition'}
+            title={isActive ? t('toolbar.ocrActive') : t('toolbar.ocr')}
           >
             <Type
               className={
@@ -204,7 +204,7 @@ export function generateControlActions(
     // Media Device Control - has custom render
     {
       key: 'mediaDevice',
-      label: 'Media',
+      label: t('toolbar.media'),
       icon: null,
       hasCustomRender: true,
       renderCustom: () => {

@@ -106,6 +106,7 @@ export interface NetworkState {
 
 export type NetworkInfo = NetworkSettings & NetworkState
 export type DeviceSettings = {
+  webTerminalEnabled: boolean
   appVersion: string
   systemVersion: string
   autoUpdate: boolean

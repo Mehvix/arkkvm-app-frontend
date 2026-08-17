@@ -22,12 +22,12 @@ import { IconCloseEyes, IconOpenEyes, IconRightSmall } from '@/assets/icons';
 import { WelcomeBackground } from '@/components';
 import { Button } from '@/components/ui/button';
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/stores';
@@ -59,7 +59,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
       path: ['confirm'],
     });
 
-  type FormData = z.infer<typeof schema>
+  type FormData = z.infer<typeof schema>;
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { password: '', confirm: '' },
@@ -80,12 +80,8 @@ const WelcomeSetPasswordPage: React.FC = () => {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem
-                  className="animate__animated animate__fadeInDown animate-delay-300"
-                >
-                  <FormLabel className="text-[#B5BAD6]">
-                    {t('setPassword.password')}
-                  </FormLabel>
+                <FormItem className="animate__animated animate__fadeInDown animate-delay-300">
+                  <FormLabel className="text-[#B5BAD6]">{t('setPassword.password')}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -118,12 +114,8 @@ const WelcomeSetPasswordPage: React.FC = () => {
               control={form.control}
               name="confirm"
               render={({ field }) => (
-                <FormItem
-                  className="animate__animated animate__fadeInDown animate-delay-400"
-                >
-                  <FormLabel className="text-[#B5BAD6]">
-                    {t('setPassword.confirm')}
-                  </FormLabel>
+                <FormItem className="animate__animated animate__fadeInDown animate-delay-400">
+                  <FormLabel className="text-[#B5BAD6]">{t('setPassword.confirm')}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -136,7 +128,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B5BAD6] hover:text-[var(--text-color)] focus:outline-none"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B5BAD6] hover:text-text focus:outline-none"
                         onClick={() => setShowConfirm(v => !v)}
                         tabIndex={-1}
                       >
@@ -156,12 +148,10 @@ const WelcomeSetPasswordPage: React.FC = () => {
               type="submit"
               disabled={loading}
               variant="primary"
-              className="w-[204px] font-normal animate__animated animate__fadeInDown animate-delay-500"
+              className="w-full font-normal animate__animated animate__fadeInDown animate-delay-500"
             >
               {loading ? (
-                <span className="animate-pulse">
-                  {t('setPassword.button')}...
-                </span>
+                <span className="animate-pulse">{t('setPassword.button')}...</span>
               ) : (
                 t('setPassword.button')
               )}
@@ -169,9 +159,7 @@ const WelcomeSetPasswordPage: React.FC = () => {
             </Button>
           </form>
         </Form>
-        <ul
-          className="text-sm text-[#B5BAD6] text-center mt-5 leading-relaxed  animate__animated animate__fadeInDown animate-delay-600"
-        >
+        <ul className="text-sm text-[#B5BAD6] text-center mt-5 leading-relaxed  animate__animated animate__fadeInDown animate-delay-600">
           <li> This password protects your ArkKVM and its data. </li>
           <li>It is required to authenticate access over the local network.</li>
           <li>You can change it later in Settings.</li>

@@ -1,8 +1,8 @@
 /*
  * @Author: Lei Zhang daisy_zlei@163.com
  * @Date: 2026-06-04 10:57:34
- * @LastEditors: Lei Zhang daisy_zlei@163.com
- * @LastEditTime: 2026-06-18 16:00:18
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-07-28 20:25:56
  * @FilePath: /git-arkkvm-app-frontend/src/components/settings/SettingNetwork.tsx
  */
 import { Button } from '@/components/ui/button';
@@ -31,16 +31,14 @@ import SettingBlock from '../SettingBlock';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
-import {
-  ApplyNetworkSettingsDialog,
-  type ChangeGroup,
-} from './ApplyNetworkSettingsDialog';
+import { ApplyNetworkSettingsDialog, type ChangeGroup } from './ApplyNetworkSettingsDialog';
 import { Switch } from '@/components/ui/switch';
 import { NetworkConfigSection } from './VlanNetworkSection';
 import type { NetworkConfigValue } from './VlanNetworkSection';
 import type { StaticIPv4ConfigRef } from './StaticIPv4Config';
 import { buildChangeList } from './utils';
 import { useLoadingMap } from '@/hooks/useLoading';
+import { useAppStore } from '@/stores';
 
 const logger = createLogger('SettingNetwork');
 const INPUT_WIDTH = 'w-[150px]';
@@ -85,13 +83,11 @@ const defaultNetworkSettings: SetNetworkSettings = {
 };
 
 type VlanSettingsRequestEntry = Pick<VlanConfig, 'ipv4_mode' | 'ipv6_mode'> & {
-  vlan_id: number
-  static_ipv4?: StaticIPv4Config
-}
+  vlan_id: number;
+  static_ipv4?: StaticIPv4Config;
+};
 
-const buildVlanSettingsRequestEntry = (
-  vlan: VlanConfig
-): VlanSettingsRequestEntry => {
+const buildVlanSettingsRequestEntry = (vlan: VlanConfig): VlanSettingsRequestEntry => {
   const entry: VlanSettingsRequestEntry = {
     vlan_id: Number(vlan.vlan_id),
     ipv4_mode: vlan.ipv4_mode,
@@ -188,7 +184,7 @@ const buildNetworkStatusFormValue = (
     ipv6_link_local: state.ipv6_link_local || '',
   };
 };
-type SelectValueLike = unknown
+type SelectValueLike = unknown;
 const getSelectValue = (v: SelectValueLike): string => {
   if (typeof v === 'string') return v;
   if (typeof v === 'object' && v !== null && 'target' in v) {
@@ -202,42 +198,32 @@ const getSelectValue = (v: SelectValueLike): string => {
 };
 
 interface SettingNetworkProps {
-  rpc?: unknown
+  rpc?: unknown;
   /** Cloud mode: callback to reconnect WebRTC instead of page reload */
-  onReconnect?: () => void | Promise<void>
+  onReconnect?: () => void | Promise<void>;
 }
 
 const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
   const { t } = useTranslation(['settings']);
-  const { confirm } = useConfirmDialog();
+  const closeAllPanels = useAppStore(s => s.ui.closeAllPanels);
+  const { confirm, info } = useConfirmDialog();
   const [saveLoading, setSaveLoading] = useState(false);
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
   const [selectedDomain, setSelectedDomain] = useState('');
   const [networkSettingsFormValue, setNetworkSettingsFormValue] =
     useState<SetNetworkSettings | null>(null);
-  const [originalSettings, setOriginalSettings] =
-    useState<SetNetworkSettings | null>(null);
+  const [originalSettings, setOriginalSettings] = useState<SetNetworkSettings | null>(null);
   const [send, isChannelReady, sendAsync] = useJsonRpc();
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const networkStaticIpRef = useRef<StaticIPv4ConfigRef>(null);
   const primaryStaticIpRef = useRef<StaticIPv4ConfigRef>(null);
   const secondaryStaticIpRef = useRef<StaticIPv4ConfigRef>(null);
-  const [primaryVlanIdError, setPrimaryVlanIdError] = useState<
-    string | undefined
-  >(undefined);
-  const [secondaryVlanIdError, setSecondaryVlanIdError] = useState<
-    string | undefined
-  >(undefined);
-  const [vlanSettingsFormValue, setVlanSettingsFormValue] =
-    useState<VlanSettingsMode | null>(null);
-  const [originalVlanSettings, setOriginalVlanSettings] =
-    useState<VlanSettingsMode | null>(null);
+  const [primaryVlanIdError, setPrimaryVlanIdError] = useState<string | undefined>(undefined);
+  const [secondaryVlanIdError, setSecondaryVlanIdError] = useState<string | undefined>(undefined);
+  const [vlanSettingsFormValue, setVlanSettingsFormValue] = useState<VlanSettingsMode | null>(null);
+  const [originalVlanSettings, setOriginalVlanSettings] = useState<VlanSettingsMode | null>(null);
   const updateVlanSettings = useCallback(
-    (
-      patch:
-        | ((prev: VlanSettingsMode) => VlanSettingsMode)
-        | Partial<VlanSettingsMode>
-    ) => {
+    (patch: ((prev: VlanSettingsMode) => VlanSettingsMode) | Partial<VlanSettingsMode>) => {
       setVlanSettingsFormValue(pre => {
         if (!pre) return pre;
         return typeof patch === 'function' ? patch(pre) : { ...pre, ...patch };
@@ -253,19 +239,19 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     'setNetworkSettings',
   ]);
   const [applyDialogData, setApplyDialogData] = useState<{
-    title: string
-    description: React.ReactNode
-    groupedChanges: ChangeGroup[]
-    cancelText?: string
-    countdownSeconds?: number
-    countdownCancelText?: (remaining: number) => string
-    redirectAfterSeconds?: number
-    originalIpAddress?: string
-    newIpAddress?: string
-    disableActions?: boolean
-    onConfirm: () => Promise<void>
-    onCancel?: () => void
-    onCountdownExpire?: () => void
+    title: string;
+    description: React.ReactNode;
+    groupedChanges: ChangeGroup[];
+    cancelText?: string;
+    countdownSeconds?: number;
+    countdownCancelText?: (remaining: number) => string;
+    redirectAfterSeconds?: number;
+    originalIpAddress?: string;
+    newIpAddress?: string;
+    disableActions?: boolean;
+    onConfirm: () => Promise<void>;
+    onCancel?: () => void;
+    onCountdownExpire?: () => void;
   } | null>(null);
   const getNetworkSettings = useCallback(async () => {
     const [networkState, networkSettings] = await Promise.all([
@@ -286,21 +272,14 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
         }
       ),
     ]);
-    const formValue = buildNetworkSettingsFormValue(
-      networkSettings,
-      networkState
-    );
-    const buildNetworkStatus = buildNetworkStatusFormValue(
-      networkState,
-      networkSettings
-    );
+
+    const formValue = buildNetworkSettingsFormValue(networkSettings, networkState);
+    const buildNetworkStatus = buildNetworkStatusFormValue(networkState, networkSettings);
     setNetworkStatus(buildNetworkStatus);
     setNetworkSettingsFormValue(formValue);
     setOriginalSettings(formValue);
     const domainValue = formValue.domain ?? '';
-    const newSelectedDomain = ['dhcp', 'local'].includes(domainValue)
-      ? domainValue
-      : 'custom';
+    const newSelectedDomain = ['dhcp', 'local'].includes(domainValue) ? domainValue : 'custom';
     setSelectedDomain(newSelectedDomain);
   }, [sendAsync, networkStatus]);
   const getVlanSettings = useCallback(async () => {
@@ -333,11 +312,12 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
   }, [sendAsync]);
   useEffect(() => {
     if (!isChannelReady) return;
+
     let isCancelled = false;
     void (async () => {
       try {
         getNetworkSettings();
-        // getVlanSettings();
+        getVlanSettings();
 
         if (isCancelled) return;
 
@@ -353,10 +333,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     };
   }, [isChannelReady]);
   const hasNetworkSettingsChanged = useMemo(() => {
-    const vlanChangeConsidered = !isSameValue(
-      vlanSettingsFormValue,
-      originalVlanSettings
-    );
+    const vlanChangeConsidered = !isSameValue(vlanSettingsFormValue, originalVlanSettings);
 
     // When VLAN is enabled, only treat VLAN as changed if at least one VLAN ID
     // (primary or secondary) exists and the VLAN settings actually differ.
@@ -370,22 +347,14 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     //   vlanChangeConsidered = vlanHasChange;
     // }
 
-    return (
-      !isSameValue(networkSettingsFormValue, originalSettings) ||
-      vlanChangeConsidered
-    );
-  }, [
-    networkSettingsFormValue,
-    originalSettings,
-    vlanSettingsFormValue,
-    originalVlanSettings,
-  ]);
+    return !isSameValue(networkSettingsFormValue, originalSettings) || vlanChangeConsidered;
+  }, [networkSettingsFormValue, originalSettings, vlanSettingsFormValue, originalVlanSettings]);
   const callSetNetworkSettings = useCallback(
     async (settings: SetNetworkSettings): Promise<unknown> => {
-      // const {vlan_enabled,secondaryVlan,primaryVlan} = vlanSettingsFormValue||{};
-      // if(vlan_enabled&&(primaryVlan?.vlan_id||secondaryVlan?.vlan_id)){
-      //   settings.ipv4_mode = originalSettings?.ipv4_mode;
-      // }
+      const { vlan_enabled, secondaryVlan, primaryVlan } = vlanSettingsFormValue || {};
+      if (vlan_enabled && (primaryVlan?.vlan_id || secondaryVlan?.vlan_id)) {
+        settings.ipv4_mode = originalSettings?.ipv4_mode;
+      }
       setSaveLoading(true);
       try {
         if (!isChannelReady) {
@@ -403,78 +372,79 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
             : originalSettings?.static_ipv4?.ipAddress?.trim();
         const hasValidNewIp = !!newIp;
         const ipChanged = oldIp !== newIp;
-        const willRedirect =
-          isVlanDisabled && isStaticMode && hasValidNewIp && ipChanged;
+        const willRedirect = isVlanDisabled && isStaticMode && hasValidNewIp && ipChanged;
 
         // return false;
         start('setNetworkSettings');
-        const result = await sendAsync({
-          method: 'setNetworkSettings',
-          params: { settings },
-        },{
-          timeout:120000,
-          showUnhandledErrorToast:true
-        });
+        const result = await sendAsync(
+          {
+            method: 'setNetworkSettings',
+            params: { settings },
+          },
+          {
+            timeout: 120000,
+            showUnhandledErrorToast: true,
+          }
+        );
         stop('setNetworkSettings');
         const errorCode = result?.error?.code;
         const envTarget = env.target;
-        if (
-          result?.success ||
-          (envTarget === 'cloud' && errorCode === -32003)
-        ) {
-          if (willRedirect && env.target === 'device') {
-            toast.success('Network settings saved, redirecting to new IP...');
-            await redirectToIp(settings.static_ipv4!.ipAddress, 2000);
-          } else if (
-            envTarget === 'cloud' &&
-            willRedirect ||
-            (!isStaticMode && originalSettings?.ipv4_mode === 'static')
-          ) {
+
+        if (willRedirect && (result?.success || errorCode === -32003)) {
+          if (envTarget === 'cloud') {
             setApplyDialogOpen(false);
             getNetworkSettings();
             await redirectToIp(settings.static_ipv4!.ipAddress, {
               delayMs: env.target === 'cloud' ? 9000 : 2000,
               onCloudReconnect: onReconnect,
             });
-
           } else {
-            toast.success('Network settings saved successfully');
-            getNetworkSettings();
+            toast.success('Network settings saved, redirecting to new IP...');
+            await redirectToIp(settings.static_ipv4!.ipAddress, 2000);
           }
+        } else if (
+          errorCode === -32003 &&
+          !isStaticMode &&
+          originalSettings?.ipv4_mode === 'static' &&
+          envTarget !== 'cloud'
+        ) {
+          setApplyDialogOpen(false);
+          const dhcpModeChangedDesc = t('settings:network.dhcpModeChanged.desc', {
+            returnObjects: true,
+          }) as string[];
+          info({
+            title: t('settings:network.dhcpModeChanged.title'),
+            content: (
+              <div className="space-y-1">
+                {dhcpModeChangedDesc.map((line, index) => (
+                  <p key={index}>{line}</p>
+                ))}
+              </div>
+            ),
+            type: 'info',
+          });
+          closeAllPanels();
+        } else {
+          toast.success('Network settings saved successfully');
+          getNetworkSettings();
         }
+
         return result;
       } catch (e) {
-        toast.error(
-          `Failed to save: ${e instanceof Error ? e.message : 'Unknown error'}`
-        );
+        toast.error(`Failed to save: ${e instanceof Error ? e.message : 'Unknown error'}`);
         return { success: false, error: { message: String(e) } };
       } finally {
         setSaveLoading(false);
       }
     },
-    [
-      send,
-      sendAsync,
-      isChannelReady,
-      vlanSettingsFormValue,
-      originalSettings,
-      networkStatus,
-    ]
+    [send, sendAsync, isChannelReady, vlanSettingsFormValue, originalSettings, networkStatus]
   );
 
   const callSetVlanSettings = useCallback(
-    async (settings: VlanSettingsMode): Promise<number | null> => {
+    async (settings: VlanSettingsMode): Promise<unknown> => {
       try {
-        const {
-          primaryVlan,
-          secondaryVlan,
-          vlan_enabled: oldVlanEnabled,
-        } = settings;
-        if (
-          !oldVlanEnabled &&
-          !primaryVlan?.vlan_id &&
-          !secondaryVlan?.vlan_id
-        ) {
+        const { primaryVlan, secondaryVlan, vlan_enabled: oldVlanEnabled } = settings;
+        if (!oldVlanEnabled && !primaryVlan?.vlan_id && !secondaryVlan?.vlan_id) {
           setApplyDialogOpen(false);
           setSaveLoading(false);
 
@@ -482,8 +452,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
           return null;
         }
         setSaveLoading(true);
-        const vlan_enabled =
-          primaryVlan.vlan_id || secondaryVlan?.vlan_id ? oldVlanEnabled : false;
+        const vlan_enabled = primaryVlan.vlan_id || secondaryVlan?.vlan_id ? oldVlanEnabled : false;
         const vlanSettingsRequest = {
           vlan_enabled,
           primaryVlan: primaryVlan.vlan_id
@@ -509,8 +478,15 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
         );
         stop('setVlanSettings');
         setSaveLoading(false);
-
-        return result?.result?.confirm_within_seconds;
+        if ([-32003].includes(result?.error?.code)) {
+          result.success = true;
+          result.code = -32003;
+        }
+        const primaryStaticIp = vlanSettingsRequest?.primaryVlan?.static_ipv4?.ipAddress?.trim();
+        const secondaryStaticIp =
+          vlanSettingsRequest?.secondaryVlan?.static_ipv4?.ipAddress?.trim();
+        const targetIp = primaryStaticIp || secondaryStaticIp || null;
+        return { ...result, targetIp };
       } catch (e) {
         setSaveLoading(false);
         toast.error(
@@ -536,8 +512,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
       ipv4_mode: originalIpv4Mode,
       static_ipv4: originalStaticIpv4,
     } = originalSettings ?? {};
-    const { vlan_enabled, primaryVlan, secondaryVlan } =
-      vlanSettingsFormValue || {};
+    const { vlan_enabled, primaryVlan, secondaryVlan } = vlanSettingsFormValue || {};
     const {
       vlan_enabled: oldVlanEnabled,
       primaryVlan: oldPrimaryVlan,
@@ -546,8 +521,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     const hasVlanId = Boolean(primaryVlan?.vlan_id || secondaryVlan?.vlan_id);
     const isEmptyVlanEnable = !oldVlanEnabled && vlan_enabled && !hasVlanId;
     const hasVlanChange =
-      !isEmptyVlanEnable &&
-      !isSameValue(vlanSettingsFormValue, originalVlanSettings);
+      !isEmptyVlanEnable && !isSameValue(vlanSettingsFormValue, originalVlanSettings);
 
     const needsDialog =
       !isSameValue(
@@ -581,10 +555,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
       if (!primaryValid || !secondaryValid) return;
 
       if (secondaryVlan) {
-        if (
-          secondaryVlan.vlan_id &&
-          secondaryVlan.vlan_id === primaryVlan.vlan_id
-        ) {
+        if (secondaryVlan.vlan_id && secondaryVlan.vlan_id === primaryVlan.vlan_id) {
           setSecondaryVlanIdError(
             t(
               'settings:network.vlan.validation.vlanIdDuplicate',
@@ -598,15 +569,13 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
 
     // Build dialog groups
     const groups: ChangeGroup[] = [];
-    const networkGroup = buildChangeList(
-      originalSettings,
-      networkSettingsFormValue,
-      ['hostname', 'static_ipv4.ipAddress', 'ipv4_mode']
-    );
+    const networkGroup = buildChangeList(originalSettings, networkSettingsFormValue, [
+      'hostname',
+      'static_ipv4.ipAddress',
+      'ipv4_mode',
+    ]);
     if (
-      (!oldVlanEnabled &&
-        vlan_enabled &&
-        (primaryVlan?.vlan_id || secondaryVlan?.vlan_id)) ||
+      (!oldVlanEnabled && vlan_enabled && (primaryVlan?.vlan_id || secondaryVlan?.vlan_id)) ||
       (oldVlanEnabled && !vlan_enabled)
     ) {
       networkGroup.push({
@@ -660,11 +629,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
           from: secondaryrom,
           to: 'Deleted',
         });
-      } else if (
-        !primaryVlan?.vlan_id &&
-        oldPrimaryVlan?.vlan_id &&
-        !secondaryVlan?.vlan_id
-      ) {
+      } else if (!primaryVlan?.vlan_id && oldPrimaryVlan?.vlan_id && !secondaryVlan?.vlan_id) {
         networkGroup.push({
           key: 'primary_vlan_delete',
           label: 'Primary VLAN  ',
@@ -677,8 +642,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     const networkIpChanged =
       networkSettingsFormValue.ipv4_mode === 'static' &&
       networkSettingsFormValue.static_ipv4?.ipAddress &&
-      originalSettings?.static_ipv4?.ipAddress !==
-        networkSettingsFormValue.static_ipv4?.ipAddress;
+      originalSettings?.static_ipv4?.ipAddress !== networkSettingsFormValue.static_ipv4?.ipAddress;
     if (networkGroup.length)
       groups.push({
         title: t('settings:network.applyDialog.networkGroup', 'Network'),
@@ -703,10 +667,8 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     if (vlan_enabled) {
       const keys1 = ['vlan_id', 'ipv4_mode', 'static_ipv4.ipAddress'];
       const keys2 = ['vlan_id', 'ipv4_mode'];
-      const primaryVlanKeys =
-        primaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
-      const secondaryVlanKeys =
-        secondaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
+      const primaryVlanKeys = primaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
+      const secondaryVlanKeys = secondaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
 
       if (primaryVlan.vlan_id) {
         primaryVLANFields = buildChangeList(
@@ -738,8 +700,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
         const vlanIpChanged =
           primaryVlan?.ipv4_mode === 'static' &&
           primaryVlan?.static_ipv4?.ipAddress &&
-          oldPrimaryVlan?.static_ipv4?.ipAddress !==
-            primaryVlan?.static_ipv4?.ipAddress;
+          oldPrimaryVlan?.static_ipv4?.ipAddress !== primaryVlan?.static_ipv4?.ipAddress;
         groups.push({
           title: t('settings:network.vlan.primaryVlan.title', 'Primary VLAN'),
           fields: primaryVLANFields,
@@ -753,10 +714,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
       }
       if (secondaryVlanields?.length) {
         groups.push({
-          title: t(
-            'settings:network.vlan.secondaryVlan.title',
-            'Secondary VLAN'
-          ),
+          title: t('settings:network.vlan.secondaryVlan.title', 'Secondary VLAN'),
           fields: secondaryVlanields,
         });
       }
@@ -768,30 +726,14 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
       (oldVlanEnabled && (!primaryVlan.vlan_id || !secondaryVlan?.vlan_id))
     ) {
       setApplyDialogData({
-        title: t(
-          'settings:network.applyDialog.title',
-          'Apply network settings'
-        ),
+        title: t('settings:network.applyDialog.title', 'Apply network settings'),
         description: hasVlanChange ? (
           <div className="space-y-2 text-sm">
-            <p>
-              {t(
-                'settings:network.applyDialog.vlanDesc1',
-                'Applying VLAN settings will temporarily interrupt the connection.'
-              )}
-            </p>
-            <p>
-              {t(
-                'settings:network.applyDialog.vlanDesc2',
-                'ArkKVM may obtain a new IP address. You may need to reconnect using the updated address shown on the ArkKVM screen.'
-              )}
-            </p>
-            <p>
-              {t(
-                'settings:network.applyDialog.vlanDesc3',
-                'The new settings must be confirmed within 90 seconds, otherwise ArkKVM will automatically revert to the previous network configuration.'
-              )}
-            </p>
+            {(
+              t('settings:network.vlan.applyDialog.vlanDesc', { returnObjects: true }) as string[]
+            ).map((line, index) => (
+              <p key={index} dangerouslySetInnerHTML={{ __html: line }} />
+            ))}
           </div>
         ) : (
           t(
@@ -809,61 +751,61 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
             return;
           }
 
-          const seconds = await callSetVlanSettings(vlanSettingsFormValue);
-          if (seconds) {
-            const originalIp =
-              originalVlanSettings?.primaryVlan?.static_ipv4?.ipAddress;
-            const newIp =
-              vlanSettingsFormValue?.primaryVlan?.static_ipv4?.ipAddress ||
-              vlanSettingsFormValue?.secondaryVlan?.static_ipv4?.ipAddress;
-            setTimeout(
-              async () => {
-                if (
-                  newIp &&
-                  newIp !== originalIp &&
-                  vlanSettingsFormValue.primaryVlan.ipv4_mode === 'static' &&
-                  env.target !== 'cloud'
-                ) {
-                  await redirectToIp(newIp);
-                } else {
-                  window.location.reload();
-                }
-              },
-              env.target === 'cloud' ? 8000 : 3000
-            );
-            // Note: onReconnect callback is handled by the parent component in cloud mode
+          const vlanApplyResult = await callSetVlanSettings(vlanSettingsFormValue);
 
-            setApplyDialogData(
-              prev =>
-                prev && {
-                  ...prev,
-                  groupedChanges: groups,
-                  countdownSeconds: seconds,
-                  countdownCancelText: (r: number) => `Revert (${r}s)`,
-                  disableActions: true,
-                  onConfirm: async () => {
-                    await sendAsync(
-                      { method: 'confirmVlanSettings' },
-                      { showUnhandledErrorToast: true }
-                    );
-                    toast.success('VLAN settings confirmed');
-                    setOriginalVlanSettings(vlanSettingsFormValue);
-                    setApplyDialogOpen(false);
-                  },
-                  onCancel: async () => {
-                    await sendAsync({ method: 'revertVlanSettings' });
-                    toast.info('VLAN settings reverted');
-                    setVlanSettingsFormValue(originalVlanSettings);
-                  },
-                  onCountdownExpire: async () => {
-                    await sendAsync({ method: 'revertVlanSettings' });
-                    toast.info('VLAN settings reverted (timeout)');
-                    setVlanSettingsFormValue(originalVlanSettings);
-                    setApplyDialogOpen(false);
-                  },
-                }
-            );
-            setApplyDialogOpen(true);
+          const vlanResult = vlanApplyResult as {
+            success?: boolean;
+            result?: { confirm_within_seconds?: number };
+            targetIp?: string | null;
+          } | null;
+
+          if (vlanResult?.success) {
+            if (vlanResult?.code === -32003) {
+              info({
+                title: t('settings:network.connectionLost.title', 'Connection Lost'),
+                content: (
+                  <div className="space-y-1 text-sm">
+                    <p>
+                      {t(
+                        'settings:network.connectionLost.line1',
+                        'ArkKVM network settings have been applied.'
+                      )}
+                    </p>
+                    <p>
+                      {t(
+                        'settings:network.connectionLost.line2',
+                        'The IP address or VLAN configuration may have changed.'
+                      )}
+                    </p>
+                    <p>
+                      {t(
+                        'settings:network.connectionLost.line3',
+                        'Check the ArkKVM device screen for the current network information and reconnect.'
+                      )}
+                    </p>
+                  </div>
+                ),
+                type: 'error',
+                confirmText: t('settings:network.connectionLost.ok', 'OK'),
+              });
+              setApplyDialogOpen(false);
+            }
+
+            setApplyDialogData(prev => prev && { ...prev, disableActions: true });
+            const targetIp = vlanResult?.targetIp;
+
+            // debugger;
+
+            setTimeout(async () => {
+              setApplyDialogOpen(false);
+              setApplyDialogData(prev => prev && { ...prev, disableActions: false });
+              if (targetIp && env.target !== 'cloud') {
+                await redirectToIp(targetIp);
+              } else {
+                window.location.reload();
+              }
+            }, 30000);
+            // Note: onReconnect callback is handled by the parent component in cloud mode
           } else {
             // setApplyDialogOpen(false);
 
@@ -874,10 +816,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
       });
     } else if (networkGroup.length) {
       setApplyDialogData({
-        title: t(
-          'settings:network.applyDialog.title',
-          'Apply network settings'
-        ),
+        title: t('settings:network.applyDialog.title', 'Apply network settings'),
         description: hasVlanChange ? (
           <div className="space-y-2 text-sm">
             {t(
@@ -894,9 +833,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
         groupedChanges: groups,
         onConfirm: async () => {
           if (!isSameValue(networkSettingsFormValue, originalSettings)) {
-            const result = await callSetNetworkSettings(
-              networkSettingsFormValue
-            );
+            const result = await callSetNetworkSettings(networkSettingsFormValue);
             if (result?.success || env.target === 'cloud') {
               setApplyDialogOpen(false);
             }
@@ -921,6 +858,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
     callSetNetworkSettings,
     callSetVlanSettings,
     sendAsync,
+    isChannelReady,
   ]);
   const handleVlanEnabledChange = useCallback(
     async (checked: boolean) => {
@@ -985,14 +923,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
         // TODO: add disable logic here
       }
     },
-    [
-      confirm,
-      t,
-      updateVlanSettings,
-      vlanSettingsFormValue,
-      originalVlanSettings,
-      networkStatus,
-    ]
+    [confirm, t, updateVlanSettings, vlanSettingsFormValue, originalVlanSettings, networkStatus]
   );
 
   const renewDhcpLease = useCallback(async () => {
@@ -1031,9 +962,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
             onClick={saveNetworkSettings}
             disabled={saveLoading || !hasNetworkSettingsChanged}
           >
-            {saveLoading
-              ? t('settings:network.savingButton')
-              : t('settings:network.saveButton')}
+            {saveLoading ? t('settings:network.savingButton') : t('settings:network.saveButton')}
             {hasNetworkSettingsChanged}
           </Button>
         </div>
@@ -1109,16 +1038,16 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
                   }));
                 }}
                 options={[
-                  { value: 'dhcp', label: 'DHCP provided' },
-                  { value: 'local', label: 'None' },
-                  { value: 'custom', label: 'Custom' },
+                  { value: 'dhcp', label: t('settings:network.domain.options.dhcpProvided') },
+                  { value: 'local', label: t('settings:network.domain.options.none') },
+                  { value: 'custom', label: t('settings:network.domain.options.custom') },
                 ]}
               />
             </SettingBlock.Right>
             {selectedDomain === 'custom' && (
               <SettingBlock.Bottom>
                 <Input
-                  label="Custom Domain"
+                  label={t('settings:network.domain.customLabel')}
                   size="xs"
                   labelClassName="text-[12px]"
                   value={networkSettingsFormValue.domain ?? ''}
@@ -1208,20 +1137,15 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
                           'Secondary VLAN must use a different VLAN ID from the Primary VLAN.'
                         )}
                         showVlanId
-                        originalIpv4Mode={
-                          originalVlanSettings?.primaryVlan?.ipv4_mode
-                        }
+                        originalIpv4Mode={originalVlanSettings?.primaryVlan?.ipv4_mode}
                         vlanEnabled={originalVlanSettings?.vlan_enabled}
                         staticIpv4Ref={primaryStaticIpRef}
                         vlanIdError={primaryVlanIdError}
                         value={vlanSettingsFormValue.primaryVlan}
                         ipv6Addresses={
-                          originalVlanSettings?.primaryVlan
-                            ?.ipv6_addresses as IPv6AddressEntry[]
+                          originalVlanSettings?.primaryVlan?.ipv6_addresses as IPv6AddressEntry[]
                         }
-                        dhcpLease={
-                          vlanSettingsFormValue?.primaryVlan?.dhcp_lease
-                        }
+                        dhcpLease={vlanSettingsFormValue?.primaryVlan?.dhcp_lease}
                         onChange={(value: NetworkConfigValue) => {
                           updateVlanSettings(pre => ({
                             ...pre,
@@ -1238,9 +1162,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
                             {!vlanSettingsFormValue.secondaryVlan && (
                               <Button
                                 className="mt-[24px] w-full"
-                                disabled={
-                                  !vlanSettingsFormValue.primaryVlan.vlan_id
-                                }
+                                disabled={!vlanSettingsFormValue.primaryVlan.vlan_id}
                                 onClick={() => {
                                   updateVlanSettings(pre => ({
                                     ...pre,
@@ -1255,11 +1177,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
                                   }));
                                 }}
                               >
-                                +{' '}
-                                {t(
-                                  'settings:network.vlan.addSecondary',
-                                  'Add Secondary VLAN'
-                                )}
+                                + {t('settings:network.vlan.addSecondary', 'Add Secondary VLAN')}
                               </Button>
                             )}
                           </>
@@ -1303,16 +1221,10 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
                           staticIpv4Ref={secondaryStaticIpRef}
                           vlanIdError={secondaryVlanIdError}
                           value={vlanSettingsFormValue.secondaryVlan!}
-                          otherVlanId={
-                            vlanSettingsFormValue.primaryVlan?.vlan_id
-                          }
-                          originalIpv4Mode={
-                            originalVlanSettings?.secondaryVlan?.ipv4_mode
-                          }
+                          otherVlanId={vlanSettingsFormValue.primaryVlan?.vlan_id}
+                          originalIpv4Mode={originalVlanSettings?.secondaryVlan?.ipv4_mode}
                           vlanEnabled={originalVlanSettings?.vlan_enabled}
-                          dhcpLease={
-                            vlanSettingsFormValue?.secondaryVlan?.dhcp_lease
-                          }
+                          dhcpLease={vlanSettingsFormValue?.secondaryVlan?.dhcp_lease}
                           ipv6Addresses={
                             originalVlanSettings?.secondaryVlan
                               ?.ipv6_addresses as IPv6AddressEntry[]
@@ -1354,9 +1266,7 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
               }}
               dhcpLease={networkStatus?.dhcp_lease}
               onRenewDhcp={renewDhcpLease}
-              ipv6Addresses={
-                networkStatus?.ipv6_addresses as IPv6AddressEntry[]
-              }
+              ipv6Addresses={networkStatus?.ipv6_addresses as IPv6AddressEntry[]}
               ipv6LinkLocal={networkStatus?.ipv6_link_local}
             />
           )}
@@ -1367,23 +1277,14 @@ const SettingNetwork: FC<SettingNetworkProps> = ({ onReconnect }) => {
           open={applyDialogOpen}
           onOpenChange={setApplyDialogOpen}
           title={applyDialogData.title}
-          confirmLoading={
-            isLoading('setVlanSettings') || isLoading('setNetworkSettings')
-          }
+          confirmLoading={isLoading('setVlanSettings') || isLoading('setNetworkSettings')}
           description={applyDialogData.description}
           groupedChanges={applyDialogData.groupedChanges}
-          confirmText={t(
-            'settings:network.applyDialog.confirm',
-            'Apply changes'
-          )}
+          confirmText={t('settings:network.applyDialog.confirm', 'Apply changes')}
           cancelText={
-            applyDialogData.cancelText ??
-            t('settings:network.applyDialog.cancel', 'Cancel')
+            applyDialogData.cancelText ?? t('settings:network.applyDialog.cancel', 'Cancel')
           }
-          changesLabel={t(
-            'settings:network.applyDialog.changes',
-            'Configuration changes'
-          )}
+          changesLabel={t('settings:network.applyDialog.changes', 'Configuration changes')}
           countdownSeconds={applyDialogData.countdownSeconds}
           countdownCancelText={applyDialogData.countdownCancelText}
           redirectAfterSeconds={applyDialogData.redirectAfterSeconds}

@@ -29,14 +29,14 @@ const getPrimaryVlanIpv4 = (primaryVlan: unknown) => {
   if (!primaryVlan || typeof primaryVlan !== 'object') return '';
 
   const vlan = primaryVlan as {
-    ipv4?: unknown
-    ipv4_mode?: unknown
+    ipv4?: unknown;
+    ipv4_mode?: unknown;
     static_ipv4?: {
-      ipAddress?: unknown
-    }
+      ipAddress?: unknown;
+    };
     dhcp_lease?: {
-      ip?: unknown
-    }
+      ip?: unknown;
+    };
   };
 
   if (vlan.ipv4_mode === 'static') {
@@ -66,9 +66,10 @@ export function VlanPendingConfirmDialog() {
   useEffect(() => {
     if (!isChannelReady) return;
 
-    let cancelled = false
+    let cancelled = false;
+    let openTimer: ReturnType<typeof window.setTimeout> | undefined;
 
-    ;(async () => {
+    (async () => {
       const resp = await sendAsync<'getVlanSettings'>(
         { method: 'getVlanSettings' },
         { resultOnly: true, showUnhandledErrorToast: false }
@@ -78,13 +79,19 @@ export function VlanPendingConfirmDialog() {
       const pending = resp?.pending_settings;
       const current = resp?.settings;
 
-      if (!pending) return;
+      if (!pending) {
+        setOpen(false);
+        return;
+      }
       const currentHost = normalizeHost(window.location.hostname);
       const pendingPrimaryIpv4 = getPrimaryVlanIpv4(pending.primaryVlan);
+      const pendingSecondaryIpv4 = getPrimaryVlanIpv4(pending.secondaryVlan);
       const previousPrimaryIpv4 = getPrimaryVlanIpv4(current?.primaryVlan);
+
       if (
-        (!currentHost || currentHost !== pendingPrimaryIpv4) &&
-        pending.vlan_enabled&&env.target !== 'cloud'
+        (!currentHost || ![pendingPrimaryIpv4, pendingSecondaryIpv4].includes(currentHost)) &&
+        pending.vlan_enabled &&
+        env.target !== 'cloud'
       )
         return;
 
@@ -125,9 +132,7 @@ export function VlanPendingConfirmDialog() {
             to: 'Deleted',
           });
         } else if (!primaryVlan?.vlan_id && secondaryVlan?.vlan_id) {
-          const primaryFrom = oldPrimaryVlan?.vlan_id
-            ? `${oldPrimaryVlan.vlan_id || '.'}`
-            : ' ';
+          const primaryFrom = oldPrimaryVlan?.vlan_id ? `${oldPrimaryVlan.vlan_id || '.'}` : ' ';
           networkGroup.push({
             key: 'primary_vlan_delete',
             label: 'Primary VLAN  ',
@@ -173,10 +178,8 @@ export function VlanPendingConfirmDialog() {
       if (vlan_enabled) {
         const keys1 = ['vlan_id', 'ipv4_mode', 'static_ipv4.ipAddress'];
         const keys2 = ['vlan_id', 'ipv4_mode'];
-        const primaryVlanKeys =
-          primaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
-        const secondaryVlanKeys =
-          secondaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
+        const primaryVlanKeys = primaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
+        const secondaryVlanKeys = secondaryVlan?.ipv4_mode === 'static' ? keys1 : keys2;
 
         if (primaryVlan?.vlan_id) {
           primaryFields = buildChangeList(
@@ -213,10 +216,7 @@ export function VlanPendingConfirmDialog() {
         });
       if (secondaryFields?.length)
         builtGroups.push({
-          title: t(
-            'settings:network.vlan.secondaryVlan.title',
-            'Secondary VLAN'
-          ),
+          title: t('settings:network.vlan.secondaryVlan.title', 'Secondary VLAN'),
           fields: secondaryFields,
         });
 
@@ -224,11 +224,29 @@ export function VlanPendingConfirmDialog() {
       setCountdown(confirmWithin ?? 0);
       setActionsDisabled(!canConfirm);
       setCurrentPrimaryIpv4(previousPrimaryIpv4);
-      setOpen(true);
+
+      const openWhenNoOtherDialog = () => {
+        if (cancelled) return;
+
+        const hasOpenDialog = document.querySelector(
+          '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
+        );
+        if (hasOpenDialog) {
+          openTimer = window.setTimeout(openWhenNoOtherDialog, 100);
+          return;
+        }
+
+        setOpen(true);
+      };
+
+      openWhenNoOtherDialog();
     })();
 
     return () => {
       cancelled = true;
+      if (openTimer !== undefined) {
+        window.clearTimeout(openTimer);
+      }
     };
   }, [isChannelReady, sendAsync, t]);
 
@@ -238,37 +256,33 @@ export function VlanPendingConfirmDialog() {
     <ApplyNetworkSettingsDialog
       open={open}
       onOpenChange={setOpen}
-      title={t(
-          'settings:network.applyDialog.title',
-          'Apply network settings'
-        )}
-      description={ <div className="space-y-2 text-sm">
-            <p>
-              {t(
-                'settings:network.applyDialog.vlanDesc1',
-                'Applying VLAN settings will temporarily interrupt the connection.'
-              )}
-            </p>
-            <p>
-              {t(
-                'settings:network.applyDialog.vlanDesc2',
-                'ArkKVM may obtain a new IP address. You may need to reconnect using the updated address shown on the ArkKVM screen.'
-              )}
-            </p>
-            <p>
-              {t(
-                'settings:network.applyDialog.vlanDesc3',
-                'The new settings must be confirmed within 90 seconds, otherwise ArkKVM will automatically revert to the previous network configuration.'
-              )}
-            </p>
-          </div>}
+      title={t('settings:network.applyDialog.title', 'Apply network settings')}
+      description={
+        <div className="space-y-2 text-sm">
+          <p>
+            {t(
+              'settings:network.applyDialog.vlanDesc1',
+              'Applying VLAN settings will temporarily interrupt the connection.'
+            )}
+          </p>
+          <p>
+            {t(
+              'settings:network.applyDialog.vlanDesc2',
+              'ArkKVM may obtain a new IP address. You may need to reconnect using the updated address shown on the ArkKVM screen.'
+            )}
+          </p>
+          <p>
+            {t(
+              'settings:network.applyDialog.vlanDesc3',
+              'The new settings must be confirmed within 90 seconds, otherwise ArkKVM will automatically revert to the previous network configuration.'
+            )}
+          </p>
+        </div>
+      }
       groupedChanges={groups}
       countdownSeconds={countdown}
       countdownCancelText={r => `Revert (${r}s)`}
-      confirmText={t(
-        'settings:network.applyDialog.keepChanges',
-        'Keep changes'
-      )}
+      confirmText={t('settings:network.applyDialog.keepChanges', 'Keep changes')}
       disableConfirmAction={actionsDisabled}
       onConfirm={async () => {
         if (actionsDisabled) return;
@@ -277,21 +291,14 @@ export function VlanPendingConfirmDialog() {
           { showUnhandledErrorToast: true }
         );
         if (success) {
-          toast.success(
-            t(
-              'settings:network.applyDialog.confirmed',
-              'VLAN settings confirmed'
-            )
-          );
+          toast.success(t('settings:network.applyDialog.confirmed', 'VLAN settings confirmed'));
           setOpen(false);
         }
       }}
       onCancel={async () => {
         const { success } = await sendAsync({ method: 'revertVlanSettings' });
         if (success) {
-          toast.info(
-            t('settings:network.applyDialog.reverted', 'VLAN settings reverted')
-          );
+          toast.info(t('settings:network.applyDialog.reverted', 'VLAN settings reverted'));
           setOpen(false);
           await redirectToCurrentPrimary();
         }
@@ -300,10 +307,7 @@ export function VlanPendingConfirmDialog() {
         setActionsDisabled(true);
         await sendAsync({ method: 'revertVlanSettings' });
         toast.warning(
-          t(
-            'settings:network.applyDialog.revertedTimeout',
-            'Configuration reverted automatically.'
-          )
+          t('settings:network.applyDialog.revertedTimeout', 'Configuration reverted automatically.')
         );
         setOpen(false);
         await redirectToCurrentPrimary();

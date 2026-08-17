@@ -4,11 +4,15 @@ import { useAppStore } from '@/stores';
 import type { DownloadItem } from '@/stores/slices/fileTransferDownloadSlice';
 import type { TransferRow } from '@/stores/slices/fileTransferListSlice';
 import { createLogger } from '@/utils/logger';
+import { env } from '@/utils/env';
+import { humanSize } from '@/utils/format';
+import { toast } from 'sonner';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfirmDialog } from '../../ui/confirm-dialog';
 import { Input } from '../../ui/input';
 import { removeFromQueue } from '../../Upload/uploadLock';
+import type { UploadDropZoneRef } from '../../Upload/UploadDropZone';
 import type {
   DeleteResult,
   Row,
@@ -17,6 +21,7 @@ import type {
   VMState,
 } from './types';
 import { filterTasksByFtcache, joinPath } from './utils';
+import { deleteUploadTask, UploadResumeError, type UploadResumeErrorCode } from '@/utils/uploadIndexedDb';
 
 const logger = createLogger('VirtualUsbDrive');
 
@@ -94,6 +99,9 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
         } catch {}
       }
       removeRow(id);
+      try {
+        deleteUploadTask(id);
+      } catch {}
     },
     [removeRow, getUploadController, removeUploadController, getFileNameByKey]
   );
@@ -128,12 +136,19 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
     'upload'
   );
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadDropZoneRef = useRef<UploadDropZoneRef>(null);
   const {
     setDownloadFileList,
     updateProgress: updateProgressDownload,
     removeRow: removeDownloadRow,
   } = useAppStore.getState().fileDownloadList;
-  const [downloadFile] = useFileDownload({
+  const [downloadFile, downloadFileCancel] = useFileDownload({
+    transport: env.target === 'device' ? 'http-stream' : 'webrtc',
+    httpDownloadUrl: env.target === 'device' ? '/ft/file' : undefined,
+    onStart: task => {
+      logger.debug('Download started', { name: task.name });
+      updateProgressDownload(task.id, task as import('@/stores/slices/fileTransferDownloadSlice').DownloadItem);
+    },
     onProgress: task => {
       logger.debug('Download progress', {
         name: task.name,
@@ -142,13 +157,16 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
       if (task.progress === 100) {
         removeDownloadRow(task.id);
       } else {
-        updateProgressDownload(task.id, task);
+        updateProgressDownload(task.id, task as import('@/stores/slices/fileTransferDownloadSlice').DownloadItem);
       }
     },
     onComplete: task => {
       logger.info('Download completed', { name: task.name, path: task.path });
-      const id = `${task.name}-${task.path}`;
-      removeDownloadRow(id);
+      removeDownloadRow(task.id);
+    },
+    onError: (task, err) => {
+      logger.error('Download failed', { name: task.name, error: err });
+      updateProgressDownload(task.id, { ...task, state: 'failed' } as import('@/stores/slices/fileTransferDownloadSlice').DownloadItem);
     },
   });
   const downloadsMap = useAppStore(s => s.fileDownloadList.byId);
@@ -339,6 +357,33 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
               fileTransferList.removeRow(task.id);
             }
           });
+
+          // Add paused tasks for orphan .ftcache files that have no matching task row
+          const FTCACHE_SUFFIX = '.ftcache';
+          const ftcacheFiles = (result as Row[]).filter(
+            file => typeof file.name === 'string' && file.name.endsWith(FTCACHE_SUFFIX)
+          );
+          ftcacheFiles.forEach(file => {
+            const baseName = file.name.slice(0, -FTCACHE_SUFFIX.length);
+            if (validIds.has(baseName)) return;
+
+            const rowId = createRow({
+              id: baseName,
+              path,
+              name: baseName,
+              totalBytes: 0,
+              source: 'virtual-usb',
+              direction: 'upload',
+            });
+            setState(rowId, 'paused');
+            updateProgress(rowId, {
+              transferredBytes: file.size,
+              totalBytes: 0,
+              progress: 0,
+              transferredFormatted: humanSize(file.size),
+              progressFormatted: '0%',
+            });
+          });
         }
       } finally {
         stopLoading('ftListFile');
@@ -515,17 +560,17 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
   // Create directory
   const handleCreateDir = useCallback(() => {
     confirm({
-      title: 'Enter directory name',
+      title: t('toolbar.virtualUsbDrive.createDirDialog.title'),
       content: (
         <Input
           size="lg"
           ref={inputRef}
           autoFocus
-          placeholder="Enter directory name"
+          placeholder={t('toolbar.virtualUsbDrive.createDirDialog.placeholder')}
         />
       ),
-      confirmText: 'Yes',
-      cancelText: 'No',
+      confirmText: t('toolbar.virtualUsbDrive.createDirDialog.confirm'),
+      cancelText: t('toolbar.virtualUsbDrive.createDirDialog.cancel'),
       onConfirm: async () => {
         const createDirName = inputRef.current?.value?.trim() || '';
 
@@ -566,7 +611,9 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
 
   const startParamsFn = (file: File) => {
     return {
-      path: currentPath.replace(/\/{2,}/g, '/').replace(/([^:])\/$/, '$1'),
+      path: currentPathRef.current
+        .replace(/\/{2,}/g, '/')
+        .replace(/([^:])\/$/, '$1'),
       name: file.name,
       size: file.size,
     };
@@ -684,7 +731,11 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
   const onSuccessUpload = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file: any) => {
-      removeRow(file?.name);
+      const name = file?.name;
+      removeRow(name);
+      try {
+        deleteUploadTask(name);
+      } catch {}
       scheduleRefreshAfterUploadSuccess();
     },
     [removeRow, scheduleRefreshAfterUploadSuccess]
@@ -693,6 +744,84 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
   const handleBreadcrumbClick = useCallback((path: string) => {
     getCompletedList(path);
   }, []);
+
+  const handleCancelDownload = useCallback(
+    (taskId: string) => {
+      downloadFileCancel(taskId);
+      removeDownloadRow(taskId);
+    },
+    [downloadFileCancel, removeDownloadRow]
+  );
+
+  const onResumeStart = useCallback(
+    (payload: { filename: string; taskId?: string }) => {
+      const { taskId } = payload || {};
+      if (!taskId) return;
+      try {
+        setState(taskId, 'running');
+      } catch (e) {
+        logger.error('Failed to mark upload row as running on resume', e);
+      }
+    },
+    [setState]
+  );
+
+  const handleResumeUpload = useCallback(
+    async (row: TransferRow) => {
+      const taskPath = row.path || '/';
+      currentPathRef.current = taskPath;
+      setCurrentPath(taskPath);
+      // Stay on the current task list view; do not jump back to the file list.
+      void getCompletedList(taskPath);
+
+      // 1) Prefer an in-session upload controller (pause/continue in same tab).
+      const ctrl = getUploadController?.(row.name) || getUploadController?.(row.id);
+      if (ctrl && typeof ctrl.resume === 'function') {
+        try {
+          ctrl.resume();
+          setState(row.id, 'running');
+          return;
+        } catch {
+          // Fall through to persisted resume or fallback picker.
+        }
+      }
+
+      // 2) Try persisted File System Access resume.
+      try {
+        await uploadDropZoneRef.current?.resumeUpload(row.id);
+        return;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        // 3) If the persisted task/handle is missing or FSA is unavailable,
+        //    open the native file picker so the user can re-select the same file.
+        //    The device still returns alreadyUploadedBytes by filename, so the
+        //    upload continues from the server-side offset.
+        const recoverableCodes = new Set<UploadResumeErrorCode>([
+          'file-missing',
+          'not-supported',
+          'permission-denied',
+        ]);
+        const isRecoverable =
+          err instanceof UploadResumeError && recoverableCodes.has(err.code);
+
+        if (isRecoverable) {
+          toast.info(
+            t('toolbar.virtualUsbDrive.resumeFallback', {
+              defaultValue:
+                'Please re-select the file to continue the upload',
+            })
+          );
+          uploadDropZoneRef.current?.openFilePicker();
+          return;
+        }
+        toast.error(message || 'Resume upload failed');
+        try {
+          setState(row.id, 'failed', message);
+        } catch {}
+      }
+    },
+    [getCompletedList, getUploadController, setState, t]
+  );
 
   return {
     // State
@@ -722,6 +851,7 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
     handleRemoveUpload,
     handleDelete,
     handleDownload,
+    handleCancelDownload,
     handleCreateDir,
     handleCreateFile,
     handleMountWithFileImg,
@@ -739,6 +869,11 @@ export function useVirtualUsbDrive({ rpc }: VirtualUsbDriveProps) {
 
     // Refs
     currentPathRef,
+    uploadDropZoneRef,
+
+    // Resume callbacks
+    onResumeStart,
+    handleResumeUpload,
 
     // Logger
     logger,

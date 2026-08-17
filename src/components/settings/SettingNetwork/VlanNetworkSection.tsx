@@ -120,8 +120,8 @@ export const NetworkConfigSection = ({
           value={value.ipv4_mode}
            size="xs"
           options={[
-            { value: 'dhcp', label: 'DHCP' },
-            { value: 'static', label: 'Static' },
+            { value: 'dhcp', label: t('settings:network.ipv4Mode.options.dhcp') },
+            { value: 'static', label: t('settings:network.ipv4Mode.options.static') },
           ]}
 
           onChange={v => updateValue({ ipv4_mode: getSelectValue(v) as IPv4Mode })}
@@ -137,8 +137,8 @@ export const NetworkConfigSection = ({
                         <IconInfo className="w-5 h-5" />
                       </div>
                     }
-                    title=" Switch to DHCP?"
-                    description="Click “Save Settings” to apply this change and automatically get network information."
+                    title={t('settings:network.emptyState.switchToDhcp.title')}
+                    description={t('settings:network.emptyState.switchToDhcp.desc')}
                   />
           ) : dhcpLease ? (
             <InfoCard

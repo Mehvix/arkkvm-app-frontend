@@ -7,6 +7,7 @@
 import { type OcrSelection } from '@/hooks/useOcrCapture';
 import { AlertCircle, Check, Copy, Loader2, Maximize2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface OcrSelectionOverlayProps {
   isActive: boolean
@@ -45,6 +46,7 @@ export function OcrSelectionOverlay({
   onMouseUp,
   onCancel,
 }: OcrSelectionOverlayProps) {
+  const { t } = useTranslation('common');
   const [autoCopied, setAutoCopied] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
@@ -84,14 +86,13 @@ export function OcrSelectionOverlay({
       return () => clearTimeout(timer);
     }
     if (phase === OcrPhase.FAILED) {
-      setRecognitionError('Couldn\'t recognize text. Try selecting a clearer area.');
+      setRecognitionError(t('ocr.errorHint'));
       setShowResult(true);
     }
     if (phase !== OcrPhase.SUCCESS && phase !== OcrPhase.FAILED) {
       setAutoCopied(false);
       setShowResult(false);
       setRecognitionError(null);
-      setShowFullText(false);
     }
   }, [phase, recognizedText, autoCopied, onCopyText]);
 
@@ -173,7 +174,7 @@ export function OcrSelectionOverlay({
 
             {/* Size label - floating above selection, not blocking content */}
             <div
-              className="absolute bg-slate-800/90 backdrop-blur-sm text-white px-2 py-0.5 rounded text-[10px] font-mono pointer-events-none whitespace-nowrap shadow-sm border border-white/10"
+              className="absolute bg-slate-800/90 backdrop-blur-sm text-text px-2 py-0.5 rounded text-[10px] font-mono pointer-events-none whitespace-nowrap shadow-sm border border-white/10"
               style={{
                 left: '50%',
                 top: '-24px',
@@ -186,7 +187,7 @@ export function OcrSelectionOverlay({
             {/* Recognizing status - small badge at bottom-right of selection */}
             {phase === OcrPhase.RECOGNIZING && (
               <div
-                className="absolute flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-sm shadow-lg"
+                className="absolute flex items-center gap-1 bg-blue-600 text-text px-2 py-1 rounded text-sm shadow-lg"
                 style={{
                   right: '0',
                   bottom: '0',
@@ -195,7 +196,7 @@ export function OcrSelectionOverlay({
                 }}
               >
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Recognizing...</span>
+                <span>{t('ocr.recognizing')}</span>
               </div>
             )}
           </div>
@@ -246,10 +247,10 @@ export function OcrSelectionOverlay({
       )}
 
       {/* Top toolbar - minimal, natural English */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white rounded-lg shadow-lg px-3 py-2">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-text rounded-lg shadow-lg px-3 py-2">
         {(phase === OcrPhase.IDLE || phase === OcrPhase.SELECTING || phase === OcrPhase.SELECTED) && (
           <span className="text-sm font-medium">
-            {phase === OcrPhase.IDLE ? 'Drag to select text area · Press Esc to cancel' : 'Release mouse to recognize text · Esc to cancel'}
+            {phase === OcrPhase.IDLE ? t('ocr.dragHint') : t('ocr.releaseHint')}
           </span>
         )}
         {(phase === OcrPhase.IDLE || phase === OcrPhase.SELECTING || phase === OcrPhase.SELECTED) && (
@@ -258,19 +259,19 @@ export function OcrSelectionOverlay({
               e.stopPropagation();
               onCancel();
             }}
-            className="text-slate-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-white/10 transition-colors"
+            className="text-slate-400 hover:text-text text-sm px-2 py-1 rounded hover:bg-white/10 transition-colors"
           >
-            Exit
+            {t('ocr.exit')}
           </button>
         )}
         {phase === OcrPhase.RECOGNIZING && (
-          <span className="text-sm font-medium text-blue-300">Reading selected area...</span>
+          <span className="text-sm font-medium text-blue-300">{t('ocr.reading')}</span>
         )}
         {phase === OcrPhase.SUCCESS && (
-          <span className="text-sm font-medium text-green-400">Text recognized</span>
+          <span className="text-sm font-medium text-green-400">{t('ocr.success')}</span>
         )}
         {phase === OcrPhase.FAILED && (
-          <span className="text-sm font-medium text-amber-400">Couldn&apos;t recognize text</span>
+          <span className="text-sm font-medium text-amber-400">{t('ocr.error')}</span>
         )}
       </div>
     </div>
@@ -301,6 +302,7 @@ function ResultCard({
   onCancel,
   onClose,
 }: ResultCardProps) {
+  const { t } = useTranslation('common');
   const [showFullText, setShowFullText] = useState(false);
   const isError = !!recognitionError;
   const text = recognizedText || '';
@@ -362,12 +364,12 @@ function ResultCard({
             {isError ? (
               <>
                 <AlertCircle className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-slate-700">Couldn&apos;t recognize text</span>
+                <span className="text-sm font-medium text-slate-700">{t('ocr.error')}</span>
               </>
             ) : (
               <>
                 <Check className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-slate-700">Text recognized</span>
+                <span className="text-sm font-medium text-slate-700">{t('ocr.success')}</span>
               </>
             )}
           </div>
@@ -377,7 +379,7 @@ function ResultCard({
               onClose();
             }}
             className="p-1 hover:bg-slate-100 rounded transition-colors"
-            aria-label="Close"
+            aria-label={t('ocr.close')}
           >
             <X className="w-4 h-4 text-slate-400" />
           </button>
@@ -392,7 +394,7 @@ function ResultCard({
           <>
             {/* Text preview - scrollable if medium length */}
             <div className="bg-slate-50 rounded px-2.5 py-2 mb-3 border border-slate-100">
-              <p className={`text-sm text-slate-800 whitespace-pre-wrap break-words leading-relaxed ${isLongText ? 'max-h-[120px] overflow-y-auto pr-1' : ''}`}>
+              <p className={`text-sm text-slate-800 whitespace-pre-wrap wrap-break-word leading-relaxed ${isLongText ? 'max-h-[120px] overflow-y-auto pr-1' : ''}`}>
                 {text}
               </p>
               {isLongText && (
@@ -404,7 +406,7 @@ function ResultCard({
                   className="mt-2 text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1"
                 >
                   <Maximize2 className="w-3 h-3" />
-                  View full text
+                  {t('ocr.viewFullText')}
                 </button>
               )}
             </div>
@@ -413,7 +415,7 @@ function ResultCard({
             {autoCopied && (
               <div className="mb-3 text-sm text-green-600 flex items-center gap-1">
                 <Check className="w-3 h-3" />
-                <span>Copied to clipboard</span>
+                <span>{t('ocr.copied')}</span>
               </div>
             )}
           </>
@@ -428,10 +430,10 @@ function ResultCard({
                 await onCopyText?.();
                 onCancel(); // Exit OCR mode after copy
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-text px-3 py-1.5 rounded text-sm font-medium transition-colors"
             >
               <Copy className="w-4 h-4" />
-              <span>Copy</span>
+              <span>{t('ocr.copy')}</span>
             </button>
           )}
           <button
@@ -441,7 +443,7 @@ function ResultCard({
             }}
             className={`${isError ? 'flex-1' : ''} px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded text-sm font-medium transition-colors border border-slate-200`}
           >
-            Reselect
+            {t('ocr.reselect')}
           </button>
           {isError && (
             <button
@@ -451,14 +453,14 @@ function ResultCard({
               }}
               className="px-3 py-1.5 text-slate-500 hover:bg-slate-100 rounded text-sm font-medium transition-colors"
             >
-              Close
+              {t('ocr.close')}
             </button>
           )}
         </div>
 
         {/* Privacy note */}
         <div className="mt-2 text-[10px] text-slate-400 text-center">
-          Text recognition runs locally on your device
+          {t('ocr.privacyNote')}
         </div>
       </div>
 
@@ -477,7 +479,7 @@ function ResultCard({
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <span className="font-medium text-slate-800">Recognized text</span>
+              <span className="font-medium text-slate-800">{t('ocr.recognizedText')}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -495,14 +497,16 @@ function ResultCard({
             </div>
             <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-100">
               <button
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  onCopyText?.();
+                  await onCopyText?.();
+                  setShowFullText(false);
+                  onCancel();
                 }}
-                className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-text px-4 py-2 rounded text-sm font-medium transition-colors"
               >
                 <Copy className="w-4 h-4" />
-                Copy
+                {t('ocr.copy')}
               </button>
             </div>
           </div>

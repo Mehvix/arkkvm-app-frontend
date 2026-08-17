@@ -26,7 +26,7 @@ export interface UIVisibilityMap {
   extension: boolean
   connectionStats: boolean
 }
-export type KeyboardLayout = 'windows' | 'apple'
+export type KeyboardLayout = 'windows' | 'mac'
 export interface UISlice {
   /** The Single Source of Truth for the currently active main panel ('none' indicates no panel is open). */
   activeMain: 'terminal' | 'virtualKeyboard' | 'settings' | 'none'
@@ -75,7 +75,7 @@ const asRecord = (arr: PanelId[], v: boolean) =>
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
   activeMain: 'none',
   keyboardHeight: 316,
-  keyboardLayout: 'apple',
+  keyboardLayout: 'mac',
   isPasteTextOpen: false,
   controlLayoutMode: 'vertical',
   keyboardLedState: undefined,

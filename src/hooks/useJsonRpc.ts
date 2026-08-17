@@ -6,6 +6,8 @@ import type {
   JsonRpcResponse,
   JsonRpcSend,
   JsonRpcSendAsync,
+  RpcErrorResult,
+  RpcSuccessResult,
   SendAsyncOptions,
   ToastMessageOption,
 } from '@/api/rpc/types';
@@ -34,7 +36,7 @@ export type {
 type RpcStore = {
   callbackStore: Map<string, (resp: JsonRpcResponse) => void>
   pendingTimers: Map<string, number>
-  pendingResolvers: Map<string, (value: unknown) => void>
+  pendingResolvers: Map<string, (value: { result: null; success: false; error: JsonRpcError }) => void>
   requestCounter: number
 }
 
@@ -70,6 +72,16 @@ function getStore(): RpcStore {
 const { callbackStore, pendingTimers, pendingResolvers } = getStore();
 let requestCounter = getStore().requestCounter;
 
+const UNAVAILABLE_PEER_CONNECTION_STATES: RTCPeerConnectionState[] = [
+  'disconnected',
+  'failed',
+  'closed',
+];
+
+function isPeerConnectionUnavailable(state: RTCPeerConnectionState | null) {
+  return Boolean(state && UNAVAILABLE_PEER_CONNECTION_STATES.includes(state));
+}
+
 function clearPending(id: number | string) {
   const key = String(id);
   callbackStore.delete(key);
@@ -85,6 +97,7 @@ function clearAllPending() {
   // Resolve all pending promises with error before cleanup
   pendingResolvers.forEach((resolve) => {
     resolve({
+      result: null,
       success: false,
       error: {
         code: -32003,
@@ -122,6 +135,7 @@ export function useJsonRpc(
   options?: UseJsonRpcOptions
 ) {
   const rpcDataChannel = useRTCStore(s => s.rpcDataChannel);
+  const peerConnectionState = useRTCStore(s => s.peerConnectionState);
 
   // Track channel readiness via state + event listeners so it updates on disconnect
   const [isChannelReady, setIsChannelReady] = useState(
@@ -145,6 +159,13 @@ export function useJsonRpc(
   useEffect(() => {
     channelRef.current = rpcDataChannel ?? null;
   }, [rpcDataChannel]);
+  const peerConnectionStateRef = useRef<RTCPeerConnectionState | null>(null);
+  useEffect(() => {
+    peerConnectionStateRef.current = peerConnectionState ?? null;
+    if (isPeerConnectionUnavailable(peerConnectionStateRef.current)) {
+      clearAllPending();
+    }
+  }, [peerConnectionState]);
 
   const send = useCallback(<M extends MethodName>(call: JsonRpcSend<M>) => {
     const {
@@ -180,6 +201,18 @@ export function useJsonRpc(
       onError?.({
         code: -32002,
         message: `Channel state is ${ch.readyState}`,
+      });
+      return undefined;
+    }
+    const currentPeerConnectionState = peerConnectionStateRef.current;
+    if (isPeerConnectionUnavailable(currentPeerConnectionState)) {
+      const detail = getErrorMessage(ErrorMessageKey.RpcChannelClosed);
+      const msg = compose(errorMessage, detail);
+      if (msg) toast.error(msg);
+      onError?.({
+        code: -32003,
+        message: detail,
+        data: { peerConnectionState: currentPeerConnectionState },
       });
       return undefined;
     }
@@ -245,7 +278,11 @@ export function useJsonRpc(
       opts?: SendAsyncOptions & {
         resultOnly?: boolean
       }
-    ): Promise<unknown> => {
+    ): Promise<
+      opts extends { resultOnly: true }
+        ? MethodResultMap[M] | null
+        : RpcSuccessResult<M> | RpcErrorResult
+    > => {
       const timeout = opts?.timeout ?? 60000;
       const resultOnly = opts?.resultOnly ?? false;
       const showUnhandledErrorToast = opts?.showUnhandledErrorToast ?? false;
@@ -274,9 +311,14 @@ export function useJsonRpc(
       };
 
       return new Promise((resolve) => {
+        let immediateError: JsonRpcError | undefined;
         const id = send<M>({
           ...(call as JsonRpcSend<M>),
           showUnhandledErrorToast: false,
+          onError: (error: JsonRpcError) => {
+            immediateError = error;
+            call.onError?.(error);
+          },
           onResponse: (resp: JsonRpcResponse<MethodResultMap[M]>) => {
             clearPending(String((resp as { id?: unknown }).id ?? ''));
 
@@ -284,9 +326,8 @@ export function useJsonRpc(
               showErrorToast(resp.error);
               if (resultOnly) {
                 resolve(null);
-                // reject(new Error(resp.error.message || 'RPC Error'))
               } else {
-                resolve({ ...resp, success: false });
+                resolve({ result: null, success: false, error: resp.error });
               }
               return;
             }
@@ -294,14 +335,14 @@ export function useJsonRpc(
             if (resultOnly) {
               resolve(resp.result);
             } else {
-              resolve({ ...resp, success: true });
+              resolve({ result: resp.result, success: true });
             }
           },
         });
 
         if (typeof id !== 'number') {
           // Channel not ready, resolve immediately with error
-          const error = {
+          const error = immediateError ?? {
             code: -32002,
             message: getErrorMessage(ErrorMessageKey.RpcChannelNotReady, {
               method: String((call as JsonRpcSend<M>).method),
@@ -309,6 +350,7 @@ export function useJsonRpc(
           };
           showErrorToast(error);
           resolve(resultOnly ? null : {
+            result: null,
             success: false,
             error,
           });
@@ -316,8 +358,8 @@ export function useJsonRpc(
         }
 
         const key = String(id);
-        // Register resolver for cleanup on channel close
-        pendingResolvers.set(key, resolve);
+        // Register resolver for cleanup on channel close (cast: Map only stores the error-path shape)
+        pendingResolvers.set(key, resolve as (value: { result: null; success: false; error: JsonRpcError }) => void);
         const timer = window.setTimeout(() => {
           clearPending(key);
           const error = {
@@ -330,6 +372,7 @@ export function useJsonRpc(
           };
           showErrorToast(error);
           resolve(resultOnly ? null : {
+            result: null,
             success: false,
             error,
           });
@@ -345,6 +388,8 @@ export function useJsonRpc(
     [send]
   );
   const sendAsync = sendAsyncImpl as JsonRpcSendAsync;
+  const isRpcReady =
+    isChannelReady && !isPeerConnectionUnavailable(peerConnectionState);
 
   useEffect(() => {
     if (!rpcDataChannel) return;
@@ -459,8 +504,8 @@ export function useJsonRpc(
 
   // Memoize the returned tuple to keep a stable reference.
   return useMemo(
-    () => [send, isChannelReady, sendAsync] as const,
-    [send, isChannelReady, sendAsync]
+    () => [send, isRpcReady, sendAsync] as const,
+    [send, isRpcReady, sendAsync]
   );
 }
 

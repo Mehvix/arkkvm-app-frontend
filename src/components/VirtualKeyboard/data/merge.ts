@@ -75,9 +75,9 @@ function getBaseKeyDefinition(
  * - Modifier keys: get legends + isModifier from MODIFIER_KEYS
  * - Symbol keys: get legends + showDualState from US_SYMBOL_KEYS
  *
- * Example: createKeyDef('KeyA') => { keyCode: 'KeyA', legends: { base: 'a', shift: 'A', caps: 'A' } }
+ * Example: createKeyDef('KeyA') => { keyCode: 'KeyA', legends: { base: 'a', shift: 'A' } }
  * Example: createKeyDef('ShiftLeft') => { keyCode: 'ShiftLeft', legends: { base: 'Shift' }, isModifier: true }
- * Example: createKeyDef('Digit1') => { keyCode: 'Digit1', legends: { base: '1', shift: '!' }, showDualState: true }
+ * Example: createKeyDef('Digit1') => { keyCode: 'Digit1', legends: { base: '1', shift: '!', caps: '1' }, showDualState: true }
  */
 export function createKeyDef(
   keyCode: string,
@@ -87,18 +87,21 @@ export function createKeyDef(
   const baseDef = getBaseKeyDefinition(keyCode);
 
   if (baseDef) {
-    // Merge base definition legends and custom legends
     const mergedLegends = mergeLegends(baseDef.legends, legends);
-    // Merge base definition meta (isModifier, showDualState) and custom meta
+    if (
+      US_SYMBOL_KEYS[keyCode] &&
+      mergedLegends.base !== undefined &&
+      mergedLegends.caps === undefined
+    ) {
+      mergedLegends.caps = mergedLegends.base;
+    }
     const { legends: _, ...baseMeta } = baseDef as BaseKeyDefinition;
     return {
       keyCode,
       legends: mergedLegends,
-      ...baseMeta, // Base definition isModifier, showDualState, etc.
-      ...meta, // Custom meta overrides
+      ...baseMeta,
+      ...meta,
     };
   }
-
-  // No base definition, use passed legends directly
   return { keyCode, legends: legends || {}, ...meta };
 }

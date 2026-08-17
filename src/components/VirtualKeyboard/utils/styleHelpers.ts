@@ -18,7 +18,6 @@ export interface StyleConfig {
   isPressed: boolean
   isActive: boolean
   compact: boolean
-  heightClass: string
   isFixedWidth: boolean
 }
 
@@ -53,10 +52,10 @@ export const getKeyStateStyles = (config: StyleConfig) => {
  * @returns Array of CSS class strings
  */
 export const getKeyConditionalStyles = (config: StyleConfig) => {
-  const { compact, heightClass, isFixedWidth } = config;
+  const { compact, isFixedWidth } = config;
 
   return [
-    compact ? `m-0 ${heightClass}` : `m-[2px] ${heightClass}`,
+    compact ? 'm-0 h-5' : 'm-[2px] h-10',
     isFixedWidth ? 'flex-none' : 'flex-1 basis-0  min-w-[10px] md:min-w-[32px]',
   ];
 };

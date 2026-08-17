@@ -8,7 +8,7 @@
 .env.*.local
 
 # Documentation files
-# *.md
+*.md
 **/*.md
 !/README.md
 !/CONTRIBUTING.md

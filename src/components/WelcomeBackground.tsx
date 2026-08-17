@@ -8,7 +8,7 @@ function renderHighlightedText(text: React.ReactNode): React.ReactNode {
   if (parts.length === 1) return text;
   return parts.map((part, i) =>
     part.startsWith('**') && part.endsWith('**') ? (
-      <span key={i} className="text-white font-medium">
+      <span key={i} className="text-text font-medium">
         {part.slice(2, -2)}
       </span>
     ) : (
@@ -82,7 +82,7 @@ export default function WelcomeBackground({
               <div
                 className="animate__animated animate__fadeInDown animate-delay-100"
               >
-                <h1 className="text-[34px] font-[700] mt-[80px] leading-[1] mb-[20px] text-white">
+                <h1 className="text-[34px] font-[700] mt-[80px] leading-[1] mb-[20px] text-text">
                   {title}
                 </h1>
               </div>

@@ -211,7 +211,7 @@ const Key: React.FC<KeyProps> = React.memo(
             style.includes('hover:') ||
             style.includes('active:')
         );
-        return [...filteredStyles, pressedColor, 'text-white', 'shadow-inner'];
+        return [...filteredStyles, pressedColor, 'text-text', 'shadow-inner'];
       }
 
       return baseStyles;

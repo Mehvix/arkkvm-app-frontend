@@ -3,11 +3,12 @@ import { createLogger } from '@/utils/logger';
 import {
   type InputMethodName,
   type InputMethodParamsMap,
-  type InputSend
+  type InputSend,
 } from '@/utils/protobuf/inputMessage';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 const logger = createLogger('useInputChannel');
+const INPUT_BUFFERED_AMOUNT_LIMIT = 256 * 1024;
 
 export function useInputChannel() {
   const inputChannel = useRTCStore(s => s.inputChannel);
@@ -19,21 +20,48 @@ export function useInputChannel() {
 
   useEffect(() => {
     channelRef.current = inputChannel ?? null;
+    if (!inputChannel) return;
+
+    const handleUnavailable = () => {
+      if (channelRef.current === inputChannel) {
+        channelRef.current = null;
+      }
+    };
+
+    inputChannel.addEventListener('close', handleUnavailable);
+    inputChannel.addEventListener('error', handleUnavailable);
+    return () => {
+      inputChannel.removeEventListener('close', handleUnavailable);
+      inputChannel.removeEventListener('error', handleUnavailable);
+    };
   }, [inputChannel]);
   useEffect(() => {
     if (inputUnstableChannel?.readyState === 'open') {
       channelRef.current = inputUnstableChannel;
     }
-  }, [inputUnstableChannel]);
+    if (!inputUnstableChannel) return;
+
+    const handleUnavailable = () => {
+      if (channelRef.current === inputUnstableChannel) {
+        channelRef.current =
+          inputChannel?.readyState === 'open' ? inputChannel : null;
+      }
+    };
+
+    inputUnstableChannel.addEventListener('close', handleUnavailable);
+    inputUnstableChannel.addEventListener('error', handleUnavailable);
+    return () => {
+      inputUnstableChannel.removeEventListener('close', handleUnavailable);
+      inputUnstableChannel.removeEventListener('error', handleUnavailable);
+    };
+  }, [inputChannel, inputUnstableChannel]);
 
   const send = useCallback(
-    <M extends InputMethodName>(
-      call: InputSend<M>,
-      channel?: RTCDataChannel | null
-    ) => {
+    <M extends InputMethodName>(call: InputSend<M>, channel?: RTCDataChannel | null) => {
       // If channel is provided, use it; otherwise use channelRef.current
       const ch = channel ?? channelRef.current;
       if (!ch || ch.readyState !== 'open') return undefined;
+      if (ch.bufferedAmount > INPUT_BUFFERED_AMOUNT_LIMIT) return undefined;
       idRef.current += 1;
       if (idRef.current > Number.MAX_SAFE_INTEGER) idRef.current = 1;
 
@@ -43,7 +71,6 @@ export function useInputChannel() {
         params: call.params,
         id: idRef.current,
       };
-
 
       try {
         ch.send(JSON.stringify(payload));
@@ -57,6 +84,21 @@ export function useInputChannel() {
 
   const sendKeyboardReport = useCallback(
     (report: InputMethodParamsMap['keyboardReport']) => {
+      //       console.log('report',report)
+      //        if(report.keys?.[0]){
+      //           report.keys = [
+
+      //   39, // Digit0
+
+      //   30, // Digit1
+
+      //   36, // Digit7
+
+      //   30, // Digit1
+      //   0,0
+
+      // ];
+      //         }
       send({ method: 'keyboardReport', params: report });
     },
     [send]
@@ -94,9 +136,11 @@ export function useInputChannel() {
   );
 
   const sendWheelReport = useCallback(
-    (report: InputMethodParamsMap['wheelReport']) =>
-      send({ method: 'wheelReport', params: report }),
-    [send]
+    (report: InputMethodParamsMap['wheelReport']) => {
+
+      return send({ method: 'wheelReport', params: report }, inputUnstableChannel);
+    },
+    [send, inputUnstableChannel]
   );
 
   // Memoize the returned object to keep a stable reference for consumers.
@@ -109,8 +153,15 @@ export function useInputChannel() {
       sendWheelReport,
       isChannelReady,
     }),
-    [send, sendKeyboardReport, sendRelMouseReport, sendAbsMouseReport, sendWheelReport, isChannelReady]
+    [
+      send,
+      sendKeyboardReport,
+      sendRelMouseReport,
+      sendAbsMouseReport,
+      sendWheelReport,
+      isChannelReady,
+    ]
   );
 }
 
-export type UseInputChannelHandle = ReturnType<typeof useInputChannel>
+export type UseInputChannelHandle = ReturnType<typeof useInputChannel>;

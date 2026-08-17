@@ -14,40 +14,40 @@ import type { RootState } from '../types';
  * - `done`: Completed
  * - `failed`: Failed (with error message)
  */
-export type TransferState = 'pending' | 'running' | 'paused' | 'done' | 'failed'
+export type TransferState = 'pending' | 'running' | 'paused' | 'done' | 'failed';
 
 /**
  * Transfer direction.
  * - `upload`: Upload (local → remote)
  * - `download`: Download (remote → local)
  */
-export type TransferDirection = 'upload' | 'download'
+export type TransferDirection = 'upload' | 'download';
 
 /**
  * Transfer source/entry point.
  * - `virtual-usb`: Virtual USB drive
  * - `storage`: Storage mount
  */
-export type TransferSource = 'virtual-usb' | 'storage'
+export type TransferSource = 'virtual-usb' | 'storage';
 
 /**
  * File transfer task - core fields (for display and persistence).
  */
 export interface TransferItem {
   /** File path (remote save location), e.g., "/" or "/images" */
-  path: string
+  path: string;
 
   /** File name, e.g., "DSC00531.JPG" */
-  name: string
+  name: string;
 
   /** Total file size in bytes, e.g., 6494874 */
-  totalBytes: number
+  totalBytes: number;
 
   /** Transferred bytes (resume position), e.g., 5423120 */
-  transferredBytes: number
+  transferredBytes: number;
 
   /** Transfer progress percentage (0-100), e.g., 83.5 */
-  progress: number
+  progress: number;
 }
 
 /**
@@ -55,28 +55,28 @@ export interface TransferItem {
  */
 export interface TransferRuntimeFields {
   /** Current transfer state */
-  state: TransferState
+  state: TransferState;
 
   /** Real-time transfer speed (bytes/second), e.g., 1048576 = 1 MB/s */
-  speedBps: number
+  speedBps: number;
 
   /** Associated DataChannel name (WebRTC scenario) */
-  dataChannel?: string
+  dataChannel?: string;
 
   /** Error message (populated when state is failed) */
-  errorMessage?: string
+  errorMessage?: string;
 
   /** Total size formatted, e.g., "24.1 MB" */
-  totalFormatted?: string
+  totalFormatted?: string;
 
   /** Transferred size formatted, e.g., "5.6 MB" */
-  transferredFormatted?: string
+  transferredFormatted?: string;
 
   /** Progress percentage formatted, e.g., "23.4%" */
-  progressFormatted?: string
+  progressFormatted?: string;
 
   /** Speed formatted, e.g., "3.2 MB/s" */
-  speedFormatted?: string
+  speedFormatted?: string;
 }
 
 /**
@@ -84,86 +84,84 @@ export interface TransferRuntimeFields {
  */
 export interface TransferPersistMeta {
   /** Unique identifier */
-  id: string
+  id: string;
 
   /** Task creation timestamp (milliseconds), for sorting */
-  createdAt: number
+  createdAt: number;
 
   /** Last update timestamp (milliseconds), for expiration check */
-  updatedAt: number
+  updatedAt: number;
 
   /** Transfer direction: upload / download */
-  direction?: TransferDirection
+  direction?: TransferDirection;
 
   /** Transfer source: virtual-usb / storage */
-  source?: TransferSource
+  source?: TransferSource;
 
   /** Device ID (for multi-device scenarios) */
-  deviceId?: string
+  deviceId?: string;
 
   /** File fingerprint (weak validation to avoid wrong file resume) */
-  fingerprint?: string
+  fingerprint?: string;
 
   /** File last modified timestamp (milliseconds), for fingerprint generation */
-  lastModified?: number
+  lastModified?: number;
 }
 
 /**
  * Transfer task - complete persistence structure.
  * = TransferItem + TransferPersistMeta
  */
-export type TransferRowPersist = TransferItem & TransferPersistMeta
+export type TransferRowPersist = TransferItem & TransferPersistMeta;
 
 /**
  * Transfer task - complete UI structure.
  * = TransferRowPersist + TransferRuntimeFields
  */
-export type TransferRow = TransferRowPersist & TransferRuntimeFields
-
+export type TransferRow = TransferRowPersist & TransferRuntimeFields;
 
 export interface TransferListState {
-  byId: Record<string, TransferRow>
-  order: string[]
+  byId: Record<string, TransferRow>;
+  order: string[];
 }
 
 export interface TransferListActions {
   /** Restore from local storage (called on startup) */
-  hydrate: () => void
+  hydrate: () => void;
 
   /** Create a new task */
   createRow: (params: {
-    id?: string
-    path: string
-    name: string
-    totalBytes: number
-    dataChannel?: string
-    source?: TransferSource
-    direction?: TransferDirection
-  }) => string
+    id?: string;
+    path: string;
+    name: string;
+    totalBytes: number;
+    dataChannel?: string;
+    source?: TransferSource;
+    direction?: TransferDirection;
+  }) => string;
 
   /** Remove a task */
-  removeRow: (id: string) => void
+  removeRow: (id: string) => void;
 
   /** Set state (failed/paused/done, etc.) */
-  setState: (id: string, state: TransferState, errorMessage?: string) => void
+  setState: (id: string, state: TransferState, errorMessage?: string) => void;
 
   /** Update progress (with TransferStats fields) */
-  updateProgress: (id: string, stats: Partial<TransferRow>) => void
+  updateProgress: (id: string, stats: Partial<TransferRow>) => void;
 
   /** Update speed only (not persisted) */
-  setSpeed: (id: string, speedBps: number) => void
+  setSpeed: (id: string, speedBps: number) => void;
 
   /** Manually persist all tasks */
-  persistAll: () => void
+  persistAll: () => void;
 }
 
-export type TransferListSlice = TransferListState & TransferListActions
+export type TransferListSlice = TransferListState & TransferListActions;
 
-export type UploadState = TransferState
-export type UploadSource = TransferSource
-export type UploadRow = TransferRow
-export type UploadListSlice = TransferListSlice
-
+export type UploadState = TransferState;
+export type UploadSource = TransferSource;
+export type UploadRow = TransferRow;
+export type UploadListSlice = TransferListSlice;
 
 const STORAGE_KEY = 'transfer:list';
 
@@ -186,9 +184,7 @@ function savePersist(rows: TransferRowPersist[]) {
   } catch {}
 }
 
-function toPersistables(
-  byId: Record<string, TransferRow>
-): TransferRowPersist[] {
+function toPersistables(byId: Record<string, TransferRow>): TransferRowPersist[] {
   return Object.values(byId).map(r => ({
     id: r.id,
     createdAt: r.createdAt,
@@ -206,15 +202,18 @@ function toPersistables(
   }));
 }
 
-
-export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], TransferListSlice> = (set, get) => ({
+export const createFileTransferUploadListSlice: StateCreator<
+  RootState,
+  [],
+  [],
+  TransferListSlice
+> = (set, get) => ({
   byId: {},
   order: [],
 
-  hydrate: () => {
+  hydrate: (source?: 'storage') => {
     const list = loadPersist();
-    const currentById: Record<string, TransferRow> =
-      get().fileTransferList?.byId || {};
+    const currentById: Record<string, TransferRow> = get().fileTransferList?.byId || {};
 
     const byId: Record<string, TransferRow> = {};
     const order: string[] = [];
@@ -231,17 +230,21 @@ export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], 
     // 2. Restore incomplete tasks from localStorage (skipping already retained running tasks)
     for (const r of list) {
       if (byId[r.id]) continue; // Already retained as running
-      if (r.progress >= 100) continue;
-
       const raw = r as TransferRowPersist & { fileSize?: number; nextOffset?: number };
       const totalBytes = r.totalBytes ?? raw.fileSize ?? 0;
       const transferredBytes = r.transferredBytes ?? raw.nextOffset ?? 0;
-      const progress =
-        typeof r.progress === 'number' && !Number.isNaN(r.progress)
-          ? r.progress
-          : totalBytes
-            ? Math.min(100, (transferredBytes / totalBytes) * 100)
-            : 0;
+
+      let progress = 0;
+      if (r.progress >= 100) {
+        progress = 99.99;
+      } else {
+        progress =
+          typeof r.progress === 'number' && !Number.isNaN(r.progress)
+            ? r.progress
+            : totalBytes
+              ? (transferredBytes / totalBytes) * 100
+              : 0;
+      }
 
       byId[r.id] = {
         ...r,
@@ -256,8 +259,9 @@ export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], 
         // intentionally drops *Formatted fields).
         totalFormatted: humanSize(totalBytes),
         transferredFormatted: humanSize(transferredBytes),
-        progressFormatted: `${progress.toFixed(1)}%`,
+        progressFormatted: `${progress.toFixed(2)}%`,
         speedFormatted: '0 B/s',
+        source,
       };
       order.push(r.id);
     }
@@ -271,15 +275,7 @@ export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], 
     }));
   },
 
-  createRow: ({
-    id,
-    path,
-    name,
-    totalBytes,
-    dataChannel,
-    source,
-    direction = 'upload',
-  }) => {
+  createRow: ({ id, path, name, totalBytes, dataChannel, source, direction = 'upload' }) => {
     const createdAt = now();
     const finalId = id ?? name;
 
@@ -320,9 +316,7 @@ export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], 
         fileTransferList: {
           ...s.fileTransferList,
           byId: rest,
-          order: (s.fileTransferList?.order || []).filter(
-            (x: string) => x !== id
-          ),
+          order: (s.fileTransferList?.order || []).filter((x: string) => x !== id),
         },
       };
     });
@@ -339,8 +333,7 @@ export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], 
         errorMessage,
         updatedAt: now(),
         progress: state === 'done' ? 100 : it.progress,
-        transferredBytes:
-          state === 'done' ? it.totalBytes : it.transferredBytes,
+        transferredBytes: state === 'done' ? it.totalBytes : it.transferredBytes,
         speedBps: state === 'done' ? 0 : it.speedBps,
       };
       return {
@@ -356,17 +349,13 @@ export const createFileTransferUploadListSlice: StateCreator<RootState, [], [], 
 
   updateProgress: (id, stats) => {
     set((s: RootState) => {
-
       const it = s.fileTransferList?.byId?.[id];
       if (!it) return s;
       const next: TransferRow = {
         ...it,
         ...stats,
         updatedAt: now(),
-        state:
-          it.state === 'pending'
-            ? 'running'
-            : it.state,
+        state: it.state === 'pending' ? 'running' : it.state,
       };
       return {
         ...s,

@@ -32,7 +32,7 @@
     "noCurrentUploadsDesc": "Completed uploads will appear under Available",
     "formatsIntro": "",
     "formatsTypes": "Supported formats: ISO, IMG",
-    "idleText": "Click or drag an image to upload",
+    "idleText": "Click or drag an image here to start or resume an upload",
     "draggingText": "Drop file to upload",
     "colName": "Name",
     "colSpeed": "Transfer Speed",
@@ -41,7 +41,58 @@
     "deleteFileDesc": "Are you sure you want to delete \"{{displayName}}\" from storage? This action cannot be undone.",
     "delete": "Delete",
     "cancel": "Cancel",
-    "fileDeleted": "File deleted successfully."
+    "fileDeleted": "File deleted successfully.",
+    "selectFile": "Select",
+    "selectedFile": "Selected",
+    "deleteFileButton": "Delete",
+    "continueUploading": "Continue uploading",
+    "uploadImageButton": "Upload Image",
+    "uploadImageTooltip": "Select the image file you uploaded last time",
+    "resumeFallback": "Please re-select the file to continue the upload"
+  },
+  "urlMount": {
+    "imageUrlLabel": "Image URL",
+    "mountUrlButton": "Mount URL",
+    "mountAs": "Mount as",
+    "cdDvd": "CD/DVD",
+    "disk": "Disk",
+    "popularImages": "Popular images",
+    "selectButton": "Select",
+    "editButton": "Edit",
+    "copyButton": "Copy URL",
+    "mountAsCdDvd": "Mount as CD/DVD",
+    "mountAsDisk": "Mount as Disk",
+    "deleteButton": "Delete",
+    "editDialogTitle": "Edit Image",
+    "editDialogDesc": "Update the name and URL for this image.",
+    "editIconLabel": "Icon",
+    "editNameLabel": "Name",
+    "editConfirmButton": "Save",
+    "cancelButton": "Cancel",
+    "deleteConfirmTitle": "Delete Image",
+    "deleteConfirmDesc": "Are you sure you want to remove \"{{name}}\"? This will only remove it from the list.",
+    "deleteConfirmButton": "Delete",
+    "addButton": "Add an image URL",
+    "emptyTitle": "No popular images",
+    "emptyDescription": "Select Add to save a frequently used image URL.",
+    "addDialogTitle": "Add Image",
+    "addDialogDesc": "Add a new image to the popular images list.",
+    "validation": {
+      "nameRequired": "Name is required",
+      "urlRequired": "Image URL is required",
+      "urlInvalid": "Enter a valid image URL",
+      "urlUnsupportedFormat": "Enter a supported image format: ISO, CUE, MDS, NRG, IMG, QCOW, QCOW2, VHD, VHDX, VMDK, RAW, DD, or DMG",
+      "nameDuplicate": "A popular image with this name already exists",
+      "urlDuplicate": "This image URL already exists. Do not add it again"
+    }
+  },
+  "errors": {
+    "maxItemsLimit": "Maximum {{max}} popular images can be added",
+    "nameRequired": "Name is required",
+    "nameDuplicate": "A popular image with this name already exists"
+  },
+  "popularImages": {
+    "netbootDescription": "Boot and install various operating systems over network"
   },
   "sourceDialog": {
     "title": "Virtual Media Source",

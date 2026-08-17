@@ -1,19 +1,30 @@
+/*
+ * @Author: zhanglei
+ * @Date: 2026-05-14 21:03:09
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-07-09 22:55:07
+ */
 /**
- * @Purpose:
- * @Descripttion:
- * @version:
+ * @Purpose: Spanish keyboard layout
  * @Author: zhanglei
  * @Date: 2026-05-06 20:42:27
  * @LastEditors: zhanglei
- * @LastEditTime: 2026-05-06 21:31:28
+ * @LastEditTime: 2026-07-02 16:54:00
  */
 import type { LanguageLayoutModule } from '../types';
-import { meta } from './meta';
+import { esESMeta as meta } from '../meta';
 import { winLayout } from './windows';
+import { getSpecialChars } from './specialChars';
+import { macLayout } from './mac';
 
-const frFR: LanguageLayoutModule = {
+const esES: LanguageLayoutModule = {
   meta,
   windows: winLayout,
+  getSpecialChars,
+   mac:macLayout,
 };
 
-export default frFR;
+/** Export special characters for external use */
+export { getSpecialChars };
+
+export default esES;

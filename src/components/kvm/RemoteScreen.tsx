@@ -76,7 +76,7 @@ interface RemoteScreenProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export interface RemoteScreenHandle {
   disconnect?: () => void
-  reconnect?: () => void
+  reconnect?: (force?: boolean) => void
   videoElement?: HTMLVideoElement | null
   startOcrCapture?: () => void
   cancelOcrCapture?: () => void
@@ -96,7 +96,8 @@ const HDMI_ERROR_STATES: readonly HdmiErrorState[] = [
 
 const DISCONNECTED_WEBRTC_STATES = ['disconnected', 'failed', 'closed'] as const;
 
-const DOT_CURSOR_SVG = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Ccircle cx=\'6\' cy=\'6\' r=\'4\' fill=\'rgba(59, 130, 246, 0.8)\' stroke=\'white\' stroke-width=\'1.5\'/%3E%3C/svg%3E") 6 6, auto';
+const DOT_CURSOR_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='4' fill='rgba(59, 130, 246, 0.8)' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E";
+const DOT_CURSOR_SVG = `url("${DOT_CURSOR_IMAGE}") 6 6, auto`;
 
 // ============================================================================
 // Helper Functions
@@ -163,6 +164,11 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
     const [hasVideoContent, setHasVideoContent] = useState(false);
     const [videoAspectRatio, setVideoAspectRatio] = useState<string>('1920/1080');
 
+    useEffect(() => {
+      const image = new Image();
+      image.src = DOT_CURSOR_IMAGE;
+    }, []);
+
     // ========================================================================
     // OCR Functionality
     // ========================================================================
@@ -180,7 +186,7 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       cancelSelection: cancelOcrSelection,
     } = useOcrCapture({
       videoRef,
-      language: 'eng+chi_sim',
+      language: 'eng+chi_sim+vie+spa+ces+por+deu+nld+fra',
       onTextRecognized,
     });
 
@@ -394,9 +400,23 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       [unmute]
     );
 
+    const focusControlSurface = useCallback(() => {
+      try {
+        containerRef.current?.focus({ preventScroll: true });
+      } catch {}
+    }, []);
+
     // ========================================================================
     // Video Styling
     // ========================================================================
+
+    const remoteCursor = useMemo(() => {
+      return isCursorHidden
+        ? 'none'
+        : cursorStyle === 'arrow'
+          ? 'auto'
+          : DOT_CURSOR_SVG;
+    }, [isCursorHidden, cursorStyle]);
 
     /**
      * Compute video element styles including cursor and filters
@@ -405,21 +425,15 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
       const { saturation, brightness, contrast,hueRotate } = enhancement;
       const isDefault = saturation === 1 && brightness === 1 && contrast === 1;
 
-      const cursor = isCursorHidden
-        ? 'none'
-        : cursorStyle === 'arrow'
-          ? 'auto'
-          : DOT_CURSOR_SVG;
-
       return {
-        cursor,
+        cursor: remoteCursor,
         ...(isDefault
           ? {}
           : {
               filter: `saturate(${saturation}) brightness(${brightness}) contrast(${contrast}) hue-rotate(${hueRotate}deg)`,
             }),
       };
-    }, [enhancement, isCursorHidden, cursorStyle]);
+    }, [enhancement, remoteCursor]);
 
     // ========================================================================
     // Imperative Handle (Ref API)
@@ -507,7 +521,15 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
 
     return useMemo(
       () => (
-        <div className={cn('w-full h-full p-[4px]', className)} ref={containerRef}>
+        <div
+          className={cn('w-full h-full p-[4px] outline-none', className)}
+          ref={containerRef}
+          tabIndex={0}
+          data-kvm-control-surface="true"
+          onMouseEnter={focusControlSurface}
+          onPointerMove={focusControlSurface}
+          onContextMenu={e => e.preventDefault()}
+        >
             {(DISCONNECTED_WEBRTC_STATES as readonly string[]).includes(String(connectionState.webrtc)) && !connectionStatusMessage ? (
               <ConnectionIssuePanel
                 title={t(`webrtcConnection.${connectionState.webrtc}.title`)}
@@ -545,7 +567,7 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
                           strokeLinecap="round"
                         />
                       </svg>
-                      <div className="text-sm font-[400] text-white">
+                      <div className="text-sm font-[400] text-text">
                         {connectionStatusMessage}
                       </div>
                     </div>
@@ -575,6 +597,7 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
                 />
                 <video
                   ref={videoRef}
+                  tabIndex={-1}
                   className={cn(
                     'inset-0 w-auto h-auto m-auto block max-w-full max-h-full object-contain outline-none focus:outline-none focus:ring-0 focus-visible:outline-none',
                     hasVideoContent && !isHdmiErrorState(hdmiState) && 'border border-[var(--border-color)]',
@@ -626,6 +649,7 @@ export const RemoteScreen = forwardRef<RemoteScreenHandle, RemoteScreenProps>(
         videoStyle,
         mouseInputMode,
         handleEnableSound,
+        focusControlSurface,
         ocrEnabled,
         isOcrSelecting,
         ocrSelection,

@@ -78,7 +78,7 @@ export function ReconnectOverlay() {
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl font-semibold text-white">
+            <h2 className="text-2xl font-semibold text-text">
               {t('updateDialog.reconnect.title', {
                 defaultValue: 'Update Completed',
               })}

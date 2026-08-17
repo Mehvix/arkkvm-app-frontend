@@ -6,41 +6,41 @@
 import type { KeyboardLayout } from './keyboard-types';
 
 /** Keyboard layout standard */
-export type KeyboardStandard = 'ansi' | 'iso' | 'jis'
+export type KeyboardStandard = 'ansi' | 'iso' | 'jis';
 
 /** Keyboard layout type */
-export type LayoutType = 'qwerty' | 'qwertz' | 'azerty' | 'dvorak' | 'colemak'
+export type LayoutType = 'qwerty' | 'qwertz' | 'azerty' | 'dvorak' | 'colemak';
 
 /** Layout region */
-export type LayoutRegion = 'global' | 'europe' | 'asia' | 'americas'
+export type LayoutRegion = 'global' | 'europe' | 'asia' | 'americas';
 
 /** Layout metadata for generating options list */
 export interface LayoutMeta {
   /** Unique identifier, e.g., "cs-CZ-qwerty" */
-  id: string
+  id: string;
   /** Short tag, e.g., "CZ" */
-  tag: string
+  tag: string;
   /** Display name, e.g., "Czech - QWERTY" */
-  name: string
+  name: string;
   /** Native language name, e.g., "Čeština" */
-  nativeName: string
+  nativeName: string;
   /** Layout type */
-  layout: LayoutType
+  layout: LayoutType;
   /** Keyboard standard */
-  standard: KeyboardStandard
+  standard: KeyboardStandard;
   /** Region classification */
-  region: LayoutRegion
+  region: LayoutRegion;
   /** Sort priority (lower number = higher priority) */
-  priority: number
+  priority: number;
   /** Whether recommended */
-  recommended?: boolean
+  recommended?: boolean;
   /** Whether supports AltGr functionality (default true)
    * - true: Supports AltGr, shows altGr characters when pressed
    * - false: No AltGr support, shows current input (e.g., US keyboard)
    */
-  hasAltGr?: boolean
+  hasAltGr?: boolean;
   /** Additional notes */
-  note?: string
+  note?: string;
 }
 
 /**
@@ -49,11 +49,13 @@ export interface LayoutMeta {
  */
 export interface LanguageLayoutModule {
   /** Layout metadata */
-  meta: LayoutMeta
+  meta: LayoutMeta;
   /** Windows layout */
-  windows?: KeyboardLayout
+  windows?: KeyboardLayout;
   /** Mac layout */
-  mac?: KeyboardLayout
+  mac?: KeyboardLayout;
+  /** Optional special characters function */
+  getSpecialChars?(): LayoutChars;
 }
 
 /**
@@ -62,22 +64,34 @@ export interface LanguageLayoutModule {
  */
 export type LayoutOption = LayoutMeta & {
   /** Whether has Windows layout */
-  hasWindows: boolean
+  hasWindows: boolean;
   /** Whether has Mac layout */
-  hasMac: boolean
-}
+  hasMac: boolean;
+};
 
 import csCZ from './layouts/cs_CZ';
 import deCH from './layouts/de_CH';
 import deDE from './layouts/de_DE';
 import enGB from './layouts/en_GB';
 import enUS from './layouts/en_US';
-// import esES from './layouts/es_ES';
+import esES from './layouts/es_ES';
 import frFR from './layouts/fr_FR';
 import nlBE from './layouts/nl_BE';
+import ptPT from './layouts/pt-PT';
+import type { LayoutChars } from '../utils/generateCharMap';
 // esEs esES
 
-const ALL_LANGUAGE_LAYOUTS: LanguageLayoutModule[] = [enUS, enGB, csCZ, deCH, deDE, nlBE,frFR];
+const ALL_LANGUAGE_LAYOUTS: LanguageLayoutModule[] = [
+  enUS,
+  enGB,
+  csCZ,
+  deCH,
+  deDE,
+  nlBE,
+  frFR,
+  esES,
+  ptPT,
+];
 
 /** All layout metadata mapping (id -> meta) */
 export const languageLayoutMetaMap: Record<string, LayoutMeta> = {};
@@ -109,9 +123,8 @@ export function getLanguageLayoutMeta(id: string): LayoutMeta | undefined {
 /**
  * Get layout module by language ID.
  */
-export function getLanguageLayoutModule(
-  id: string
-): LanguageLayoutModule | undefined {
+export function getLanguageLayoutModule(id: string): LanguageLayoutModule | undefined {
+  //console.log('id',id,languageLayoutModuleMap)
   return languageLayoutModuleMap[id];
 }
 
@@ -125,32 +138,6 @@ export function getLanguageKeyboardLayout(
   const module = languageLayoutModuleMap[id];
   if (!module) return undefined;
   return platform === 'mac' ? module.mac : module.windows;
-}
-
-/**
- * Get layout options grouped by region.
- */
-export function getLanguageLayoutOptionsByRegion(): Record<
-  string,
-  LayoutOption[]
-> {
-  const grouped: Record<string, LayoutOption[]> = {
-    global: [],
-    europe: [],
-    asia: [],
-    americas: [],
-  };
-  languageLayoutOptions.forEach(option => {
-    grouped[option.region]?.push(option);
-  });
-  return grouped;
-}
-
-/**
- * Get recommended layout options.
- */
-export function getRecommendedLanguageLayouts(): LayoutOption[] {
-  return languageLayoutOptions.filter(option => option.recommended);
 }
 
 /**
@@ -194,4 +181,32 @@ export function getDefaultKeyboardLayoutByLanguage(): string {
   }
 
   return 'en-US-qwerty';
+}
+
+/**
+ * Get special characters mapping for a specific language layout
+ * @param layoutId - Layout ID (e.g., 'cs-CZ-qwerty')
+ * @returns LayoutChars object with special character mappings, or empty object if not available
+ */
+
+export function getLanguageLayoutData(
+  id: string,
+  platform: 'windows' | 'mac' = 'windows'
+): {
+  layout: KeyboardLayout | undefined;
+  specialChars: LayoutChars;
+} {
+  const module = languageLayoutModuleMap[id];
+  if (!module) {
+    return { layout: undefined, specialChars: {} };
+  }
+
+  const layout = platform === 'mac' ? module.mac : module.windows;
+  const specialChars = module.getSpecialChars ? module.getSpecialChars() : {};
+
+  return { layout, specialChars };
+}
+
+export function getLanguageSpecialChars(layoutId: string): LayoutChars {
+  return getLanguageLayoutData(layoutId).specialChars;
 }

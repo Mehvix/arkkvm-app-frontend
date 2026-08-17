@@ -5,7 +5,12 @@
  * - A custom trigger element (e.g., Button) with drag support
  * - A default styled drop zone with idle/dragging hints
  */
-import React from 'react';
+import type {
+  FilePickerAcceptType,
+  PersistedFileSystemFileHandle,
+} from '@/utils/uploadIndexedDb';
+import { isFileSystemAccessSupported } from '@/utils/uploadIndexedDb';
+import React, { useCallback } from 'react';
 import { Label } from '../ui/label';
 
 interface UploadZoneProps {
@@ -28,6 +33,11 @@ interface UploadZoneProps {
   onDragLeave: (e: React.DragEvent<HTMLDivElement>) => void
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void
   onFileSelected: (e: React.ChangeEvent<HTMLInputElement>) => void
+  /** Called when a file is picked via the File System Access API. */
+  onFilePicked?: (
+    file: File,
+    handle?: PersistedFileSystemFileHandle
+  ) => void
 }
 
 function UploadZone({
@@ -50,11 +60,74 @@ function UploadZone({
   onDragLeave,
   onDrop,
   onFileSelected,
+  onFilePicked,
 }: UploadZoneProps) {
-  const openPicker = () => {
+  const buildPickerTypes = useCallback((): FilePickerAcceptType[] => {
+    if (!accept || accept === '*') return [];
+    const types: FilePickerAcceptType[] = [];
+    const extensions: string[] = [];
+    const mimeTypes: string[] = [];
+    accept.split(',').forEach(token => {
+      const t = token.trim().toLowerCase();
+      if (!t) return;
+      if (t.startsWith('.')) {
+        extensions.push(t);
+      } else if (t.includes('/')) {
+        mimeTypes.push(t);
+      }
+    });
+    if (extensions.length) {
+      types.push({
+        description: 'Allowed files',
+        accept: { 'application/octet-stream': extensions },
+      });
+    }
+    mimeTypes.forEach(mime => {
+      types.push({ description: 'Allowed files', accept: { [mime]: [] } });
+    });
+    return types;
+  }, [accept]);
+
+  const openPicker = async () => {
     if (disabled) return;
     if (pickingRef.current) return;
     pickingRef.current = true;
+
+    // Prefer the File System Access API when available so we can persist the
+    // file handle for resumable uploads. Fall back to the native input.
+    if (onFilePicked && isFileSystemAccessSupported()) {
+      try {
+        const showPicker = (
+          window as unknown as {
+            showOpenFilePicker?: (
+              options?: Record<string, unknown>
+            ) => Promise<FileSystemFileHandle[]>;
+          }
+        ).showOpenFilePicker;
+        if (!showPicker) throw new Error('showOpenFilePicker not available');
+        const handles = await showPicker({
+          multiple: true,
+          types: buildPickerTypes(),
+        });
+        pickingRef.current = false;
+        for (const handle of handles) {
+          const file = await handle.getFile();
+          onFilePicked(
+            file,
+            handle as unknown as PersistedFileSystemFileHandle
+          );
+        }
+        return;
+      } catch (e: unknown) {
+        // AbortError means the user cancelled the picker — keep the fallback
+        // input closed in that case.
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          pickingRef.current = false;
+          return;
+        }
+        // For any other error, fall through to the native input picker.
+      }
+    }
     inputRef.current?.click();
   };
 

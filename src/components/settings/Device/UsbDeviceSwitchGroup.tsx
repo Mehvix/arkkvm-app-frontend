@@ -35,7 +35,7 @@ export interface UsbDeviceSwitchGroupProps {
 
 /**
  * USB device switch group component.
- * Includes four switches: Keyboard, Absolute Mouse, Relative Mouse, and Mass Storage.
+ * Includes five switches: Keyboard, Absolute Mouse, Relative Mouse, Virtual Storage, and USB Microphone.
  */
 export default function UsbDeviceSwitchGroup({
   value,
@@ -60,26 +60,13 @@ export default function UsbDeviceSwitchGroup({
     onDeviceChange?.(device, enabled);
   };
 
-  const handleKeyboardRelativeToggle = (enabled: boolean) => {
-    const newConfig = {
-      ...value,
-      keyboard: enabled,
-      relative_mouse: enabled,
-    };
-    onChange(newConfig);
-    onDeviceChange?.('keyboard', enabled);
-    onDeviceChange?.('relative_mouse', enabled);
-  };
-
-  const keyboardRelativeChecked = value.keyboard && value.relative_mouse;
-
   return (
     <div className={className}>
       <SettingSwitch
-        title={t('settings:hardware.usb.devices.keyboardRelativeMouse.title')}
-        content={t('settings:hardware.usb.devices.keyboardRelativeMouse.desc')}
-        checked={keyboardRelativeChecked}
-        onCheckedChange={handleKeyboardRelativeToggle}
+        title={t('settings:hardware.usb.devices.keyboard.title')}
+        content={t('settings:hardware.usb.devices.keyboard.desc')}
+        checked={value.keyboard}
+        onCheckedChange={enabled => handleDeviceToggle('keyboard', enabled)}
         disabled={disabled}
         titleSize={titleSize}
         contentSize={contentSize}
@@ -91,6 +78,18 @@ export default function UsbDeviceSwitchGroup({
         checked={value.absolute_mouse}
         onCheckedChange={enabled =>
           handleDeviceToggle('absolute_mouse', enabled)
+        }
+        disabled={disabled}
+        titleSize={titleSize}
+        contentSize={contentSize}
+      />
+
+      <SettingSwitch
+        title={t('settings:hardware.usb.devices.relativeMouse.title')}
+        content={t('settings:hardware.usb.devices.relativeMouse.desc')}
+        checked={value.relative_mouse}
+        onCheckedChange={enabled =>
+          handleDeviceToggle('relative_mouse', enabled)
         }
         disabled={disabled}
         titleSize={titleSize}

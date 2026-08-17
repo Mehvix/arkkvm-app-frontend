@@ -3,43 +3,43 @@ import type { FC } from 'react';
 import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { KeyLabel, LEDIndicator } from '.';
 import type { KeyDefinition, KeyLegends } from '../data/keyboard-types';
+import { useI18n } from '../i18n';
 import { useGlobalEventCleanup } from '../hooks';
 import { generateKeyStyles } from '../utils';
 
 interface KeycapProps {
-  keyCode?: string
-  label?: React.ReactNode | string | string[]
+  keyCode?: string;
+  label?: React.ReactNode | string | string[];
 
-  className?: string
-  shiftActive?: boolean
-  capsLockActive?: boolean
-  altGrActive?: boolean
+  className?: string;
+  shiftActive?: boolean;
+  capsLockActive?: boolean;
+  altGrActive?: boolean;
 
-  width?: number
-  style?: React.CSSProperties
-  isActive?: boolean
-  isPressed?: boolean
-  pressedColor?: string
-  disabled?: boolean
-  compact?: boolean
-  heightClass?: string
-  showStatusIndicator?: boolean
-  title?: string
-  sendValue?: string
+  width?: number;
+  style?: React.CSSProperties;
+  isActive?: boolean;
+  isPressed?: boolean;
+  pressedColor?: string;
+  disabled?: boolean;
+  compact?: boolean;
+  showStatusIndicator?: boolean;
+  title?: string;
+  sendValue?: string;
 
-  onKeyDown?: (keyCode: string, sendValue?: string) => void
-  onKeyUp?: (keyCode: string, sendValue?: string) => void
-  keyDef: KeyDefinition
+  onKeyDown?: (keyCode: string, sendValue?: string) => void;
+  onKeyUp?: (keyCode: string, sendValue?: string) => void;
+  keyDef?: KeyDefinition;
 }
 
 interface DisplayLabelParams {
-  legends?: KeyLegends
-  shiftActive?: boolean
-  capsLockActive?: boolean
-  altGrActive?: boolean
-  isModifier?: boolean
-  showDualState?: boolean
-  ignoreAltGr?: boolean
+  legends?: KeyLegends;
+  shiftActive?: boolean;
+  capsLockActive?: boolean;
+  altGrActive?: boolean;
+  isModifier?: boolean;
+  showDualState?: boolean;
+  ignoreAltGr?: boolean;
 }
 
 const getDisplayLabel = ({
@@ -54,18 +54,30 @@ const getDisplayLabel = ({
   if (!legends) return '';
 
   if (isModifier || ignoreAltGr) return legends.base;
-
-  if (altGrActive) return legends.altGr;
-
-  if (legends.caps) {
-    return shiftActive ? legends.shift : (showDualState ? [legends.base, legends.shift] : legends.base);
+  if (altGrActive) {
+    if (shiftActive) {
+      return legends?.['shift+altGr'] || '';
+    }
+    return legends.altGr;
   }
 
-  if (shiftActive && legends.shift) {
-    return capsLockActive ? legends.base : legends.shift;
+  if (capsLockActive) {
+    if (shiftActive) {
+      return legends['shift+caps'] ?? legends.base ?? legends.shift ?? '';
+    }
+
+    if (legends.caps !== undefined) {
+      return showDualState && legends.shift !== undefined
+        ? [legends.caps, legends.shift]
+        : legends.caps;
+    }
+
+    if (legends.shift !== undefined) {
+      return legends.shift;
+    }
   }
 
-  if (capsLockActive && legends.shift) {
+  if (shiftActive && legends.shift !== undefined) {
     return legends.shift;
   }
 
@@ -77,6 +89,9 @@ const getDisplayLabel = ({
 export const Keycap: FC<KeycapProps> = memo(
   ({
     keyDef,
+    className,
+    width: widthOverride,
+    style: styleOverride,
     shiftActive = false,
     capsLockActive = false,
     altGrActive = false,
@@ -85,19 +100,28 @@ export const Keycap: FC<KeycapProps> = memo(
     pressedColor = 'bg-blue-500',
     disabled = false,
     compact = false,
-    heightClass,
     showStatusIndicator = false,
     title,
     sendValue,
     onKeyDown,
     onKeyUp,
   }) => {
-    if (!keyDef) return <span></span>;
+    const t = useI18n();
 
-    const { keyCode, width, style, className = '' } = keyDef;
+    if (!keyDef)
+      return (
+        <span
+          className={cn(compact ? 'm-0 h-5' : 'm-[2px] h-10', className)}
+          style={{ flex: `${widthOverride ?? 1} 1 0%`, ...styleOverride }}
+          aria-hidden="true"
+        ></span>
+      );
+
+    const { keyCode, width: keyDefWidth, style: keyDefStyle, className: keyDefClassName } = keyDef;
+    const width = widthOverride ?? keyDefWidth;
     const isFixedWidth = width !== 'auto' && Boolean(width);
     const flexGrow = width || 1;
-    const heightClass_ = heightClass || (compact ? 'h-5' : 'h-10');
+
     const [internalPressed, setInternalPressed] = useState(false);
     const pressedRef = useRef(false);
     const keyStyles = useMemo(() => {
@@ -106,7 +130,6 @@ export const Keycap: FC<KeycapProps> = memo(
         isPressed: internalPressed,
         isActive,
         compact,
-        heightClass: heightClass_,
         isFixedWidth,
       };
 
@@ -114,25 +137,13 @@ export const Keycap: FC<KeycapProps> = memo(
 
       if (isPressed && !disabled) {
         const filteredStyles = baseStyles.filter(
-          style =>
-            !style.includes('bg-') ||
-            style.includes('hover:') ||
-            style.includes('active:')
+          style => !style.includes('bg-') || style.includes('hover:') || style.includes('active:')
         );
-        return [...filteredStyles, pressedColor, 'text-white', 'shadow-inner'];
+        return [...filteredStyles, pressedColor, 'text-text', 'shadow-inner'];
       }
 
       return baseStyles;
-    }, [
-      disabled,
-      internalPressed,
-      isPressed,
-      isActive,
-      compact,
-      heightClass_,
-      isFixedWidth,
-      pressedColor,
-    ]);
+    }, [disabled, internalPressed, isPressed, isActive, compact, isFixedWidth, pressedColor]);
 
     const computedLabel = useMemo(() => {
       const label = getDisplayLabel({
@@ -151,8 +162,7 @@ export const Keycap: FC<KeycapProps> = memo(
     const computedSendLabel = useMemo(() => {
       if (typeof sendValue === 'string') return sendValue;
       if (computedLabel.isStringLabel) return computedLabel.label as string;
-      if (computedLabel.isArrayLabel)
-        return String((computedLabel.label as string[])[0] ?? '');
+      if (computedLabel.isArrayLabel) return String((computedLabel.label as string[])[0] ?? '');
       return '';
     }, [sendValue, computedLabel]);
 
@@ -169,9 +179,9 @@ export const Keycap: FC<KeycapProps> = memo(
     const fullTooltip = useMemo(() => {
       const baseTooltip = `${tooltipText} (${keyCode})`;
       if (!showStatusIndicator) return baseTooltip;
-      const statusText = isActive ? 'Active' : 'Inactive';
-      return `${baseTooltip} - Status: ${statusText}`;
-    }, [tooltipText, keyCode, showStatusIndicator, isActive]);
+      const statusText = isActive ? t('active') : t('inactive');
+      return `${baseTooltip} - ${t('status')}: ${statusText}`;
+    }, [tooltipText, keyCode, showStatusIndicator, isActive, t]);
 
     useGlobalEventCleanup(internalPressed, () => {
       if (pressedRef.current) {
@@ -261,10 +271,11 @@ export const Keycap: FC<KeycapProps> = memo(
 
     return (
       <button
-        className={cn([...keyStyles, className])}
+        className={cn(keyStyles, 'box-border m-[2px]', keyDefClassName, className)}
         style={{
           flex: `${flexGrow} 1 0%`,
-          ...style,
+          ...keyDefStyle,
+          ...styleOverride,
         }}
         disabled={disabled}
         title={fullTooltip}
@@ -282,39 +293,10 @@ export const Keycap: FC<KeycapProps> = memo(
         onKeyUp={handleKeyboardUp}
         onContextMenu={e => e.preventDefault()}
       >
-        {keyCode === 'CapsLock' && showStatusIndicator && (
-          <LEDIndicator isActive={isActive} />
-        )}
+        {keyCode === 'CapsLock' && showStatusIndicator && <LEDIndicator isActive={isActive} />}
 
-        <KeyLabel
-          {...computedLabel}
-          showDualState={keyDef.showDualState && !isActive}
-        />
+        <KeyLabel {...computedLabel} showDualState={keyDef.showDualState && !isActive} />
       </button>
     );
-  },
-  (prevProps, nextProps) => {
-    if (prevProps.isPressed !== nextProps.isPressed) return false;
-    if (prevProps.isActive !== nextProps.isActive) return false;
-
-    if (prevProps.keyDef !== nextProps.keyDef) {
-      const prevLegends = prevProps.keyDef?.legends;
-      const nextLegends = nextProps.keyDef?.legends;
-      if (JSON.stringify(prevLegends) !== JSON.stringify(nextLegends)) {
-        return false;
-      }
-    }
-
-    const hasShiftLegend = prevProps.keyDef?.legends?.shift !== undefined;
-    const hasDualState = prevProps.keyDef?.showDualState === true;
-    const hasAltGrLegend = prevProps.keyDef?.legends?.altGr !== undefined;
-
-    if (hasShiftLegend || hasDualState || hasAltGrLegend) {
-      if (prevProps.shiftActive !== nextProps.shiftActive) return false;
-      if (prevProps.capsLockActive !== nextProps.capsLockActive) return false;
-      if (prevProps.altGrActive !== nextProps.altGrActive) return false;
-    }
-
-    return true;
   }
 );

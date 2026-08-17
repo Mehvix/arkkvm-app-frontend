@@ -5,7 +5,7 @@
  * @Author: zhanglei
  * @Date: 2025-10-27 16:25:25
  * @LastEditors: zhanglei
- * @LastEditTime: 2025-12-17 16:56:53
+ * @LastEditTime: 2026-07-31 21:05:00
  */
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import * as React from 'react';
@@ -13,15 +13,11 @@ import * as React from 'react';
 import { useFullscreenPortalContainer } from '@/contexts/FullscreenPortalContext';
 import { cn } from '@/lib/utils';
 
-function Popover({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Root>) {
+function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
-function PopoverTrigger({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
+function PopoverTrigger({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
@@ -48,9 +44,7 @@ function PopoverContent({
   );
 }
 
-function PopoverAnchor({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
+function PopoverAnchor({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 

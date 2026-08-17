@@ -91,7 +91,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             value={lang.code}
             className="cursor-pointer"
           >
-            {lang.name}
+            {t(`language.${lang.code}`, { defaultValue: lang.name })}
           </SelectItem>
         ))}
       </SelectContent>

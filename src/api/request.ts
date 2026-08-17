@@ -40,7 +40,7 @@ const buildRequestUrl = (url: string, config: RequestConfig = {}) => {
   return { finalUrl, config: restConfig };
 };
 
-const buildRequestHeaders = (config: RequestConfig) => {
+export const buildRequestHeaders = (config: RequestConfig) => {
   const headers = new Headers(config.headers);
   if (env.target !== 'cloud') {
     headers.set('Accept', 'application/json');

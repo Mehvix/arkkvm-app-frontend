@@ -120,6 +120,10 @@
       "title": "Theme",
       "desc": "Choose your preferred color theme"
     },
+    "language": {
+      "title": "Language",
+      "desc": "Choose your preferred display language"
+    },
     "statusBar": {
       "title": "Status Bar",
       "desc": "Choose what information is shown in the status bar.",
@@ -145,7 +149,8 @@
     "disable": "Disable",
     "retry": "Retry",
     "update": "Apply Changes",
-    "refresh": "Restore Defaults"
+    "refresh": "Restore Defaults",
+    "custom": "Custom"
   },
   "panels": {
     "accessibility": "Access",
@@ -167,11 +172,20 @@
     },
     "scrollThrottling": {
       "title": "Scrolling Speed",
-      "desc": "Reduce scrolling speed on the remote system."
+      "desc": "Reduce scrolling speed on the remote system.",
+      "off": "Off",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "maximum": "Maximum"
     },
     "jiggler": {
       "title": "Mouse Jiggler",
-      "desc": "Simulate small mouse movements at regular intervals to keep the system awake."
+      "desc": "Simulate small mouse movements at regular intervals to keep the system awake.",
+      "off": "Off",
+      "30seconds": "30 seconds",
+      "1minute": "1 minute",
+      "5minutes": "5 minutes"
     },
     "inputMode": {
       "title": "Mouse Mode",
@@ -230,12 +244,20 @@
     },
     "streamQuality": {
       "title": "Stream Quality",
-      "desc": "Adjust the quality of the video stream"
+      "desc": "Adjust the quality of the video stream",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
     },
     "enhancement": {
       "title": "Video Color",
       "desc": "Adjust color settings to make the video output more vibrant and colorful",
       "restoreButton": "Restore to default",
+      "standard": "Standard",
+      "vivid": "Vivid",
+      "textFocus": "Text focus",
+      "warm": "Warm",
+      "custom": "Custom",
       "saturation": {
         "title": "Saturation",
         "desc": "Color saturation"
@@ -257,6 +279,7 @@
     "edid": {
       "title": "EDID",
       "desc": "Configure EDID settings for display compatibility",
+      "default": "ArkKVM Default",
       "custom": {
         "title": "Custom EDID",
         "desc": "EDID determines video mode compatibility.  Default settings work in most cases, but some UEFI/BIOS configurations may require adjustments.",
@@ -270,15 +293,32 @@
   "audio": {
     "streamQuality": {
       "title": "Stream quality",
-      "desc": "Adjust the quality of the audio stream"
+      "desc": "Adjust the quality of the audio stream",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "toast": {
+        "updated": "Audio quality updated successfully",
+        "failed": "Failed to update audio quality"
+      }
     },
     "playback": {
       "title": "Playback",
-      "desc": "Stream remote audio to this device"
+      "desc": "Stream remote audio to this device",
+      "toast": {
+        "enabled": "Audio playback enabled",
+        "disabled": "Audio playback disabled",
+        "failed": "Failed to update audio playback"
+      }
     },
     "microphoneEmulation": {
       "title": "Microphone emulation",
-      "desc": "Enable remote apps to access local microphone"
+      "desc": "Enable remote apps to access local microphone",
+      "toast": {
+        "enabled": "Microphone emulation enabled",
+        "disabled": "Microphone emulation disabled",
+        "failed": "Failed to update microphone emulation"
+      }
     }
   },
   "hardware": {
@@ -293,16 +333,31 @@
     },
     "displayBrightness": {
       "title": "Display Brightness",
-      "desc": "Set the brightness of the display"
+      "desc": "Set the brightness of the display",
+      "off": "Off",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
     },
     "dimAfter": {
       "title": "Dim Display After",
-      "desc": "Set the delay before the display dims"
+      "desc": "Set the delay before the display dims",
+      "never": "Never",
+      "1minute": "1 Minute",
+      "5minutes": "5 Minutes",
+      "10minutes": "10 Minutes",
+      "30minutes": "30 Minutes",
+      "1hour": "1 Hour"
     },
     "turnOffAfter": {
       "title": "Turn off Display After",
       "desc": "Set the period of inactivity before the display automatically turns off.",
-      "tip": "The display will wake up when the screen is touched."
+      "tip": "The display will wake up when the screen is touched.",
+      "never": "Never",
+      "5minutes": "5 Minutes",
+      "10minutes": "10 Minutes",
+      "30minutes": "30 Minutes",
+      "1hour": "1 Hour"
     },
     "usb": {
       "title": "USB Devices",
@@ -314,11 +369,16 @@
       "devices": {
         "presets": {
           "fullFeatureSet": "Full feature set",
-          "keyboardMouse": "Keyboard & Mouse"
+          "keyboardMouse": "Keyboard & Mouse",
+          "keyboardOnly": "Keyboard only"
         },
-        "keyboardRelativeMouse": {
-          "title": "Keyboard & Relative Mouse",
-          "desc": "Emulates a USB keyboard and relative mouse. Recommended for BIOS, GRUB, KVM switches, games, and legacy systems."
+        "keyboard": {
+          "title": "Keyboard",
+          "desc": "Emulates a standard USB keyboard on the target computer."
+        },
+        "relativeMouse": {
+          "title": "Relative Mouse",
+          "desc": "Emulates a relative USB mouse for better compatibility with BIOS, GRUB, games, and legacy systems."
         },
         "absoluteMouse": {
           "title": "Absolute Mouse (Pointer)",
@@ -346,6 +406,22 @@
           "logitechUniversalAdapter": "Logitech",
           "microsoftWirelessKeyboard": "Microsoft",
           "dellMultimediaKeyboard": "Dell"
+        },
+        "fields": {
+          "vendorId": "Vendor ID",
+          "productId": "Product ID",
+          "serialNumber": "Serial Number",
+          "manufacturer": "Manufacturer",
+          "productName": "Product Name"
+        },
+        "validation": {
+          "vendorIdRequired": "Vendor ID is required",
+          "vendorIdInvalid": "Must be a valid hex ID, e.g. 0x413c",
+          "productIdRequired": "Product ID is required",
+          "productIdInvalid": "Must be a valid hex ID, e.g. 0x2011",
+          "serialNumberMaxLength": "Serial number must be at most 64 characters",
+          "manufacturerMaxLength": "Manufacturer must be at most 126 characters",
+          "productNameMaxLength": "Product name must be at most 126 characters"
         }
       }
     }
@@ -366,7 +442,12 @@
     "domain": {
       "title": "Domain",
       "desc": "Set the DNS search domain for this device.",
-      "customLabel": "Custom Domain"
+      "customLabel": "Custom Domain",
+      "options": {
+        "dhcpProvided": "DHCP provided",
+        "none": "None",
+        "custom": "Custom"
+      }
     },
     "mdns": {
       "title": "mDNS",
@@ -397,13 +478,32 @@
         "desc": "Provides additional local access to ArkKVM, but does not carry outbound system traffic.",
         "idDesc": "Secondary VLAN must use a different VLAN ID from the Primary VLAN."
       },
-      "addSecondary": "Add Secondary VLAN"
+      "addSecondary": "Add Secondary VLAN",
+      "applyDialog":{
+        "vlanDesc":[
+          "Applying VLAN settings will temporarily interrupt the connection.",
+          "ArkKVM may obtain a new IP address. Reconnect using the updated address shown on the ArkKVM device screen.",
+          "If ArkKVM becomes unreachable because of incorrect VLAN settings, use <strong>Reset Network Config</strong> on the ArkKVM device screen to restore the default network settings.",
+          "Make sure your switch is configured for the selected VLAN(s) before applying these settings."
+        ]
+      }
+    },
+    "connectionLost": {
+      "title": "Connection Lost",
+      "line1": "ArkKVM network settings have been applied.",
+      "line2": "The IP address or VLAN configuration may have changed.",
+      "line3": "Check the ArkKVM device screen for the current network information and reconnect.",
+      "ok": "OK"
     },
     "saveButton": "Save Settings",
     "savingButton": "Saving...",
     "ipv4Mode": {
       "title": "IPv4 Mode",
-      "desc": "Configure how the device obtains an IPv4 address"
+      "desc": "Configure how the device obtains an IPv4 address",
+      "options": {
+        "dhcp": "DHCP",
+        "static": "Static"
+      }
     },
     "ipv6Mode": {
       "title": "IPv6 Mode",
@@ -431,6 +531,10 @@
       "validLifetime": "Valid Lifetime",
       "preferredLifetime": "Preferred Lifetime"
     },
+    "dhcpModeChanged": {
+      "title": "Connection Lost",
+      "desc": ["ArkKVM network settings have been applied.","The IP address or VLAN configuration may have changed.","Check the ArkKVM device screen for the current network information and reconnect."]
+    },
     "emptyState": {
       "switchToDhcp": {
         "title": "Switch to DHCP?",
@@ -452,6 +556,20 @@
         "title": "IPv6 Information",
         "desc": "No IPv6 addresses configured"
       }
+    },
+    "staticIpv4": {
+      "title": "Static IPv4 Configuration",
+      "ipAddress": "IPv4 Address",
+      "subnetMask": "IPv4 Netmask",
+      "gateway": "IPv4 Gateway",
+      "dnsServers": "IPv4 DNS",
+      "addDns": "Add DNS Server",
+      "error": {
+        "ipRequired": "IPv4 address is required",
+        "maskRequired": "Subnet mask is required",
+        "gatewayRequired": "Gateway is required",
+        "invalidIp": "Invalid IPv4 address"
+      }
     }
   },
   "advanced": {
@@ -465,7 +583,16 @@
     },
     "loopbackOnly": {
       "title": "Loopback-Only Mode",
-      "desc": "Restrict web interface access to localhost only (127.0.0.1)"
+      "desc": "Restrict web interface access to localhost only (127.0.0.1)",
+      "confirm": {
+        "title": "Enable Loopback-Only Mode?",
+        "warning": "WARNING: This will restrict web interface access to localhost (127.0.0.1) only.",
+        "prereqNote": "Before enabling this feature, make sure you have either:",
+        "prereqSsh": "SSH access configured and tested",
+        "prereqCloud": "Cloud access enabled and working",
+        "confirmText": "I Understand, Enable Anyway",
+        "cancelText": "Cancel"
+      }
     },
     "sshAccess": {
       "title": "SSH Access",
@@ -473,7 +600,8 @@
       "keyLabel": "SSH Public Key",
       "keyPlaceholder": "Paste your SSH public key here...",
       "defaultUserText": "The default SSH user is",
-      "updateButton": "Update SSH Key"
+      "updateButton": "Update SSH Key",
+      "successMessage": "SSH Key updated successfully"
     },
     "troubleshooting": {
       "title": "Troubleshooting Mode",
@@ -485,9 +613,25 @@
         "disableButton": "Disable USB Emulation"
       },
       "resetConfig": {
-        "title": "Reset Configuration",
-        "desc": "Reset most settings to their default values. You will be signed out.",
-        "button": "Reset Configuration"
+        "title": "Factory Reset",
+        "desc": "Erase all content and restore to factory settings.",
+        "button": "Factory Reset",
+        "confirm": {
+          "title": "Factory Reset",
+          "desc": [
+            "Factory Reset will permanently erase all local data and restore ArkKVM to its factory settings.",
+            "This includes uploaded image files, any files stored in the Virtual USB Drive, certificates, SSH keys, and all other settings.",
+            "This action cannot be undone."
+          ],
+          "button": "Factory Reset",
+          "cancel": "Cancel"
+        }
+      },
+      "diagnostic": {
+        "title": "Diagnostic",
+        "desc": "Download diagnostic information to help identify and troubleshoot issues.",
+        "descSlow": "Generate a diagnostic package containing system information and logs for troubleshooting.",
+        "button": "Download Diagnostics"
       }
     }
   },

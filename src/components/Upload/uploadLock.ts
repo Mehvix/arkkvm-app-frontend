@@ -29,8 +29,10 @@ export interface QueuedFile {
   alreadyUploadedBytes: number
   /** Original dataChannel value from RPC (string or object) */
   dataChannel: string | RTCDataChannel | null
+  /** Extra RPC params (e.g. path) needed by per-chunk startXxx calls in HTTP mode */
+  rpcParams?: Record<string, unknown>
   /** Callback to start upload directly (skips RPC) */
-  onReady: (file: File, channelLabel: string, alreadyUploadedBytes: number, dataChannel: string | RTCDataChannel | null) => void
+  onReady: (file: File, channelLabel: string, alreadyUploadedBytes: number, dataChannel: string | RTCDataChannel | null, rpcParams?: Record<string, unknown>) => void
 }
 export const uploadQueue: QueuedFile[] = [];
 

@@ -144,10 +144,11 @@ export function Dialog({
       <AlertDialogContent
         className={`${baseContentClasses} ${fullScreenClasses} ${paddingClass} ${contentClassName ?? ''} pb-0 flex flex-col overflow-hidden ${fullScreen ? '' : 'max-h-[85vh] !max-w-[95vw] sm:!max-w-none'}`}
         style={contentStyle}
-        {...(preventOutsideClose ? {
-          onPointerDownOutside: (e: Event) => e.preventDefault(),
-          onInteractOutside: (e: Event) => e.preventDefault(),
-        } : {})}
+        onOverlayClick={() => {
+          if (!preventOutsideClose) {
+            onOpenChange?.(false);
+          }
+        }}
       >
         {showCloseIcon && (
           <div className="absolute right-3 top-3">

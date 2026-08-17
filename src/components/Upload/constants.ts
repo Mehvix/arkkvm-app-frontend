@@ -60,3 +60,36 @@ export const UPLOAD_LOCK_TIMEOUT = 60_000;
 
 /** Timeout waiting for device confirmation after final send (30s) */
 export const FINALIZE_TIMEOUT = 30_000;
+
+/**
+ * ACK sliding-window ceiling: max bytes the frontend `offset` (sentBytes) may run
+ * ahead of the device-confirmed `AlreadyUploadedBytes` before we pause sending.
+ * Prevents the sender from racing far ahead of the device's receive/write speed
+ * (which otherwise floods DataChannel bufferedAmount and triggers backpressure).
+ */
+export const MAX_IN_FLIGHT_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Base ACK stall timeout (60s). The actual timeout used at runtime is computed
+ * by `getAckStallTimeout(fileSize)` so large uploads on slow/cloud networks are
+ * not aborted by temporary ACK delays.
+ */
+export const ACK_STALL_TIMEOUT = 60_000;
+
+/** Maximum ACK stall timeout (10 minutes). */
+export const MAX_ACK_STALL_TIMEOUT = 10 * 60 * 1000;
+
+/**
+ * Compute the ACK stall timeout for a given file size.
+ *
+ * On slow/cloud networks, device ACKs can be delayed by buffering, congestion,
+ * or TURN relay without the device actually stopping. We scale the timeout with
+ * file size so huge files are allowed more patience, while small files still
+ * fail fast when the channel is truly dead.
+ *
+ * Formula: 60s base + 1s per MB, capped at 10 minutes.
+ */
+export const getAckStallTimeout = (fileSize: number): number => {
+  const extraMs = (fileSize / (1024 * 1024)) * 1000;
+  return Math.min(ACK_STALL_TIMEOUT + extraMs, MAX_ACK_STALL_TIMEOUT);
+};

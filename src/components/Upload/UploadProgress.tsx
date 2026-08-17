@@ -41,7 +41,7 @@ function UploadProgress({
           </div>
           <div className="h-2 bg-white/10 rounded">
             <div
-              className="h-full bg-[var(--btn-primary-bg)] rounded upload-progress-bar"
+              className="h-full bg-(--btn-primary-bg) rounded upload-progress-bar"
               style={{
                 '--upload-width': `${currentUploadDetail.progress}%`,
               } as React.CSSProperties}

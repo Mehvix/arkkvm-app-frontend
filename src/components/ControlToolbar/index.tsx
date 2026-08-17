@@ -9,12 +9,13 @@ import {
   IconSetting,
   IconTerminal,
 } from '@/assets/icons';
+import { Type } from 'lucide-react';
 import { activeClass } from '@/components/ui/variants';
 import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores';
 import { useActiveDeviceSettings } from '@/stores/devicesStore';
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import Extension from '../kvm/Extension';
 import { Button } from '../ui/button';
@@ -24,6 +25,7 @@ import PasteText from './PasteText';
 import VirtualMedia from './VirtualMedia';
 import VirtualUsbDrive from './VirtualUsbDrive';
 import WakeOnLAN from './WakeOnLAN';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 export interface KeyboardEventData {
   /** Keyboard event type: keydown, keyup, keypress */
@@ -111,6 +113,8 @@ interface ControlToolbarProps {
   onStatsClick?: () => void
   /** OCR text recognition click event */
   onOcrClick?: () => void
+  /** Whether OCR text recognition is currently active */
+  ocrEnabled?: boolean
   /** JSON-RPC handle */
   rpc: JsonRpcHandle
   /** Optional ref to imperatively close all toolbar popovers from parent */
@@ -134,7 +138,8 @@ export default memo(function ControlToolbar({
   onWakeOnLanClick: _onWakeOnLanClick,
   onExtensionClick: _onExtensionClick,
   onStatsClick: _onStatsClick,
-  onOcrClick: _onOcrClick,
+  onOcrClick,
+  ocrEnabled: _ocrEnabled = false,
   closeAllPopoversRef,
 
   rpc,
@@ -150,6 +155,7 @@ export default memo(function ControlToolbar({
   const virtualMediaInternalDialogsRef = React.useRef<(() => void) | null>(null);
   const [isVirtualUsbDriveOpen, setIsVirtualUsbDriveOpen] = useState(false);
   const [isWakeOnLanOpen, setIsWakeOnLanOpen] = useState(false);
+  const [isCopyTextDropdownOpen, setIsCopyTextDropdownOpen] = useState(false);
   const [isExtensionOpen, setIsExtensionOpen] = useState(false);
   const webTerminalEnabled = useActiveDeviceSettings(
     state => state.webTerminalEnabled
@@ -170,7 +176,7 @@ export default memo(function ControlToolbar({
     'data-[state=open]:ease-out data-[state=closed]:ease-in'
   );
 
-  const buttonClassName = '';
+  const buttonClassName = 'shrink-0 whitespace-nowrap';
   const getIconClassName = (_isEnabled: boolean, _defaultColor?: string) => {
     return `size-[12px] text-[12px] ${isChannelReady ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}
     }`;
@@ -233,10 +239,17 @@ export default memo(function ControlToolbar({
     }
   };
 
+  const handleOcrClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!isChannelReady) return;
+    closeAllPopovers();
+    onOcrClick?.();
+  };
+
   return (
-    <div className="flex items-center justify-between text-[#dbdbdb] w-full flex-wrap gap-y-2  border-b border-(--border-color) py-[6px] px-[18px]">
+    <div className="flex w-full items-center gap-2 overflow-x-auto overscroll-x-contain border-b border-(--border-color) px-2 py-[6px] text-[#dbdbdb] sm:justify-between sm:overflow-visible sm:px-[18px]">
       {/* Left group */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex shrink-0 items-center gap-2 sm:flex-wrap">
         {/* Web Terminal */}
         {webTerminalEnabled && (
           <Button
@@ -262,13 +275,12 @@ export default memo(function ControlToolbar({
             setIsPasteTextPanelOpen(open);
           }}
         >
-          <div className="flex items-center">
+          <div className="flex items-center -space-x-px">
             {/* Main Paste Text Button - as PopoverTrigger */}
             <PopoverTrigger asChild>
-              {/* rounded-r-none */}
               <Button
                 variant="default"
-                className={cn(buttonClassName, ' border-r border-(--border-color)')}
+                className={cn(buttonClassName, 'rounded-r-none border-r-0')}
                 disabled={!isChannelReady || !usbDeviceConfig?.keyboard}
                 title={t('toolbar.pasteText')}
                 onClick={() => {
@@ -280,7 +292,7 @@ export default memo(function ControlToolbar({
               </Button>
             </PopoverTrigger>
             {/* Dropdown Arrow for Copy Text - stop event propagation */}
-            {/* <DropdownMenu
+            <DropdownMenu
               modal={true}
               open={isCopyTextDropdownOpen}
               onOpenChange={setIsCopyTextDropdownOpen}
@@ -288,7 +300,7 @@ export default memo(function ControlToolbar({
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="default"
-                  className={cn(buttonClassName, 'rounded-l-none px-2 focus:outline-none focus-visible:outline-none focus-visible:ring-0')}
+                  className={cn(buttonClassName, 'rounded-l-none border-l-0 px-2 focus:outline-none focus-visible:outline-none focus-visible:ring-0')}
                   disabled={!isChannelReady || !usbDeviceConfig?.keyboard}
                   title={t('toolbar.moreTextActions', { defaultValue: 'More text actions' })}
                   onClick={(e: MouseEvent<HTMLButtonElement>) => {
@@ -327,7 +339,7 @@ export default memo(function ControlToolbar({
                     e.stopPropagation();
                     e.preventDefault();
                     setIsCopyTextDropdownOpen(false);
-                    handleOcrClick(e as unknown as MouseEvent<HTMLButtonElement>);
+                    handleOcrClick(e);
                   }}
                   disabled={!isChannelReady}
                 >
@@ -335,12 +347,16 @@ export default memo(function ControlToolbar({
                   {t('toolbar.copyText', { defaultValue: 'Copy text' })}
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu> */}
+            </DropdownMenu>
           </div>
           <PopoverContent
-            className={cn(popoverContentClassName, 'bg-(--bg-secondary) mt-[6px] w-[550px] overflow-auto')}
+            className={cn(
+              popoverContentClassName,
+              'max-h-[calc(100dvh-180px)] w-[min(calc(100vw-24px),550px)] overflow-auto bg-(--bg-secondary) sm:w-[550px]'
+            )}
             sideOffset={8}
             align="start"
+            collisionPadding={12}
             onOpenAutoFocus={e => e.preventDefault()}
           >
             <PasteText
@@ -378,7 +394,7 @@ export default memo(function ControlToolbar({
             sideOffset={8}
             align="start"
             onOpenAutoFocus={e => e.preventDefault()}
-            {...(virtualMediaDialogOpen ? { inert: '' } : {})}
+            {...(virtualMediaDialogOpen ? { inert: true } : {})}
           >
             <VirtualMedia
               onClose={() => setIsVirtualMediaOpen(false)}
@@ -402,12 +418,12 @@ export default memo(function ControlToolbar({
                 variant="default"
                 className={buttonClassName}
                 disabled={!isChannelReady || !usbDeviceConfig?.mass_storage}
-                title={t('Virtual USB Drive')}
+                title={t('toolbar.virtualUsbDrive.title')}
               >
                 <IconFileTransfer
                   className={getIconClassName(isVirtualMediaOpen)}
                 />
-                <span>{t('Virtual USB Drive')}</span>
+                <span>{t('toolbar.virtualUsbDrive.title')}</span>
               </Button>
             </PopoverTrigger>
             {/*  className="bg-[transparent] border-[transparent] shadow-none" */}
@@ -415,7 +431,7 @@ export default memo(function ControlToolbar({
               sideOffset={8}
               align="start"
               onOpenAutoFocus={e => e.preventDefault()}
-              className="bg-transparent border-transparent shadow-none p-0 w-[750px] mt-[6px]"
+              className="w-[calc(100vw-24px)] bg-transparent border-transparent p-0 shadow-none sm:w-[750px]"
             >
               <VirtualUsbDrive
 
@@ -444,7 +460,7 @@ export default memo(function ControlToolbar({
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className={cn(popoverContentClassName, 'mt-[6px]')}
+            className={popoverContentClassName}
             sideOffset={8}
             align="start"
             onOpenAutoFocus={e => e.preventDefault()}
@@ -473,7 +489,7 @@ export default memo(function ControlToolbar({
       </div>
 
       {/* Right group */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex shrink-0 items-center gap-2 sm:flex-wrap">
         <MediaDeviceControl
           rpc={[send, isChannelReady, sendAsync]}
           className="flex flex-row gap-[8px]"
@@ -496,7 +512,7 @@ export default memo(function ControlToolbar({
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className={cn(popoverContentClassName, 'mt-[6px]')}
+            className={popoverContentClassName}
             sideOffset={8}
             align="end"
             onOpenAutoFocus={e => e.preventDefault()}

@@ -6,7 +6,7 @@ import {
   HID_KEY_USAGE_MAP as HID_KEY_CODES,
   HID_MODIFIER_BITMASK_MAP,
 } from '../data/hidKeyCodes';
-import { languageLayoutOptions, getLanguageKeyboardLayout } from '../data/language-layouts';
+import { languageLayoutOptions, getLanguageLayoutData } from '../data/language-layouts';
 import { generateCharMapFromLayout, type LayoutChars } from './generateCharMap';
 import {
   HID_MODIFIERS,
@@ -111,23 +111,30 @@ export function toHidReport(
 const layoutConfigCache = new Map<string, { chars: LayoutChars }>();
 
 function getLayoutConfig(
-  layout: KeyboardLayout | string,
-  layoutType: 'windows' | 'apple' = 'windows'
+  layout: string,
+  layoutType: 'windows' | 'mac' = 'windows'
 ): {
   chars: LayoutChars
 } {
   const cacheKey = `${layout}:${layoutType}`;
 
+  // TODO: Remove this temporary cache bypass for debugging special chars
+  // Force regenerate to ensure special chars are loaded
   if (layoutConfigCache.has(cacheKey)) {
-    return layoutConfigCache.get(cacheKey)!;
+    // Temporarily bypass cache for Spanish layouts to test special chars
+    if (layout.toString().includes('es-ES')) {
+      layoutConfigCache.delete(cacheKey);
+    } else {
+      return layoutConfigCache.get(cacheKey)!;
+    }
   }
 
   const isoCode = extractIsoCode(layout);
   const layoutId = findLayoutIdByIsoCode(isoCode);
   if (layoutId) {
-    const keyboardLayout = getLanguageKeyboardLayout(layoutId, layoutType);
-    if (keyboardLayout) {
-      const chars = generateCharMapFromLayout(keyboardLayout);
+    const {layout, specialChars} = getLanguageLayoutData(layoutId, layoutType);
+    if (layout) {
+      const chars = generateCharMapFromLayout(layout, specialChars);
       const config = { chars };
       layoutConfigCache.set(cacheKey, config);
       return config;
@@ -220,33 +227,48 @@ function calculateModifierMask(modifiers?: string[]): number {
 export function toHidReportForChar(
   char: string,
   options?: {
-    layout?: KeyboardLayout | string
-    layoutType?: 'windows' | 'apple'
+    layout?: string
+    layoutType?: 'windows' | 'mac'
   }
 ): HidReport[] {
   const { layout = 'cs-CZ-qwerty', layoutType = 'windows' } = options || {};
-
   const layoutConfig = getLayoutConfig(layout, layoutType);
-  const entry = layoutConfig.chars[char];
+  return resolveCharReports(char, layoutConfig.chars);
+}
 
-  if (!entry) {
-    return [];
-  }
+/**
+ * Create a reusable HID reporter for a given layout.
+ *
+ * Use this when converting many characters with the same layout (e.g. paste text),
+ * so layout config is resolved only once instead of once per character.
+ *
+ * @example
+ * const reporter = createHidReporter({ layout: 'es-ES-qwerty' });
+ * const reports = text.split('').flatMap(reporter);
+ */
+export function createHidReporter(options?: {
+  layout?: string
+  layoutType?: 'windows' | 'mac'
+}): (char: string) => HidReport[] {
+  const { layout = 'cs-CZ-qwerty', layoutType = 'windows' } = options || {};
+  const chars = getLayoutConfig(layout, layoutType).chars;
+  return (char: string) => resolveCharReports(char, chars, layoutType);
+}
 
-  const { code, mod, deadKey } = entry;
+function resolveCharReports(char: string, chars: LayoutChars, layoutType: 'windows' | 'mac' = 'windows'): HidReport[] {
+  const entry = chars[char];
+  if (!entry) return [];
+
+  const { code, mod, deadKey, macDeadKey } = entry;
   const keyCode = HID_KEY_CODES[code];
-  if (!keyCode) {
-    return [];
-  }
-  if (deadKey) {
-    const deadKeyReports = createDeadKeyReports(deadKey);
-    if (deadKeyReports) {
-      return deadKeyReports.concat(createCharacterReports(keyCode, mod));
-    } else {
-      return createMergedDeadKeyReports(deadKey, keyCode, mod);
-    }
-  }
+  if (!keyCode) return [];
 
+  // Use platform-specific dead key
+  const platformDeadKey = layoutType === 'mac' && macDeadKey ? macDeadKey : deadKey;
+
+  if (platformDeadKey) {
+    return createDeadKeySequence(platformDeadKey, keyCode, mod);
+  }
   return createCharacterReports(keyCode, mod);
 }
 
@@ -262,7 +284,6 @@ function createCharacterReports(
   modifiers?: string[]
 ): HidReport[] {
   const modifierMask = calculateModifierMask(modifiers);
-
   return [
     {
       keys: [keyCode, 0, 0, 0, 0, 0],
@@ -275,72 +296,35 @@ function createCharacterReports(
   ];
 }
 
-/**
- * Create HID report sequence for dead key (only when dead key requires modifiers).
- *
- * When dead key requires modifiers (e.g., Shift+Equal produces `), sends independent
- * dead key report sequence. If dead key doesn't require modifiers, returns null
- * for caller to handle with merge logic.
- *
- * @param deadKey - Dead key definition (contains code and optional mod)
- * @returns Dead key report array, or null if dead key doesn't require modifiers
- */
-function createDeadKeyReports(deadKey: {
-  code: string
-  mod?: string[]
-}): HidReport[] | null {
-  const deadKeyCode = HID_KEY_CODES[deadKey.code];
-
-  if (!deadKeyCode) {
-    return null;
-  }
-
-  if (deadKey.mod && deadKey.mod.length > 0) {
-    const deadModifierMask = calculateModifierMask(deadKey.mod);
-
-    return [
-      {
-        keys: [deadKeyCode, 0, 0, 0, 0, 0],
-        modifier: deadModifierMask,
-      },
-      {
-        keys: [0, 0, 0, 0, 0, 0],
-        modifier: 0,
-      },
-    ];
-  }
-
-  return null;
-}
-
-/**
- * Create merged HID report sequence for dead key and character key.
- *
- * When dead key doesn't require modifiers (e.g., Equal produces ´), merges
- * dead key and character key in the same report to reduce report count
- * and improve input efficiency.
- *
- * @param deadKey - Dead key definition
- * @param charKeyCode - Character key HID code
- * @param charModifiers - Character key modifier array
- * @returns Merged report array (press + release)
- */
-function createMergedDeadKeyReports(
+function createDeadKeySequence(
   deadKey: { code: string; mod?: string[] },
   charKeyCode: number,
   charModifiers?: string[]
 ): HidReport[] {
   const deadKeyCode = HID_KEY_CODES[deadKey.code];
-  const modifierMask = calculateModifierMask(charModifiers);
+  if (!deadKeyCode) {
+    return [];
+  }
 
-  return [
-    {
-      keys: [deadKeyCode || 0, charKeyCode, 0, 0, 0, 0],
-      modifier: modifierMask,
-    },
-    {
-      keys: [0, 0, 0, 0, 0, 0],
-      modifier: 0,
-    },
-  ];
+  const reports: HidReport[] = [];
+
+  // Dead key sequence (steps 1-4)
+  if (deadKey.mod && deadKey.mod.length > 0) {
+    // Dead key with modifiers: press modifiers → press dead key → release dead key → release modifiers
+    const deadModifierMask = calculateModifierMask(deadKey.mod);
+
+    reports.push({ keys: [0, 0, 0, 0, 0, 0], modifier: deadModifierMask });           // Modifiers press
+    reports.push({ keys: [deadKeyCode, 0, 0, 0, 0, 0], modifier: deadModifierMask });    // Dead key press
+    reports.push({ keys: [0, 0, 0, 0, 0, 0], modifier: deadModifierMask });           // Dead key release
+    reports.push({ keys: [0, 0, 0, 0, 0, 0], modifier: 0 });                           // Modifiers release
+  } else {
+    // Dead key without modifiers: simple press + release
+    reports.push(...createCharacterReports(deadKeyCode));
+  }
+
+  // Character key sequence (steps 5-8) - reuse existing function
+  reports.push(...createCharacterReports(charKeyCode, charModifiers));
+
+  return reports;
 }
+

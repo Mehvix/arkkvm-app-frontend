@@ -8,13 +8,13 @@ import type { VirtualKeyboardModifierState } from '../utils/modifierStateManager
 import { Keycap } from './Keycap';
 
 export interface WindowsLayoutProps extends VirtualKeyboardModifierState {
-  layout: KeyboardLayout
-  checkKeyPressed: (keyCode: string) => boolean
-  handleModifierKeyDown: (keyCode: string, label?: string) => void
-  handleModifierKeyUp: (keyCode: string, label?: string) => void
-  handleKeyDown: (keyCode: string, label?: string) => void
-  handleKeyUp: (keyCode: string, label?: string) => void
-  pressedKeyColor: string
+  layout: KeyboardLayout;
+  checkKeyPressed: (keyCode: string) => boolean;
+  handleModifierKeyDown: (keyCode: string, label?: string) => void;
+  handleModifierKeyUp: (keyCode: string, label?: string) => void;
+  handleKeyDown: (keyCode: string, label?: string) => void;
+  handleKeyUp: (keyCode: string, label?: string) => void;
+  pressedKeyColor: string;
 }
 
 const WindowsLayout: React.FC<WindowsLayoutProps> = ({
@@ -48,12 +48,8 @@ const WindowsLayout: React.FC<WindowsLayoutProps> = ({
       <div className="flex-1 flex flex-col gap-0">
         {/* Keyboard Rows */}
         {keyRows.map((keys, rowIndex) => (
-          <div
-            className="flex flex-nowrap relative"
-            key={`keyRow${rowIndex}`}
-          >
+          <div className="flex flex-nowrap relative" key={`keyRow${rowIndex}`}>
             {keys.map(key => {
-
               const isKeyPressed = checkKeyPressed(key.keyCode);
 
               // Calculate active state
@@ -88,7 +84,6 @@ const WindowsLayout: React.FC<WindowsLayoutProps> = ({
                   shiftActive={ShiftLeft || ShiftRight}
                   capsLockActive={CapsLock}
                   altGrActive={AltGr}
-                   className='m-0'
                 />
               );
             })}
@@ -101,20 +96,11 @@ const WindowsLayout: React.FC<WindowsLayoutProps> = ({
         <div className="w-full md:w-1/5 hidden md:flex flex-col self-stretch ml-[10px] gap-0">
           {/* Right Panel Grid - 2 columns */}
           {layout.rightPanel.map((keys, rowIndex) => (
-            <div
-              key={`rightPanel-row-${rowIndex}`}
-              className="flex flex-nowrap min-h-[44px]"
-            >
+            <div key={`rightPanel-row-${rowIndex}`} className="flex flex-nowrap min-h-[44px]">
               {keys.map(key => {
                 if (key.keyCode.startsWith('__vk_spacer__')) {
-                  return (
-                    <div
-                      key={key.keyCode}
-                      className={`m-[2px] flex-[${key.width || 1}_1_0%]`}
-                    />
-                  );
+                  return <Keycap key={key.keyCode} />;
                 }
-
 
                 const isKeyPressed = checkKeyPressed(key.keyCode);
 
@@ -129,7 +115,6 @@ const WindowsLayout: React.FC<WindowsLayoutProps> = ({
                     shiftActive={ShiftLeft || ShiftRight}
                     capsLockActive={CapsLock}
                     altGrActive={AltGr}
-                    className='m-0'
                   />
                 );
               })}

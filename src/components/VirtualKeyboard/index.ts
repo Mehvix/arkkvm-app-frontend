@@ -1,3 +1,9 @@
+/*
+ * @Author: zhanglei
+ * @Date: 2026-02-09 19:54:13
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-07-16 16:56:52
+ */
 /**
  * VirtualKeyboard module exports
  *
@@ -27,3 +33,16 @@ export type * from './data';
 export * from './hooks';
 // Constants
 export * from './constants';
+
+// Self-contained i18n layer (no external i18n framework required)
+export {
+  I18nProvider,
+  useI18n,
+  getTranslations,
+  createT,
+  languageDisplayNames,
+  getLanguageDisplayName,
+  type VirtualKeyboardLocale,
+  type VirtualKeyboardTranslations,
+  type TFunction,
+} from './i18n';

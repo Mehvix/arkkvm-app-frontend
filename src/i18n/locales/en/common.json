@@ -4,6 +4,10 @@
   "connect": "Connect",
   "disconnect": "Disconnect",
   "reconnect": "Reconnect",
+  "restart": {
+    "title": "Device Restarting",
+    "desc": "Reconnecting in {{seconds}} seconds..."
+  },
   "connected": "Connected",
   "disconnected": "Disconnected",
   "update":"Apply Changes",
@@ -158,6 +162,14 @@
     "settings": "Settings",
     "settingsDesc": "Open settings panel",
     "atxPower": "ATX Power",
+    "fileTransfer": "Virtual USB Drive",
+    "ocr": "OCR",
+    "ocrActive": "OCR Active",
+    "copyText": "Copy text",
+    "moreTextActions": "More text actions",
+    "media": "Media",
+    "audioPlaybackOn": "Audio Playback On",
+    "audioPlaybackOff": "Audio Playback Off",
     "quickTools": "Quick tools",
     "tools": "Tools",
     "collapse": "Collapse",
@@ -175,14 +187,76 @@
     "disconnect": "Disconnect",
     "disconnectDesc": "Disconnect from device",
     "inputMethodLabel": "Ensure the keyboard layout matches the pasted text",
+    "targetSystemLabel": "Target system",
+    "layoutNote": "Changing layout here only affects this paste task and will not update your global settings.",
+    "layoutWarning": "Some characters may use another language layout and cannot be typed with current selection.",
+    "missingMappings": "Missing mappings: {{unique}} unique / {{total}} total",
+    "suggestedLayout": "Suggested layout: {{layout}}",
+    "switchToSuggestedLayout": "Switch to suggested layout",
+    "typingSpeed": "Typing speed",
+    "typingSpeedSlow": "Slow",
+    "typingSpeedNormal": "Normal",
+    "typingSpeedFast": "Fast",
     "virtualUsbDrive": {
+      "title": "ArkKVM USB Drive",
+      "myFiles": "My Files",
+      "createDir": "Create Dir",
+      "mountToRemote": "Mount to Remote",
+      "mountToBack": "Mount to Back",
+      "availableStorage": "Available Storage",
+      "download": "Download",
+      "delete": "Delete",
+      "uploadFiles": "Upload Files",
+      "uploadFormatsText": "Supported formats: All file types",
+      "cannotMountWhileTransfer": "Cannot mount while file transfers are running",
+      "tasks": "Tasks",
+      "upload": "Upload",
+      "back": "Back",
+      "col": {
+        "name": "Name",
+        "modifiedTime": "Modified time",
+        "fileSize": "File size",
+        "transferInfo": "Transfer Info",
+        "transferStatus": "Transfer Status",
+        "actions": "Actions"
+      },
+      "transferState": {
+        "running": "Running",
+        "paused": "Paused",
+        "failed": "Failed",
+        "pending": "Pending",
+        "completed": "Completed"
+      },
+      "transferAction": {
+        "pause": "Pause",
+        "continue": "Continue Upload",
+        "delete": "Delete",
+        "pauseBeforeDelete": "Please pause the task before deleting"
+      },
+      "createDirDialog": {
+        "title": "Enter directory name",
+        "placeholder": "Enter directory name",
+        "confirm": "Yes",
+        "cancel": "No"
+      },
+      "empty": {
+        "notMountedTitle": "File System Not Mounted",
+        "notMountedDesc": "Click 'Mount to Remote' to access the remote computer's file system and manage files.",
+        "remoteUsbTitle": "Unable to Display Files",
+        "remoteUsbDesc": "Click 'Mount Back' to disconnect ArkKVM from the remote computer so you can view, upload, and download files on your local computer.",
+        "noFilesTitle": "No Files Available",
+        "noFilesDesc": "Upload files from your local computer with the button below, or Click 'Mount to Remote' to connect ArkKVM to the remote computer as a mass storage drive and copy files into it.",
+        "transferUnableTitle": "Unable to Display",
+        "transferUnableDesc": "Click 'Back' to return to the Virtual USB Drive to browse, upload, or download files."
+      },
       "downloadDisabled": {
         "folder": "Folder download is not supported",
         "ftcacheUploading": "Cannot download .ftcache while matching upload is running"
       },
       "deleteDisabled": {
         "ftcacheUploading": "Cannot delete .ftcache while matching upload is running"
-      }
+      },
+      "resumeFallback": "Please re-select the file to continue the upload"
     }
   },
   "wol": {
@@ -228,5 +302,35 @@
     "desc": "Some changes will take effect after restarting the system.\nYou can restart now or do it later.",
     "confirm": "Restart Now",
     "cancel": "Later"
+  },
+  "reboot": {
+    "button": "Reboot",
+    "title": "Reboot",
+    "desc": [
+      "Rebooting will stop all ongoing tasks.",
+      "You can continue once the reboot is complete."
+    ],
+    "confirm": "Reboot"
+  },
+  "ocr": {
+    "recognizing": "Recognizing...",
+    "error": "Couldn't recognize text",
+    "errorHint": "Couldn't recognize text. Try selecting a clearer area.",
+    "dragHint": "Drag to select text area · Press Esc to cancel",
+    "releaseHint": "Release mouse to recognize text · Esc to cancel",
+    "exit": "Exit",
+    "reading": "Reading selected area...",
+    "success": "Text recognized",
+    "close": "Close",
+    "viewFullText": "View full text",
+    "copied": "Copied to clipboard",
+    "copy": "Copy",
+    "reselect": "Reselect",
+    "privacyNote": "Text recognition runs locally on your device",
+    "recognizedText": "Recognized text"
+  },
+  "language": {
+    "zh": "Chinese",
+    "en": "English"
   }
 }

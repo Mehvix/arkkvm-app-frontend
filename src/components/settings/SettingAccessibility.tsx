@@ -22,7 +22,13 @@ import { Textarea } from '../ui/textarea';
 import SettingBlock from './SettingBlock';
 import SettingPageContainer from './SettingPageContainer';
 import type { TailscaleConnectionState } from '@/api/rpc/tailscale';
-import { getConnectionState, getTailscaleIP, getTailscaleHostname, getTailnetName, getUserEmail } from '@/api/rpc/tailscale';
+import {
+  getConnectionState,
+  getTailscaleIP,
+  getTailscaleHostname,
+  getTailnetName,
+  getUserEmail,
+} from '@/api/rpc/tailscale';
 
 const logger = createLogger('SettingAccessibility');
 
@@ -50,13 +56,12 @@ export default function SettingAccessibility() {
   // Tailscale states
   const [tailscaleEnabled, setTailscaleEnabled] = useState(false);
 
-  const [tailscaleStatus, setTailscaleStatus] =
-    useState<TailscaleConnectionState>('disconnected');
+  const [tailscaleStatus, setTailscaleStatus] = useState<TailscaleConnectionState>('disconnected');
   const [tailscaleInfo, setTailscaleInfo] = useState<{
-    ip: string
-    hostname: string
-    tailnetName: string
-    userEmail: string
+    ip: string;
+    hostname: string;
+    tailnetName: string;
+    userEmail: string;
   } | null>(null);
   const [tailscaleLoginUrl, setTailscaleLoginUrl] = useState<string>('');
 
@@ -157,9 +162,7 @@ export default function SettingAccessibility() {
           { timeout: 10000 }
         );
         if ('error' in resp) {
-          toast.error(
-            `Failed to update TLS settings: ${resp.error.data || 'Unknown error'}`
-          );
+          toast.error(`Failed to update TLS settings: ${resp.error.data || 'Unknown error'}`);
           return;
         }
         showRestartDialog();
@@ -237,9 +240,7 @@ export default function SettingAccessibility() {
         onResponse: resp => {
           setLoading(false);
           if ('error' in resp) {
-            toast.error(
-              `Failed to update cloud URL: ${resp.error.data || 'Unknown error'}`
-            );
+            toast.error(`Failed to update cloud URL: ${resp.error.data || 'Unknown error'}`);
             return;
           }
 
@@ -263,9 +264,7 @@ export default function SettingAccessibility() {
       method: 'deregisterDevice',
       onResponse: resp => {
         if ('error' in resp) {
-          toast.error(
-            `Failed to deregister device: ${resp.error?.data || 'Unknown error'}`
-          );
+          toast.error(`Failed to deregister device: ${resp.error?.data || 'Unknown error'}`);
           return;
         }
         toast.success('Device deregistered');
@@ -277,9 +276,7 @@ export default function SettingAccessibility() {
             method: 'getCloudState',
             onResponse: resp => {
               if ('error' in resp) {
-                toast.error(
-                  `Failed to get cloud state: ${resp.error?.data || 'Unknown error'}`
-                );
+                toast.error(`Failed to get cloud state: ${resp.error?.data || 'Unknown error'}`);
                 return;
               }
               setAdopted(resp.result?.connected);
@@ -303,8 +300,8 @@ export default function SettingAccessibility() {
 
     if (!state) return null;
 
-    const {  status } = state;
-    const loginServer  =state.loginServer|| status?.AuthURL;
+    const { status } = state;
+    const loginServer = state.loginServer || status?.AuthURL;
     setTailscaleEnabled(state.enabled || false);
 
     // Safely get connectionState using utility
@@ -334,10 +331,7 @@ export default function SettingAccessibility() {
   // Refresh state when user returns from external login (only when disconnected)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === 'visible' &&
-        tailscaleStatus !== 'connected'
-      ) {
+      if (document.visibilityState === 'visible' && tailscaleStatus !== 'connected') {
         logger.info('Page became visible, refreshing Tailscale state');
         void fetchTailscaleState();
       }
@@ -387,17 +381,12 @@ export default function SettingAccessibility() {
       start('registerTailscale');
       setTailscaleStatus('connecting');
 
-      const method = forceReauth
-        ? 'registerTailscaleForce'
-        : 'registerTailscale';
-      const resp = await sendAsync(
-        { method },
-        { showUnhandledErrorToast: true }
-      );
+      const method = forceReauth ? 'registerTailscaleForce' : 'registerTailscale';
+      const resp = await sendAsync({ method }, { showUnhandledErrorToast: true });
       stop('registerTailscale');
       setTailscaleStatus('loggedOut');
       if (!resp.success) return;
-      const authUrl =  resp.result.authUrl||resp.result.auth_url ;
+      const authUrl = resp.result.authUrl || resp.result.auth_url;
 
       if (authUrl) {
         setTailscaleLoginUrl(authUrl);
@@ -410,9 +399,7 @@ export default function SettingAccessibility() {
     [sendAsync, start, stop, fetchTailscaleState, setTailscaleStatus]
   );
 
-  const stopKeyEventPropagation = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
-  ) => {
+  const stopKeyEventPropagation = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Prevent event bubbling to avoid global hotkey/KVM capture
     e.stopPropagation();
   };
@@ -508,9 +495,7 @@ export default function SettingAccessibility() {
                     labelClassName="text-text text-xs"
                     className="text-xs h-24 font-normal"
                     rows={3}
-                    placeholder={t(
-                      'settings:accessibility.tlsCertificate.certPlaceholder'
-                    )}
+                    placeholder={t('settings:accessibility.tlsCertificate.certPlaceholder')}
                     onChange={e => handleTlsCertChange(e.target.value)}
                     onKeyDown={stopKeyEventPropagation}
                   />
@@ -520,13 +505,9 @@ export default function SettingAccessibility() {
                     label={t('settings:accessibility.tlsCertificate.keyLabel')}
                     labelClassName="text-text text-xs mt-3"
                     className="text-xs h-24"
-                    description={t(
-                      'settings:accessibility.tlsCertificate.keyDescription'
-                    )}
+                    description={t('settings:accessibility.tlsCertificate.keyDescription')}
                     rows={3}
-                    placeholder={t(
-                      'settings:accessibility.tlsCertificate.keyPlaceholder'
-                    )}
+                    placeholder={t('settings:accessibility.tlsCertificate.keyPlaceholder')}
                     onChange={e => handleTlsKeyChange(e.target.value)}
                     onKeyDown={stopKeyEventPropagation}
                   ></Textarea>
@@ -619,7 +600,7 @@ export default function SettingAccessibility() {
                 disabled={!isChannelReady || isAdopted}
               />
             </SettingBlock.Right>
-            <SettingBlock.Bottom className='pl-[24px]'>
+            <SettingBlock.Bottom className="pl-[24px]">
               {selectedProvider === 'arkkvm' ? (
                 <div className="flex items-start gap-3 p-4 bg-secondary-background border border-(--border-color) rounded-lg mt-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center  ">
@@ -642,18 +623,10 @@ export default function SettingAccessibility() {
                       {t('settings:accessibility.cloudSecurity.title')}
                     </h3>
                     <ul className="space-y-1 text-sm text-inactive-text">
-                      <li>
-                        • {t('settings:accessibility.cloudSecurity.feature1')}
-                      </li>
-                      <li>
-                        • {t('settings:accessibility.cloudSecurity.feature2')}
-                      </li>
-                      <li>
-                        • {t('settings:accessibility.cloudSecurity.feature3')}
-                      </li>
-                      <li>
-                        • {t('settings:accessibility.cloudSecurity.feature4')}
-                      </li>
+                      <li>• {t('settings:accessibility.cloudSecurity.feature1')}</li>
+                      <li>• {t('settings:accessibility.cloudSecurity.feature2')}</li>
+                      <li>• {t('settings:accessibility.cloudSecurity.feature3')}</li>
+                      <li>• {t('settings:accessibility.cloudSecurity.feature4')}</li>
                     </ul>
                     {/* <p className="text-sm text-inactive-text mt-3">
                         {t(
@@ -681,9 +654,7 @@ export default function SettingAccessibility() {
                     labelPosition="top"
                     labelSize={12}
                     labelClassName="text-text text-xs mt-3"
-                    placeholder={t(
-                      'settings:accessibility.cloudUrls.apiPlaceholder'
-                    )}
+                    placeholder={t('settings:accessibility.cloudUrls.apiPlaceholder')}
                     value={cloudApiUrl}
                     size="xs"
                     onChange={e => {
@@ -700,9 +671,7 @@ export default function SettingAccessibility() {
                     labelPosition="top"
                     labelSize={12}
                     labelClassName="text-text text-xs mt-3"
-                    placeholder={t(
-                      'settings:accessibility.cloudUrls.appPlaceholder'
-                    )}
+                    placeholder={t('settings:accessibility.cloudUrls.appPlaceholder')}
                     value={cloudAppUrl}
                     size="xs"
                     disabled={isAdopted}
@@ -768,58 +737,42 @@ export default function SettingAccessibility() {
                   <SettingBlock.Bottom>
                     <div className="flex flex-col gap-4 p-6  rounded-lg border border-(--border-color)">
                       {/* Authentication State (needs_auth or logged_out) */}
-                      {tailscaleStatus !== 'connected' &&
-                        tailscaleStatus !== 'connecting' && (
-                          <div className="flex flex-col gap-4">
-                            <p className="text-sm text-text-secondary">
-                              {t(
-                                'settings:accessibility.tailscale.actions.authHint'
-                              )}
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <Button
-                                variant="primary"
-                                size="xs"
-                                onClick={openTailscaleLogin}
-                                disabled={
-                                  !tailscaleLoginUrl ||
-                                  isLoading('registerTailscale')
-                                }
-                                loading={isLoading('registerTailscale')}
-                              >
-                                {t(
-                                  'settings:accessibility.tailscale.actions.openLogin'
-                                )}
-                              </Button>
-                            </div>
-                            <p className="text-sm text-text-muted">
-                              {t(
-                                'settings:accessibility.tailscale.actions.authExpiredBefore'
-                              )}
-                              <button
-                                onClick={() => generateNewTailscaleLink()}
-                                disabled={isLoading('registerTailscale')}
-                                className="text-blue-500 hover:text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border-none cursor-pointer p-0"
-                              >
-                                {t(
-                                  'settings:accessibility.tailscale.actions.generateNewLink'
-                                )}
-                              </button>
-                              {t(
-                                'settings:accessibility.tailscale.actions.authExpiredAfter'
-                              )}
-                            </p>
+                      {tailscaleStatus !== 'connected' && tailscaleStatus !== 'connecting' && (
+                        <div className="flex flex-col gap-4">
+                          <p className="text-sm text-text-secondary">
+                            {t('settings:accessibility.tailscale.actions.authHint')}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant="primary"
+                              size="xs"
+                              onClick={openTailscaleLogin}
+                              disabled={!tailscaleLoginUrl || isLoading('registerTailscale')}
+                              loading={isLoading('registerTailscale')}
+                            >
+                              {t('settings:accessibility.tailscale.actions.openLogin')}
+                            </Button>
                           </div>
-                        )}
+                          <p className="text-sm text-text-muted">
+                            {t('settings:accessibility.tailscale.actions.authExpiredBefore')}
+                            <button
+                              onClick={() => generateNewTailscaleLink()}
+                              disabled={isLoading('registerTailscale')}
+                              className="text-blue-500 hover:text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border-none cursor-pointer p-0"
+                            >
+                              {t('settings:accessibility.tailscale.actions.generateNewLink')}
+                            </button>
+                            {t('settings:accessibility.tailscale.actions.authExpiredAfter')}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Connecting State */}
                       {tailscaleStatus === 'connecting' && (
                         <div className="flex flex-col items-center justify-center py-8 gap-3">
                           <Loading type="spinner" size="md" color="blue" />
                           <p className="text-sm text-text-muted">
-                            {t(
-                              'settings:accessibility.tailscale.status.connecting'
-                            )}
+                            {t('settings:accessibility.tailscale.status.connecting')}
                           </p>
                         </div>
                       )}
@@ -830,9 +783,7 @@ export default function SettingAccessibility() {
                           {/* Tailnet Section */}
                           <div className="flex justify-between items-center pb-4 border-b border-(--border-color)">
                             <div className="flex flex-col">
-                              <span className="text-sm text-text-muted">
-                                Tailnet
-                              </span>
+                              <span className="text-sm text-text-muted">Tailnet</span>
                               <span className="text-sm font-medium text-text">
                                 {tailscaleInfo.userEmail}
                               </span>
@@ -849,21 +800,15 @@ export default function SettingAccessibility() {
                           </div>
                           <div className="flex justify-between items-center py-4 border-b border-(--border-color)">
                             <span className="text-sm text-text-muted">
-                              {t(
-                                'settings:accessibility.tailscale.fields.status'
-                              )}
+                              {t('settings:accessibility.tailscale.fields.status')}
                             </span>
                             <span className="text-sm font-medium text-text">
-                              {t(
-                                'settings:accessibility.tailscale.status.connected'
-                              )}
+                              {t('settings:accessibility.tailscale.status.connected')}
                             </span>
                           </div>
                           <div className="flex justify-between items-center py-4 border-b border-(--border-color)">
                             <span className="text-sm text-text-muted">
-                              {t(
-                                'settings:accessibility.tailscale.fields.tailscaleIp'
-                              )}
+                              {t('settings:accessibility.tailscale.fields.tailscaleIp')}
                             </span>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-text select-text">
@@ -878,9 +823,7 @@ export default function SettingAccessibility() {
                             </div>
                           </div>
                           <div className="flex justify-between items-center pt-4">
-                            <span className="text-sm text-text-muted">
-                              MagicDNS
-                            </span>
+                            <span className="text-sm text-text-muted">MagicDNS</span>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-text select-text">
                                 {tailscaleInfo.hostname}

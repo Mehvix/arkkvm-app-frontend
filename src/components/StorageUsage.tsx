@@ -84,13 +84,14 @@ export const StorageUsage: React.FC<StorageUsageProps> = ({
   const renderFreeText =
     freeText ?? ((freeBytes: number) => <>{humanSize(freeBytes)} free</>);
 
-  const rowClassName = 'flex items-center justify-between text-sm ';
+  const rowClassName = 'flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm ';
+  const secondaryTextClassName = 'min-w-0 text-right';
 
   if (loading) {
     return (
       <div className={cn('space-y-2', className)} {...rest}>
         <div className={rowClassName}>
-          <div>{title}</div>
+          <div className="min-w-0">{title}</div>
           <div className="animate-pulse bg-gray-300 h-3 w-12 rounded"></div>
         </div>
         <div className={cn('h-2 rounded bg-white/10', barContainerClassName)}>
@@ -107,8 +108,8 @@ export const StorageUsage: React.FC<StorageUsageProps> = ({
   return (
     <div className={cn('space-y-2', className)} {...rest}>
       <div className={rowClassName}>
-        <div>{title}</div>
-        <div>{renderPercentText(targetPercent)}</div>
+        <div className="min-w-0">{title}</div>
+        <div className={secondaryTextClassName}>{renderPercentText(targetPercent)}</div>
       </div>
       <div className={cn('h-2 rounded bg-white/10', barContainerClassName)}>
         {/* <div
@@ -123,8 +124,8 @@ export const StorageUsage: React.FC<StorageUsageProps> = ({
         />
       </div>
       <div className={rowClassName}>
-        <div>{renderUsedText(normalizedUsed)}</div>
-        <div>{renderFreeText(normalizedFree)}</div>
+        <div className="min-w-0">{renderUsedText(normalizedUsed)}</div>
+        <div className={secondaryTextClassName}>{renderFreeText(normalizedFree)}</div>
       </div>
     </div>
   );

@@ -22,6 +22,10 @@ import { useUpload } from './useUpload';
 
 export interface UploadDropZoneRef {
   cancelUpload: (fileName?: string) => void;
+  /** Resume a persisted upload task by id. */
+  resumeUpload: (taskId: string) => Promise<void>;
+  /** Open the native file picker (fallback when FSA resume is unavailable). */
+  openFilePicker: () => void;
 }
 
 function UploadDropZoneBase(props: UploadDropZoneProps, ref: React.Ref<UploadDropZoneRef>) {
@@ -54,6 +58,9 @@ function UploadDropZoneBase(props: UploadDropZoneProps, ref: React.Ref<UploadDro
     inputRef,
     pickingRef,
     cancelUpload,
+    handleUploadStart,
+    resumeUpload,
+    openFilePicker,
     handleDragOver,
     handleDragEnter,
     handleDragLeave,
@@ -63,6 +70,8 @@ function UploadDropZoneBase(props: UploadDropZoneProps, ref: React.Ref<UploadDro
 
   useImperativeHandle(ref, () => ({
     cancelUpload: () => cancelUpload(),
+    resumeUpload: (taskId: string) => resumeUpload(taskId),
+    openFilePicker: () => openFilePicker(),
   }));
 
   return (
@@ -78,7 +87,7 @@ function UploadDropZoneBase(props: UploadDropZoneProps, ref: React.Ref<UploadDro
         />
       ) : null}
 
-      {(['idle', 'error'].includes(uploadState) && showUploader) ||
+      {(['idle', 'failed'].includes(uploadState) && showUploader) ||
       showInputAlways ? (
         <UploadZone
           label={label}
@@ -100,6 +109,7 @@ function UploadDropZoneBase(props: UploadDropZoneProps, ref: React.Ref<UploadDro
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onFileSelected={handleFileSelected}
+          onFilePicked={handleUploadStart}
         />
       ) : null}
     </>

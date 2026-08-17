@@ -114,7 +114,7 @@ export default function FullscreenFloatingToolbar({
       <IconComponent
         className={cn(
           'size-4',
-          isActive ? 'text-white' : 'text-[var(--text-secondary)]'
+          isActive ? 'text-text' : 'text-[var(--text-secondary)]'
         )}
       />
     );
@@ -149,7 +149,7 @@ export default function FullscreenFloatingToolbar({
       ? [
           {
             key: 'fileTransfer',
-            label: t('Virtual USB Drive'),
+            label: t('toolbar.fileTransfer'),
             icon: <IconFileTransfer className="size-4" />,
             isPopover: true,
             className: 'w-[750px] p-0 bg-transparent border border-transparent',
@@ -192,7 +192,7 @@ export default function FullscreenFloatingToolbar({
     },
     {
       key: 'ocr',
-      label: ocrEnabled ? 'OCR Active' : 'OCR',
+      label: ocrEnabled ? t('toolbar.ocrActive') : t('toolbar.ocr'),
       icon: <Type className="size-4" />,
       render: () => (
         <Tooltip key="ocr">
@@ -383,7 +383,7 @@ export default function FullscreenFloatingToolbar({
                   <TooltipTrigger asChild>
                     <PopoverTrigger asChild>
                       <Button
-                        className="w-[34px] h-[34px] p-[0]  bg-transparent data-[state=open]:!bg-[var(--btn-outline-bg)] data-[state=open]:!text-white"
+                        className="w-[34px] h-[34px] p-[0]  bg-transparent data-[state=open]:!bg-[var(--btn-outline-bg)] data-[state=open]:!text-text"
                         disabled={!isChannelReady}
                         style={{
                           color: !!popoverOpen[item.key]

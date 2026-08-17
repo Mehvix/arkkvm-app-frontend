@@ -2,7 +2,7 @@ export type InputMethodParamsMap = {
   keyboardReport: { keys: number[]; modifier: number }
   relMouseReport: { dx: number; dy: number; buttons: number }
   absMouseReport: { x: number; y: number; buttons: number }
-  wheelReport: { wheelY: number }
+  wheelReport: { wheelY: number; wheelX?: number }
 }
 
 export type InputMethodName = keyof InputMethodParamsMap
@@ -109,6 +109,9 @@ const encodeAbsMouseReport = (
 const encodeWheelReport = (report: InputMethodParamsMap['wheelReport']): number[] => {
   const msg: number[] = [];
   pushVarintField(msg, 1, report.wheelY, true);
+  if (report.wheelX !== undefined && report.wheelX !== 0) {
+    pushVarintField(msg, 2, report.wheelX, true);
+  }
   return msg;
 };
 

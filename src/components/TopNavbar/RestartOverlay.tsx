@@ -80,7 +80,7 @@ export function RestartOverlay({
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl font-semibold text-white">
+            <h2 className="text-2xl font-semibold text-text">
               {t('restart.title', { defaultValue: 'Device Restarting' })}
             </h2>
 

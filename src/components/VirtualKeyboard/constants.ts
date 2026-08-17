@@ -1,3 +1,9 @@
+/*
+ * @Author: zhanglei
+ * @Date: 2025-11-03 14:41:34
+ * @LastEditors: zhanglei
+ * @LastEditTime: 2026-07-09 18:40:08
+ */
 /**
  * @Purpose:
  * @Descripttion:
@@ -32,7 +38,7 @@ export const KEY_STYLES = {
   base: [
     'rounded-xs flex items-center justify-center relative',
     'border border-[var(--btn-outline-border)] transition-all duration-100 ease-out',
-    'text-sm md:text-sm select-none pointer-events-auto',
+    'text-base md:text-base select-none pointer-events-auto',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70',
   ],
   states: {
@@ -48,7 +54,7 @@ export const KEY_STYLES = {
       'cursor-pointer',
     ],
     active: [
-      'bg-blue-500 text-white',
+      'bg-blue-500 text-text',
       'border-blue-400',
       'shadow-[0_2px_0_rgba(0,0,0,0.2),0_4px_8px_rgba(59,130,246,0.3)]',
       'cursor-pointer',

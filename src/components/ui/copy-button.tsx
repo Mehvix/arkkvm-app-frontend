@@ -50,20 +50,25 @@ export function CopyButton({
   }, [copied]);
 
   const copyWithExecCommand = React.useCallback((textToCopy: string): boolean => {
-    const textarea = document.createElement('textarea');
-    textarea.value = textToCopy;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-999999px';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
+    // Use an input (not textarea) with absolute positioning and near-zero size.
+    // Fixed off-screen elements can fail to receive focus when a portal/dialog
+    // overlay holds it; absolute + opacity:0 + width/height:1px is more reliable.
+    const input = document.createElement('input');
+    input.setAttribute('readonly', '');
+    input.value = textToCopy;
+    input.style.cssText =
+      'position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+    document.body.appendChild(input);
+    input.focus({ preventScroll: true });
+    input.select();
+    input.setSelectionRange(0, textToCopy.length);
 
     try {
       const success = document.execCommand('copy');
-      document.body.removeChild(textarea);
+      document.body.removeChild(input);
       return success;
     } catch {
-      document.body.removeChild(textarea);
+      document.body.removeChild(input);
       return false;
     }
   }, []);
@@ -72,8 +77,9 @@ export function CopyButton({
     const displayLabel = label || t('common:text') || 'Text';
 
     try {
-      // Try modern clipboard API first
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      // Clipboard API only works reliably in secure contexts (HTTPS).
+      // In HTTP environments it may silently succeed without actually writing.
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       } else if (!copyWithExecCommand(text)) {
         throw new Error('Clipboard API unavailable and execCommand fallback failed');

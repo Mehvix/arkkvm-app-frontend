@@ -1,4 +1,5 @@
 import { type JsonRpcHandle } from '@/hooks/useJsonRpc';
+import { useFileDownload } from '@/hooks/useFileDownload';
 import { useLoadingMap } from '@/hooks/useLoading';
 import { useAppStore } from '@/stores';
 import {
@@ -17,12 +18,14 @@ import { Textarea } from '../ui/textarea';
 import SettingBlock from './SettingBlock';
 import SettingPageContainer from './SettingPageContainer';
 import { getErrorReasonKey } from '@/utils/parse';
+import { triggerLocalFileDownload } from '@/api/localFile';
+import { env } from '@/utils/env';
 
 const logger = createLogger('SettingAdvanced');
 
 export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
   const { t } = useTranslation(['settings', 'errors']);
-  const [send, isChannelReady, sendAsync] = rpc;
+  const [_send, isChannelReady, sendAsync] = rpc;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // State management
   const [, setDevChannel] = useState(false);
@@ -33,15 +36,43 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
   useActiveDeviceSettings(s => s.debugMode);
   const [, setUsbEmulation] = useState(false);
   const setNestedDeviceSetting = useSettingsActions().setNestedDeviceSetting;
-  const removeDevice = useSettingsActions().removeDevice;
-  const resetSetup = useAppStore(state => state.resetSetup);
-  const activeDeviceId = useSettingsStore(s => s.activeDeviceId);
   const { isLoading, startLoading, stopLoading } = useLoadingMap([
     'resetConfig',
+    'collectEvidence',
     'allLoading',
     'localLoopbackOnly',
   ]);
   const { confirm, info } = useConfirmDialog();
+  const downloadStartTimeRef = useRef<number>(0);
+  const networkDialogShownRef = useRef(false);
+  const [facrotyResetState, setFacrotyResetState] = useState(false);
+  const peerConnectionState = useAppStore(s => s.rtc?.peerConnectionState ?? 'disconnected');
+  const [downloadFile] = useFileDownload({
+    requestDownload: async (task, sa) => {
+      const res = await sa(
+        { method: 'startLocalFileDownload', params: { path: task.path, offset: 0 } },
+        { showUnhandledErrorToast: true, timeout: 120000 }
+      );
+      if (!res.result?.dataChannel) throw new Error('No dataChannel returned');
+      return { dataChannel: res.result.dataChannel };
+    },
+    channelFilter: label => label.startsWith('local_download_'),
+    onComplete: async task => {
+      const elapsed = ((Date.now() - downloadStartTimeRef.current) / 1000).toFixed(2);
+      logger.info(`[Diagnostic] Download complete in ${elapsed}s`, task);
+      toast.success(`Diagnostic downloaded: ${task.name}`);
+      const deleteRes = await sendAsync(
+        { method: 'deleteCollectedEvidence', params: { path: task.path } },
+        { showUnhandledErrorToast: true }
+      );
+      logger.info('deleteCollectedEvidence', deleteRes);
+    },
+    onError: task => {
+      const elapsed = ((Date.now() - downloadStartTimeRef.current) / 1000).toFixed(2);
+      logger.info(`[Diagnostic] Download failed after ${elapsed}s`, task);
+      toast.error(`Download failed: ${task.errorMessage ?? 'Unknown error'}`);
+    },
+  });
   useEffect(() => {
     if (!isChannelReady) return;
     let isCancelled = false;
@@ -54,23 +85,11 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
         devChannelState,
         localLoopbackOnlyState,
       ] = await Promise.all([
-        sendAsync({ method: 'getDevModeState' }, { resultOnly: true }).catch(
-          e => e
-        ),
-        sendAsync({ method: 'getSSHKeyState' }, { resultOnly: true }).catch(
-          e => e
-        ),
-        sendAsync(
-          { method: 'getUsbEmulationState' },
-          { resultOnly: true }
-        ).catch(e => e),
-        sendAsync({ method: 'getDevChannelState' }, { resultOnly: true }).catch(
-          e => e
-        ),
-        sendAsync(
-          { method: 'getLocalLoopbackOnly' },
-          { resultOnly: true }
-        ).catch(e => e),
+        sendAsync({ method: 'getDevModeState' }, { resultOnly: true }).catch(e => e),
+        sendAsync({ method: 'getSSHKeyState' }, { resultOnly: true }).catch(e => e),
+        sendAsync({ method: 'getUsbEmulationState' }, { resultOnly: true }).catch(e => e),
+        sendAsync({ method: 'getDevChannelState' }, { resultOnly: true }).catch(e => e),
+        sendAsync({ method: 'getLocalLoopbackOnly' }, { resultOnly: true }).catch(e => e),
       ]);
       logger.info('Settings loaded', {
         localLoopbackOnly: localLoopbackOnlyState,
@@ -91,27 +110,44 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
       isCancelled = true;
     };
   }, [isChannelReady, sendAsync]);
-  // Event handler functions
-  const _toggleDevChannelUpdates = useCallback(
-    (enabled: boolean) => {
-      setDevChannel(enabled);
-      send({
-        method: 'setDevChannelState',
-        params: { enabled },
-        onResponse(resp) {
-          logger.info('Dev channel state updated', { enabled, response: resp });
-        },
-        onError(err) {
-          toast.error(
-            `Failed to set dev channel state: ${err.message || 'Unknown error'}`
-          );
-          // Rollback state
-          setDevChannel(!enabled);
-        },
+  useEffect(() => {
+    const isPeerDisconnected = ['disconnected', 'failed', 'closed'].includes(peerConnectionState);
+    if (
+      facrotyResetState &&
+      (!isChannelReady || isPeerDisconnected) &&
+      !networkDialogShownRef.current
+    ) {
+      stopLoading('resetConfig');
+      networkDialogShownRef.current = true;
+      info({
+        title: t('settings:network.connectionLost.title', 'Connection Lost'),
+        content: (
+          <div className="space-y-1 text-sm">
+            <p>
+              {t(
+                'settings:network.connectionLost.line1',
+                'ArkKVM network settings have been applied.'
+              )}
+            </p>
+            <p>
+              {t(
+                'settings:network.connectionLost.line2',
+                'The IP address or VLAN configuration may have changed.'
+              )}
+            </p>
+            <p>
+              {t(
+                'settings:network.connectionLost.line3',
+                'Check the ArkKVM device screen for the current network information and reconnect.'
+              )}
+            </p>
+          </div>
+        ),
+        type: 'error',
+        confirmText: t('settings:network.connectionLost.ok', 'OK'),
       });
-    },
-    [send]
-  );
+    }
+  }, [isChannelReady, facrotyResetState, peerConnectionState]);
 
   const handleDeveloperModeChange = useCallback(
     async (checked: boolean) => {
@@ -128,9 +164,7 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
         }));
         setDeveloperMode(checked);
       } else {
-        toast.error(
-          `Failed to ${checked ? 'enable' : 'disable'} Developer Mode`
-        );
+        toast.error(`Failed to ${checked ? 'enable' : 'disable'} Developer Mode`);
         // Rollback state
         setDeveloperMode(!checked);
       }
@@ -141,55 +175,51 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
   const handleLoopbackOnlyChange = useCallback(
     (checked: boolean) => {
       confirm({
-        title: 'Enable Loopback-Only Mode?',
+        title: t('settings:advanced.loopbackOnly.confirm.title'),
         content: (
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="text-orange-600 mt-0.5">⚠️</div>
+              <div className="mt-0.5 text-orange-600">⚠️</div>
               <div>
                 <div className="font-medium text-orange-800 mb-2">
-                  WARNING: This will restrict web interface access to localhost
-                  (127.0.0.1) only.
+                  {t('settings:advanced.loopbackOnly.confirm.warning')}
                 </div>
                 <div className="text-sm">
-                  Before enabling this feature, make sure you have either:
+                  {t('settings:advanced.loopbackOnly.confirm.prereqNote')}
                 </div>
                 <ul className="text-sm space-y-1 ml-4">
-                  <li className="text-sm ">
-                    • SSH access configured and tested
+                  <li className="text-sm">
+                    • {t('settings:advanced.loopbackOnly.confirm.prereqSsh')}
                   </li>
-                  <li className="text-sm ">
-                    • Cloud access enabled and working
+                  <li className="text-sm">
+                    • {t('settings:advanced.loopbackOnly.confirm.prereqCloud')}
                   </li>
                 </ul>
               </div>
             </div>
           </div>
         ),
-        confirmText: 'I Understand, Enable Anyway',
-        cancelText: 'Cancel',
+        confirmText: t('settings:advanced.loopbackOnly.confirm.confirmText'),
+        cancelText: t('settings:advanced.loopbackOnly.confirm.cancelText'),
         onConfirm: async () => {
           // setLocalLoopbackOnly(checked);
           //startLoading
           startLoading('localLoopbackOnly');
-          const resChecked = await sendAsync(
+          const { success, result } = await sendAsync(
             {
               method: 'setLocalLoopbackOnly',
               params: { enabled: checked },
+              successMessage: 'Loopback-only mode enabled. Restart your device to apply.',
             },
-            {
-              resultOnly: true,
-              showUnhandledErrorToast: true,
-              successMessage:
-                'Loopback-only mode enabled. Restart your device to apply.',
-            }
+            { showUnhandledErrorToast: true }
           );
           stopLoading('localLoopbackOnly');
-          setLocalLoopbackOnly(resChecked ?? false);
+          if (!success) return;
+          setLocalLoopbackOnly(result ?? false);
         },
       });
     },
-    [send, confirm]
+    [sendAsync, startLoading, stopLoading, confirm, t]
   );
 
   const handleWebTerminalChange = useCallback(
@@ -203,103 +233,96 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
     [setNestedDeviceSetting]
   );
 
-  const _handleDebugModeChange = useCallback(
-    (checked: boolean) => {
-      logger.info('Debug mode changed', { enabled: checked });
-      setNestedDeviceSetting(prev => ({
-        ...prev,
-        debugMode: checked,
-      }));
-    },
-    [setNestedDeviceSetting]
-  );
-
-  const handleUpdateSshKey = useCallback(() => {
-    send({
-      method: 'setSSHKeyState',
-      params: { sshKey },
-      onResponse(resp) {
-        if (!('error' in resp)) {
-          toast.success('SSH Key updated successfully');
-        } else {
-          // toast.error(
-          //   `Failed to update SSH Key: ${resp.error.message || 'Unknown error'}`
-          // );
-        }
-      },
-      onError(_err) {
-        // toast.error(
-        //   `Failed to update SSH Key: ${err.message || 'Network error'}`
-        // );
-      },
-    });
-  }, [send, sshKey]);
-
-  const _handleDisableUsbEmulation = useCallback(
-    (enabled: boolean) => {
-      setUsbEmulation(enabled);
-      send({
-        method: 'setUsbEmulationState',
-        params: { enabled },
-        onResponse(resp) {
-          if (!('error' in resp)) {
-            toast.success('USB Emulation disabled successfully');
-          } else {
-            toast.error(
-              `Failed to disable USB Emulation: ${resp.error.message || 'Unknown error'}`
-            );
-            setUsbEmulation(!enabled);
-          }
-        },
-        onError(err) {
-          toast.error(
-            `Failed to disable USB Emulation: ${err.message || 'Network error'}`
-          );
-          setUsbEmulation(!enabled);
-        },
-      });
-    },
-    [send]
-  );
+  const handleUpdateSshKey = useCallback(async () => {
+    const { success } = await sendAsync(
+      { method: 'setSSHKeyState', params: { sshKey } },
+      { showUnhandledErrorToast: true }
+    );
+    if (!success) return;
+    toast.success(t('settings:advanced.sshAccess.successMessage'));
+  }, [sendAsync, sshKey, t]);
 
   const handleResetConfig = useCallback(async () => {
-    startLoading('resetConfig');
-    try {
-      const { success, error } = await sendAsync(
-        {
-          method: 'resetConfig',
+    await confirm({
+      title: t('settings:advanced.troubleshooting.resetConfig.confirm.title'),
+      content: (
+        <div className="space-y-2 text-sm">
+          {(
+            t('settings:advanced.troubleshooting.resetConfig.confirm.desc', {
+              returnObjects: true,
+            }) as string[]
+          ).map((line, index) => (
+            <p key={index}>{line}</p>
+          ))}
+        </div>
+      ),
+      confirmText: t('settings:advanced.troubleshooting.resetConfig.confirm.button'),
+      cancelText: t('settings:advanced.troubleshooting.resetConfig.confirm.cancel', 'Cancel'),
+      onConfirm: async () => {
+        startLoading('resetConfig');
+        networkDialogShownRef.current = false;
+        setFacrotyResetState(true);
+
+        const { success, error } = await sendAsync({
+          method: 'facrotyReset',
+        });
+
+        if (success) {
+          toast.success('Configuration reset to default successfully');
+          useAppStore.getState().resetGlobalSettings();
+          void useAppStore.persist.clearStorage();
+          void useSettingsStore.persist.clearStorage();
+          setTimeout(() => {
+            stopLoading('resetConfig');
+            window.location.reload();
+          }, 30000);
+        } else if (error) {
+          stopLoading('resetConfig');
+          const title = getErrorReasonKey(error.data, {
+            segmentIndex: 0,
+          });
+          const reasonKey = getErrorReasonKey(error?.data, {
+            segmentIndex: 1,
+          });
+          if (title && reasonKey) {
+            const ns = `${title}.${reasonKey}` as const;
+            info({
+              title: t(`errors:${title}.title`),
+              content: t(`errors:${ns}`),
+              confirmText: t(`errors:${title}.confirm`),
+            });
+            return;
+          }
         }
-      );
-      stopLoading('resetConfig');
-      if (success) {
-        resetSetup();
-        toast.success('Configuration reset to default successfully');
-        if (activeDeviceId) removeDevice(activeDeviceId);
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else if(error){
-           const title = getErrorReasonKey(error.data, {
-              segmentIndex: 0,
-            });
-            const reasonKey = getErrorReasonKey(error?.data, {
-              segmentIndex: 1,
-            });
-            if (title && reasonKey) {
-              const ns = `${title}.${reasonKey}` as const;
-              info({
-                title: t(`errors:${title}.title`),
-                content: t(`errors:${ns}`),
-                confirmText: t(`errors:${title}.confirm`),
-              });
-              return;
-            }
+      },
+    });
+  }, [confirm, t, sendAsync, info]);
+
+  const handleCollectEvidence = useCallback(async () => {
+    downloadStartTimeRef.current = Date.now();
+    startLoading('collectEvidence');
+    const { success, result } = await sendAsync(
+      { method: 'collectEvidence' },
+      { showUnhandledErrorToast: true, timeout: 600000 }
+    );
+    stopLoading('collectEvidence');
+    if (success && result) {
+      if (env.target === 'cloud') {
+        downloadFile([{ name: result, path: result }]);
+      } else {
+        triggerLocalFileDownload(result, result)
+          .then(() => {
+            sendAsync(
+              { method: 'deleteCollectedEvidence', params: { path: result } },
+              { showUnhandledErrorToast: true }
+            );
+          })
+          .catch(err => {
+            toast.error(`Download failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          });
       }
-    } catch (error) {
-      logger.error('Failed to clear localStorage:', error);
-      toast.error('Failed to clear local storage');
     }
-  }, [sendAsync]);
+  }, [sendAsync, startLoading, stopLoading, downloadFile]);
 
   return (
     <SettingPageContainer
@@ -324,10 +347,7 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
           content={t('settings:advanced.webTerminal.desc')}
         >
           <SettingBlock.Right>
-            <Switch
-              checked={webTerminalEnabled}
-              onCheckedChange={handleWebTerminalChange}
-            />
+            <Switch checked={webTerminalEnabled} onCheckedChange={handleWebTerminalChange} />
           </SettingBlock.Right>
         </SettingBlock>
 
@@ -340,9 +360,7 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
             <Switch
               checked={localLoopbackOnly}
               onCheckedChange={handleLoopbackOnlyChange}
-              disabled={
-                isLoading('allLoading') || isLoading('localLoopbackOnly')
-              }
+              disabled={isLoading('allLoading') || isLoading('localLoopbackOnly')}
             />
           </SettingBlock.Right>
         </SettingBlock>
@@ -369,22 +387,15 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
                   rows={3}
                   onChange={e => setSshKey(e.target.value)}
                   placeholder={t('settings:advanced.sshAccess.keyPlaceholder')}
-                  className="font-mono !text-sm "
-                  labelClassName="text-sm "
+                  className="font-mono text-sm!"
+                  labelClassName="text-sm"
                 />
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600  md:text-sm ">
+                  <div className="text-sm text-gray-600 md:text-sm">
                     {t('settings:advanced.sshAccess.defaultUserText')}{' '}
-                    <span className="font-mono bg-gray-100 px-1 rounded">
-                      root
-                    </span>
-                    .
+                    <span className="font-mono bg-gray-100 px-1 rounded">root</span>.
                   </div>
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    onClick={handleUpdateSshKey}
-                  >
+                  <Button variant="primary" size="xs" onClick={handleUpdateSshKey}>
                     {t('settings:advanced.sshAccess.updateButton')}
                   </Button>
                 </div>
@@ -402,7 +413,7 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
               variant="default"
               size="xs"
               status="danger"
-              className="bg-[var(--btn-filled-bg-danger)]"
+              className="bg-(--btn-filled-bg-danger)"
               onClick={handleResetConfig}
               loading={isLoading('resetConfig')}
             >
@@ -410,50 +421,23 @@ export default function SettingAdvanced({ rpc }: { rpc: JsonRpcHandle }) {
             </Button>
           </SettingBlock.Right>
         </SettingBlock>
-        {/* TODO: Troubleshooting Mode - USB Emulation feature to be implemented later
-         * This feature allows users to toggle USB emulation and provides
-         * debugging capabilities for hardware communication issues.
-         */}
-        {/* <SettingBlock
-          title={t('settings:advanced.troubleshooting.title')}
-          content={t('settings:advanced.troubleshooting.desc')}
+
+        {/* Diagnostic */}
+        <SettingBlock
+          title={t('settings:advanced.troubleshooting.diagnostic.title')}
+          content={t('settings:advanced.troubleshooting.diagnostic.descSlow')}
         >
           <SettingBlock.Right>
-            <Switch
-              checked={debugMode}
-              disabled={isLoading('allLoading') || isLoading('debugMode')}
-              onCheckedChange={handleDebugModeChange}
-            />
+            <Button
+              variant="primary"
+              size="xs"
+              onClick={handleCollectEvidence}
+              loading={isLoading('collectEvidence')}
+            >
+              {t('settings:advanced.troubleshooting.diagnostic.button')}
+            </Button>
           </SettingBlock.Right>
-          {debugMode && (
-            <SettingBlock.Bottom className="pl-[20px]">
-              <SettingBlock
-                title={t(
-                  'settings:advanced.troubleshooting.usbEmulation.title'
-                )}
-                content={t(
-                  'settings:advanced.troubleshooting.usbEmulation.desc'
-                )}
-                paddingBottom={10}
-              >
-                <SettingBlock.Right>
-                  <Button
-
-                    onClick={() => handleDisableUsbEmulation(!usbEmulation)}
-                  >
-                    {usbEmulation
-                      ? t(
-                          'settings:advanced.troubleshooting.usbEmulation.disableButton'
-                        )
-                      : t(
-                          'settings:advanced.troubleshooting.usbEmulation.enableButton'
-                        )}
-                  </Button>
-                </SettingBlock.Right>
-              </SettingBlock>
-            </SettingBlock.Bottom>
-          )}
-        </SettingBlock> */}
+        </SettingBlock>
       </div>
     </SettingPageContainer>
   );
