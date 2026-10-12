@@ -1,5 +1,5 @@
 /**
- * Colemak-DH (Curl-DH) - macOS layout.
+ * Colemak-DH ANSI - macOS layout.
  * Derived from the US QWERTY layout with letter positions remapped.
  */
 import type { KeyboardLayout } from '../../keyboard-types';

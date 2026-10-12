@@ -1,22 +1,22 @@
 /**
- * Colemak-DH (Curl-DH) shared letter mapping.
+ * Colemak-DH ANSI shared letter mapping.
  *
- * Colemak-DH keeps every letter on the ANSI/ISO keyboard but moves it to a
+ * Colemak-DH keeps every letter on the ANSI keyboard but moves it to a
  * different physical key. The table below maps each QWERTY physical key to the
- * character the remote host produces when its layout is set to Colemak-DH,
+ * character the remote host produces when its layout is set to Colemak-DH ANSI,
  * which is exactly what the HID report needs to type via "Paste Text".
  *
  * Layout diagram:
  *   q w f p b j l u y ;
  *   a r s t g m n e i o
- *   z x c d v k h , . /
+ *   x c d v z k h , . /
  *
  * Non-letter keys (digits, symbols, modifiers) are inherited unchanged from the
  * US QWERTY layout, so only the entries below need maintaining.
  */
 import type { KeyboardLayout, KeyDefinition } from '../../keyboard-types';
 
-/** Physical QWERTY key -> character produced under Colemak-DH. */
+/** Physical QWERTY key -> character produced under Colemak-DH ANSI. */
 export const COLEMAK_DH_LETTERS: Record<string, { base: string; shift: string }> = {
   // Top row
   KeyQ: { base: 'q', shift: 'Q' },

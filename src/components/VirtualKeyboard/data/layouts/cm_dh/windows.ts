@@ -1,5 +1,5 @@
 /**
- * Colemak-DH (Curl-DH) - Windows layout.
+ * Colemak-DH ANSI - Windows layout.
  * Derived from the US QWERTY layout with letter positions remapped.
  */
 import type { KeyboardLayout } from '../../keyboard-types';

@@ -31,15 +31,15 @@ export const enGBMeta: LayoutMeta = {
 export const colemakDHMeta: LayoutMeta = {
   id: 'colemak-dh',
   tag: 'DH',
-  name: 'English (Colemak-DH)',
-  nativeName: 'English (Colemak-DH)',
+  name: 'English (Colemak-DH ANSI)',
+  nativeName: 'English (Colemak-DH ANSI)',
   layout: 'colemak',
   standard: 'ansi',
   region: 'americas',
   priority: 3,
   recommended: false,
   hasAltGr: false,
-  note: 'Colemak-DH (Curl-DH) ergonomic layout',
+  note: 'Colemak-DH ANSI layout',
 };
 
 export const csCZMeta: LayoutMeta = {
